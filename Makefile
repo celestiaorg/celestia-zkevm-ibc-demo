@@ -4,12 +4,8 @@ DOCKER := $(shell which docker)
 DOCKER_BUF := $(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace bufbuild/buf
 IMAGE := ghcr.io/tendermint/docker-build-proto:latest
 DOCKER_PROTO_BUILDER := docker run -v $(shell pwd):/workspace --workdir /workspace $(IMAGE)
-PROJECTNAME=$(shell basename "$(PWD)")
+PROJECT_NAME=$(shell basename "$(PWD)")
 HTTPS_GIT := https://github.com/celestiaorg/celestia-zkevm-ibc-demo
-PACKAGE_NAME          := github.com/regen-network/protobuf v1.3.2-alpha.regen.1
-# Before upgrading the GOLANG_CROSS_VERSION, please verify that a Docker image exists with the new tag.
-# See https://github.com/goreleaser/goreleaser-cross/pkgs/container/goreleaser-cross
-GOLANG_CROSS_VERSION  ?= v1.23.1
 GHCR_REPO := ghcr.io/celestiaorg/simapp
 
 # process linker flags
@@ -22,7 +18,7 @@ BUILD_FLAGS := -tags "ledger" -ldflags '$(ldflags)'
 
 ## help: Get more info on make commands.
 help: Makefile
-	@echo " Choose a command run in "$(PROJECTNAME)":"
+	@echo " Choose a command run in "$(PROJECT_NAME)":"
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 .PHONY: help
 
@@ -75,13 +71,13 @@ proto-format:
 	@$(DOCKER_PROTO_BUILDER) find . -name '*.proto' -path "./proto/*" -exec clang-format -i {} \;
 .PHONY: proto-format
 
-## build-docker: Build the celestia-appd docker image from the current branch. Requires docker.
+## build-docker: Build the simapp docker image from the current branch. Requires docker.
 build-docker:
 	@echo "--> Building Docker image"
 	$(DOCKER) build -t $(GHCR_REPO) -f docker/Dockerfile .
 .PHONY: build-docker
 
-## publish-docker: Publish the celestia-appd docker image to the docker hub. Requires docker and authentication.
+## publish-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
 publish-docker:
 	$(DOCKER) push $(GHCR_REPO)
 .PHONY: publish-docker
@@ -94,7 +90,6 @@ lint:
 	@markdownlint --config .markdownlint.yaml '**/*.md'
 	@echo "--> Running hadolint"
 	@hadolint docker/Dockerfile
-	@hadolint docker/txsim/Dockerfile
 	@echo "--> Running yamllint"
 	@yamllint --no-warnings . -c .yamllint.yml
 .PHONY: lint
@@ -120,31 +115,25 @@ test:
 	@go test -timeout 30m ./...
 .PHONY: test
 
-# make init-simapp initializes a single local node network
-# it is useful for testing and development
-# Usage: make install && make init-simapp && simd start
-# Warning: make init-simapp will remove all data in simapp home directory
-#? init-simapp: Run scripts/init-simapp.sh
+## init-simapp: Initializes a single local node network. It is useful for testing and development. Try make install && make init-simapp && simd start
 init-simapp:
+# Warning this will remove all data in simapp home directory
 	./scripts/init-simapp.sh
+.PHONY: init-simapp
 
-
+## build-demo: Builds the demo binary into the ./build directory.
 build-demo:
 	go build -o ./build/demo ./testing/demo
 .PHONY: build-demo
 
-
+## run-demo: Runs the demo binary.
 run-demo:
 	go run ./testing/demo/main.go
 .PHONY: run-demo
 
-
-
-## deploy the IBC smart contracts
+## deploy-contracts: Deploys the IBC smart contracts.
 deploy-contracts:
 	@echo "--> Deploying IBC smart contracts"
 	@cd ./solidity-ibc-eureka/scripts && bun install
 	@cd ./solidity-ibc-eureka/scripts && forge script E2ETestDeploy.s.sol:E2ETestDeploy --rpc-url http://localhost:8545 --private-key 0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a --broadcast
 .PHONY: deploy-contracts
-
-
