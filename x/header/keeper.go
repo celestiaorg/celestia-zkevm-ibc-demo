@@ -26,19 +26,27 @@ func NewKeeper(
 	}
 }
 
-func (k Keeper) BeginBlocker(ctx sdk.Context) {
+func (k Keeper) BeginBlocker(ctx sdk.Context) error {
 	// Prune headers that are older than the retention period
-	k.PruneHeaders(ctx)
+	err := k.PruneHeaders(ctx)
+	if err != nil {
+		return err
+	}
 
 	// Save the block header
 	height := ctx.BlockHeight()
 	headerHash := ctx.HeaderHash()
-	k.SaveHeaderHash(ctx, height, headerHash)
+	err = k.SaveHeaderHash(ctx, height, headerHash)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (k Keeper) SaveHeaderHash(ctx context.Context, height int64, headerHash []byte) {
+func (k Keeper) SaveHeaderHash(ctx context.Context, height int64, headerHash []byte) error {
 	store := k.storeService.OpenKVStore(ctx)
-	store.Set(sdk.Uint64ToBigEndian(uint64(height)), headerHash)
+	err := store.Set(sdk.Uint64ToBigEndian(uint64(height)), headerHash)
+	return err
 }
 
 func (k Keeper) GetHeaderHash(ctx context.Context, height int64) ([]byte, bool) {
@@ -56,7 +64,7 @@ func (k Keeper) GetHeaderHash(ctx context.Context, height int64) ([]byte, bool) 
 }
 
 // PruneHeaders prunes block headers that are older than the retention window.
-func (k Keeper) PruneHeaders(ctx sdk.Context) {
+func (k Keeper) PruneHeaders(ctx sdk.Context) error {
 	store := k.storeService.OpenKVStore(ctx)
 	iterator, err := store.Iterator(nil, nil) // Start from the lowest key
 	if err != nil {
@@ -66,7 +74,7 @@ func (k Keeper) PruneHeaders(ctx sdk.Context) {
 
 	latestHeight, ok := k.GetLatestSavedBlockHeight(ctx)
 	if !ok {
-		return
+		return nil
 	}
 
 	// Calculate the minimum height to retain
@@ -78,12 +86,16 @@ func (k Keeper) PruneHeaders(ctx sdk.Context) {
 
 		// If the height is below the minimum height to retain, delete it
 		if height < minHeightToRetain {
-			store.Delete(iterator.Key())
+			err := store.Delete(iterator.Key())
+			if err != nil {
+				return err
+			}
 		} else {
 			// Since entries are sorted by height, we can break early
 			break
 		}
 	}
+	return nil
 }
 
 func (k Keeper) GetLatestSavedBlockHeight(ctx context.Context) (uint64, bool) {

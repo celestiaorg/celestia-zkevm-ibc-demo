@@ -33,7 +33,7 @@ If you've run `simd` in the past, you may need to reset your database before sta
 $ ./simd init [moniker] --chain-id [chain-id]
 ```
 
-The command should initialize a new working directory at the `~simapp` location. 
+The command should initialize a new working directory at the `~simapp` location.
 The `moniker` and `chain-id` can be anything, but you must use the same `chain-id` subsequently.
 
 ### 2. Create a New Key
@@ -69,7 +69,7 @@ The amount should be at least `1000000000stake`. Providing too much or too littl
 
 ### 5. Create the Genesis File
 
-A participant must create the genesis file `genesis.json` with every participant's transaction. 
+A participant must create the genesis file `genesis.json` with every participant's transaction.
 You can do this by gathering all the Genesis transactions under `config/gentx` and then executing this command:
 
 ```sh
@@ -106,5 +106,5 @@ Finally, execute this command to start your nodes:
 Now you have a small testnet that you can use to try out changes to the Cosmos SDK or CometBFT!
 
 > ⚠️ NOTE: Sometimes, creating the network through the `collect-gentxs` will fail, and validators will start in a funny state (and then panic).
-> 
+>
 > If this happens, you can try to create and start the network first with a single validator and then add additional validators using a `create-validator` transaction.

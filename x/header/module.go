@@ -82,9 +82,13 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 // IsAppModule implements the appmodule.AppModule interface.
 func (am AppModule) IsAppModule() {}
 
-func (am AppModule) BeginBlock(ctx context.Context) {
+func (am AppModule) BeginBlock(ctx context.Context) error {
 	c := sdk.UnwrapSDKContext(ctx)
-	am.keeper.BeginBlocker(c)
+	err := am.keeper.BeginBlocker(c)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // InitGenesis does nothing because no predefined state is required for this module and no params are set.

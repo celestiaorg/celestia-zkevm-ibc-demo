@@ -8,7 +8,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 
-	"github.com/celestiaorg/celestia-zkevm-ibc-demo/x/header"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ibcerrors "github.com/cosmos/ibc-go/v9/modules/core/errors"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
@@ -20,7 +19,6 @@ var _ exported.LightClientModule = (*LightClientModule)(nil)
 type LightClientModule struct {
 	cdc           codec.BinaryCodec
 	storeProvider clienttypes.StoreProvider
-	headerKeeper  header.Keeper
 }
 
 // NewLightClientModule creates and returns a new zk LightClientModule.

@@ -42,7 +42,11 @@ func RandomTrie(n int) (trie *gethtrie.Trie, vals map[string]*kv) {
 
 func initRnd() *mrand.Rand {
 	var seed [8]byte
-	crand.Read(seed[:])
+	_, err := crand.Read(seed[:])
+	if err != nil {
+		panic(fmt.Sprintf("failed to read random seed: %v", err))
+	}
+
 	rnd := mrand.New(mrand.NewSource(int64(binary.LittleEndian.Uint64(seed[:]))))
 	fmt.Printf("Seed: %x\n", seed)
 	return rnd

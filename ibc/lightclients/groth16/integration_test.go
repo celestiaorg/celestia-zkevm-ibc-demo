@@ -30,10 +30,9 @@ const (
 )
 
 var (
-	height             = clienttypes.NewHeight(0, 4)
-	newClientHeight    = clienttypes.NewHeight(1, 1)
-	upgradePath        = []string{"upgrade", "upgradedIBCState"}
-	invalidUpgradePath = []string{"upgrade", ""}
+	height          = clienttypes.NewHeight(0, 4)
+	newClientHeight = clienttypes.NewHeight(1, 1)
+	upgradePath     = []string{"upgrade", "upgradedIBCState"}
 )
 
 type ClientConfig interface {
@@ -48,8 +47,7 @@ type Grtoth16Config struct {
 }
 
 func NewGrtoth16Config() *Grtoth16Config {
-	return &Grtoth16Config{
-	}
+	return &Grtoth16Config{}
 }
 
 func (*Grtoth16Config) GetClientType() string {
@@ -113,22 +111,6 @@ func (suite *Groth16TestSuite) SetupTest() {
 	suite.valsHash = suite.valSet.Hash()
 	suite.header = suite.chainA.CreateTMClientHeader(chainID, int64(height.RevisionHeight), heightMinus1, suite.now, suite.valSet, suite.valSet, suite.valSet, suite.signers)
 	suite.ctx = app.BaseApp.NewContext(checkTx)
-}
-
-func getAltSigners(altVal *cmttypes.Validator, altPrivVal cmttypes.PrivValidator) map[string]cmttypes.PrivValidator {
-	return map[string]cmttypes.PrivValidator{altVal.Address.String(): altPrivVal}
-}
-
-func getBothSigners(suite *Groth16TestSuite, altVal *cmttypes.Validator, altPrivVal cmttypes.PrivValidator) (*cmttypes.ValidatorSet, map[string]cmttypes.PrivValidator) {
-	// Create bothValSet with both suite validator and altVal. Would be valid update
-	bothValSet := cmttypes.NewValidatorSet(append(suite.valSet.Validators, altVal))
-	// Create signer array and ensure it is in same order as bothValSet
-	_, suiteVal := suite.valSet.GetByIndex(0)
-	bothSigners := map[string]cmttypes.PrivValidator{
-		suiteVal.Address.String(): suite.privVal,
-		altVal.Address.String():   altPrivVal,
-	}
-	return bothValSet, bothSigners
 }
 
 func TestGroth16TestSuite(t *testing.T) {

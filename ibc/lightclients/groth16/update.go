@@ -13,7 +13,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
-
 )
 
 // VerifyClientMessage checks if the clientMessage is of type Header
@@ -29,7 +28,7 @@ func (cs *ClientState) VerifyClientMessage(
 	}
 }
 
-func (cs ClientState) verifyHeader(ctx context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec,
+func (cs ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec,
 	header *Header) error {
 	// sdkCtx := sdk.UnwrapSDKContext(ctx) // TODO: https://github.com/cosmos/ibc-go/issues/5917
 

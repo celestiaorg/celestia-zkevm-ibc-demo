@@ -70,7 +70,10 @@ func InitializeLightClient() error {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	BroadcastMessages(clientCtx, relayer, 200, msg)
+	_, err = BroadcastMessages(clientCtx, relayer, 200, msg)
+	if err != nil {
+		return fmt.Errorf("failed to broadcast message: %v", err)
+	}
 	return nil
 }
 
