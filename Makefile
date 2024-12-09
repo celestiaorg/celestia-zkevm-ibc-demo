@@ -131,7 +131,7 @@ run-demo:
 	go run ./testing/demo/main.go
 .PHONY: run-demo
 
-## deploy-contracts: Deploys the IBC smart contracts.
+## deploy-contracts: Deploys the IBC smart contracts on the EVM roll-up.
 deploy-contracts:
 	@echo "--> Deploying IBC smart contracts"
 	@cd ./solidity-ibc-eureka/scripts && bun install
