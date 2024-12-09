@@ -15,13 +15,11 @@ func TestVerifyMerklePatriciaTrieProof(t *testing.T) {
 	for i, prover := range makeProvers(trie) {
 
 		for _, kv := range vals {
-			proof := prover(kv.k)
+			proof, err := prover(kv.k)
+			require.NoError(t, err)
+			require.NotNil(t, proof)
 			proofBytes, err := ProofListToBytes(*proof)
 			require.NoError(t, err)
-
-			if proof == nil {
-				t.Fatalf("prover %d: missing key %x while constructing proof", i, kv.k)
-			}
 
 			val, err := VerifyMerklePatriciaTrieProof(root.Bytes(), kv.k, proofBytes)
 			if err != nil {
@@ -36,26 +34,30 @@ func TestVerifyMerklePatriciaTrieProof(t *testing.T) {
 
 // makeProvers creates Merkle trie provers based on different implementations to
 // test all variations.
-func makeProvers(trie *gethtrie.Trie) []func(key []byte) *ProofList {
-	var provers []func(key []byte) *ProofList
+func makeProvers(trie *gethtrie.Trie) []func(key []byte) (*ProofList, error) {
+	var provers []func(key []byte) (*ProofList, error)
 
 	// Create a direct trie based Merkle prover
-	provers = append(provers, func(key []byte) *ProofList {
+	provers = append(provers, func(key []byte) (*ProofList, error) {
 		var proof ProofList
-		trie.Prove(key, &proof)
-		return &proof
+		err := trie.Prove(key, &proof)
+		if err != nil {
+			return nil, err
+		}
+		return &proof, nil
 	})
 	// Create a leaf iterator based Merkle prover
-	provers = append(provers, func(key []byte) *ProofList {
+	provers = append(provers, func(key []byte) (*ProofList, error) {
 		var proof ProofList
 		if it := gethtrie.NewIterator(trie.MustNodeIterator(key)); it.Next() && bytes.Equal(key, it.Key) {
 			for _, p := range it.Prove() {
-				proof.Put(crypto.Keccak256(p), p)
+				err := proof.Put(crypto.Keccak256(p), p)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-		return &proof
+		return &proof, nil
 	})
 	return provers
 }
-
-

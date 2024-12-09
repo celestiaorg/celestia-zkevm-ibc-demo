@@ -8,7 +8,6 @@ import (
 	sdkerrors "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/mpt"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
@@ -32,10 +31,10 @@ func NewClientState(
 	genesisStateRoot []byte,
 ) *ClientState {
 	return &ClientState{
-		LatestHeight:               latestHeight,
+		LatestHeight: latestHeight,
 		// StateTransitionVerifierKey: stateTransitionVerifierKey,
-		CodeCommitment:             codeCommitment,
-		GenesisStateRoot:           genesisStateRoot,
+		CodeCommitment:   codeCommitment,
+		GenesisStateRoot: genesisStateRoot,
 	}
 }
 
@@ -89,36 +88,6 @@ func (cs ClientState) initialize(ctx context.Context, _ codec.BinaryCodec, clien
 	}
 	// set metadata for initial consensus state.
 	setConsensusMetadata(ctx, clientStore, cs.GetLatestHeight())
-	return nil
-}
-
-// verifyDelayPeriodPassed will ensure that at least delayTimePeriod amount of time and delayBlockPeriod number of blocks have passed
-// since consensus state was submitted before allowing verification to continue.
-func verifyDelayPeriodPassed(ctx sdk.Context, store storetypes.KVStore, proofHeight exported.Height, delayTimePeriod, delayBlockPeriod uint64) error {
-	// check that executing chain's timestamp has passed consensusState's processed time + delay time period
-	processedTime, ok := GetProcessedTime(store, proofHeight)
-	if !ok {
-		return sdkerrors.Wrapf(ErrProcessedTimeNotFound, "processed time not found for height: %s", proofHeight)
-	}
-	currentTimestamp := uint64(ctx.BlockTime().UnixNano())
-	validTime := processedTime + delayTimePeriod
-	// NOTE: delay time period is inclusive, so if currentTimestamp is validTime, then we return no error
-	if currentTimestamp < validTime {
-		return sdkerrors.Wrapf(ErrDelayPeriodNotPassed, "cannot verify packet until time: %d, current time: %d",
-			validTime, currentTimestamp)
-	}
-	// check that executing chain's height has passed consensusState's processed height + delay block period
-	processedHeight, ok := GetProcessedHeight(store, proofHeight)
-	if !ok {
-		return sdkerrors.Wrapf(ErrProcessedHeightNotFound, "processed height not found for height: %s", proofHeight)
-	}
-	currentHeight := clienttypes.GetSelfHeight(ctx)
-	validHeight := clienttypes.NewHeight(processedHeight.GetRevisionNumber(), processedHeight.GetRevisionHeight()+delayBlockPeriod)
-	// NOTE: delay block period is inclusive, so if currentHeight is validHeight, then we return no error
-	if currentHeight.LT(validHeight) {
-		return sdkerrors.Wrapf(ErrDelayPeriodNotPassed, "cannot verify packet until height: %s, current height: %s",
-			validHeight, currentHeight)
-	}
 	return nil
 }
 

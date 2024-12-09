@@ -17,6 +17,9 @@ import (
 func VerifyMerklePatriciaTrieProof(stateRoot []byte, key []byte, proof []byte) (value []byte, err error) {
 	rootHash := common.BytesToHash(stateRoot)
 	bytesToProofList, err := bytesToProofList(proof)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert cytes to proof list: %w", err)
+	}
 	proofDB, err := ReconstructProofDB(bytesToProofList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode proof: %w", err)
