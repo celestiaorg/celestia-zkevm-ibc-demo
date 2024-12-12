@@ -93,7 +93,7 @@ proto-format:
 	@$(DOCKER_PROTO_BUILDER) find . -name '*.proto' -path "./proto/*" -exec clang-format -i {} \;
 .PHONY: proto-format
 
-## build-docker: Build the simapp docker image from the current branch. Requires docker.
+## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
 build-simapp-docker:
 	@echo "--> Building Docker image"
 	$(DOCKER) build -t $(GHCR_REPO) -f docker/Dockerfile .
