@@ -22,15 +22,37 @@ help: Makefile
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 .PHONY: help
 
+## start: spins up all processes needed for the demo
+start:
+	@docker compose up -d
+.PHONY: start
+
+## setup: sets up the IBC clients and channels
+setup:
+	@echo "--> Setting up IBC Clients and Channels"
+.PHONY: setup
+
+## transfer: transfers tokens from simapp network to the EVM rollup
+transfer:
+	@echo "--> Transferring tokens"
+.PHONY: transfer
+
+## stop: stops all processes and removes the tmp directory
+stop:
+	@echo "--> Stopping all processes"
+	@docker compose down
+	@rm -rfm /.tmp
+.PHONY: stop
+
 ## build: Build the celestia-appd binary into the ./build directory.
-build: mod
+build-simapp: mod
 	@cd ./simapp/simd/
 	@mkdir -p build/
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
 .PHONY: build
 
 ## install: Build and install the celestia-appd binary into the $GOPATH/bin directory.
-install:
+install-simapp:
 	@echo "--> Installing simd"
 	@go install $(BUILD_FLAGS) ./simapp/simd/
 .PHONY: install
@@ -72,15 +94,15 @@ proto-format:
 .PHONY: proto-format
 
 ## build-docker: Build the simapp docker image from the current branch. Requires docker.
-build-docker:
+build-simapp-docker:
 	@echo "--> Building Docker image"
 	$(DOCKER) build -t $(GHCR_REPO) -f docker/Dockerfile .
-.PHONY: build-docker
+.PHONY: build-simapp-docker
 
 ## publish-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
-publish-docker:
+publish-simapp-docker:
 	$(DOCKER) push $(GHCR_REPO)
-.PHONY: publish-docker
+.PHONY: publish-simapp-docker
 
 ## lint: Run all linters; golangci-lint, markdownlint, hadolint, yamllint.
 lint:
@@ -116,20 +138,12 @@ test:
 .PHONY: test
 
 ## init-simapp: Initializes a single local node network. It is useful for testing and development. Try make install && make init-simapp && simd start
-init-simapp:
+run-simapp:
 # Warning this will remove all data in simapp home directory
 	./scripts/init-simapp.sh
-.PHONY: init-simapp
+.PHONY: run-simapp
 
-## build-demo: Builds the demo binary into the ./build directory.
-build-demo:
-	go build -o ./build/demo ./testing/demo
-.PHONY: build-demo
 
-## run-demo: Runs the demo binary.
-run-demo:
-	go run ./testing/demo/main.go
-.PHONY: run-demo
 
 ## deploy-contracts: Deploys the IBC smart contracts on the EVM roll-up.
 deploy-contracts:
