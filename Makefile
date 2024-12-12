@@ -137,7 +137,7 @@ test:
 	@go test -timeout 30m ./...
 .PHONY: test
 
-## init-simapp: Initializes a single local node network. It is useful for testing and development. Try make install && make init-simapp && simd start
+## run-simapp: Initializes a single local node network. It is useful for testing and development. Try make install && make init-simapp && simd start
 run-simapp:
 # Warning this will remove all data in simapp home directory
 	./scripts/init-simapp.sh
