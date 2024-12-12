@@ -99,7 +99,7 @@ build-simapp-docker:
 	$(DOCKER) build -t $(GHCR_REPO) -f docker/Dockerfile .
 .PHONY: build-simapp-docker
 
-## publish-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
+## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
 publish-simapp-docker:
 	$(DOCKER) push $(GHCR_REPO)
 .PHONY: publish-simapp-docker
