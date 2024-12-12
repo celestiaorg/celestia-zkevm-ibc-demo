@@ -44,7 +44,7 @@ stop:
 	@rm -rfm /.tmp
 .PHONY: stop
 
-## build: Build the celestia-appd binary into the ./build directory.
+## build: Build the simapp binary into the ./build directory.
 build-simapp: mod
 	@cd ./simapp/simd/
 	@mkdir -p build/
