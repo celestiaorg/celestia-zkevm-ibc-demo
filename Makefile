@@ -51,7 +51,7 @@ build-simapp: mod
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
 .PHONY: build
 
-## install: Build and install the celestia-appd binary into the $GOPATH/bin directory.
+## install: Build and install the simapp binary into the $GOPATH/bin directory.
 install-simapp:
 	@echo "--> Installing simd"
 	@go install $(BUILD_FLAGS) ./simapp/simd/
