@@ -22,11 +22,11 @@ help: Makefile
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 .PHONY: help
 
-setup-solidity-ibc-eureka:
+install-dependencies:
 	@echo "--> Setting up Solidity IBC Eureka submodule"
 	@cd ./solidity-ibc-eureka && bun install && just install-operator
 	@go run ./testing/demo/pkg/setup-env
-.PHONY: setup-solidity-ibc-eureka
+.PHONY: install-dependencies
 
 ## start: spins up all processes needed for the demo
 start: stop

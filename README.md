@@ -33,7 +33,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 1. Install contract dependencies and sp1 tendermint light client operator binary in solidity-ibc-eureka which is a requirement before deploying contracts
 
     ```shell
-    make setup-solidity-ibc-eureka
+    make install-dependencies
     ```
 
 1. Start a local development environment
