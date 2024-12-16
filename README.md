@@ -3,7 +3,7 @@
 > ⚠️ **Warning**
 > This repository is a work in progress and under active development.
 
-This repo exists to showcase transferring tokens to and from a Cosmos SDK chain (representing Celestia) and a ZK proveable EVM using the [IBC-Eureka solidity contracts](https://github.com/cosmos/solidity-ibc-eureka/tree/main/src). The diagram below is meant to detail the components involved and, at a high level, how they interact with one another.
+This repo exists to showcase transferring tokens to and from a Cosmos SDK chain (representing Celestia) and a ZK proveable EVM using the [IBC-Eureka solidity contracts](https://github.com/cosmos/solidity-ibc-eureka/blob/main/README.md). The diagram below is meant to detail the components involved and, at a high level, how they interact with one another.
 
 ![mvp-zk-accounts](./mvp-zk-accounts.png)
 
@@ -18,7 +18,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 1. Install [Foundry](https://book.getfoundry.sh/getting-started/installation)
 1. Install [Bun](https://bun.sh/)
 1. Install [Just](https://just.systems/man/en/)
-1. Install [SP1](https://succinctlabs.github.io/sp1/getting-started/install.html) (for end-to-end tests)
+1. Install [SP1](https://docs.succinct.xyz/docs/getting-started/install) (for end-to-end tests)
 
 ### Steps
 

@@ -29,7 +29,7 @@ setup-solidity-ibc-eureka:
 .PHONY: setup-solidity-ibc-eureka
 
 ## start: spins up all processes needed for the demo
-start:
+start: stop
 	@docker compose up -d
 .PHONY: start
 
@@ -50,7 +50,9 @@ transfer:
 stop:
 	@echo "--> Stopping all processes"
 	@docker compose down
-	@rm -rfm /.tmp
+	@docker compose rm
+	@echo "--> Clearing tmp directory"
+	@rm -rf .tmp
 .PHONY: stop
 
 ## build: Build the simapp binary into the ./build directory.
