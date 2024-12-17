@@ -17,6 +17,7 @@ alloy-provider = { workspace = true }
 ibc-eureka-solidity-types.workspace = true
 sp1-ics07-tendermint-prover.workspace = true
 sp1-ics07-tendermint-utils.workspace = true
+dotenv = "0.15.0"
 
 [build-dependencies]
 tonic-build.workspace = true

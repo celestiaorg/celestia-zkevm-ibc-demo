@@ -19,6 +19,8 @@ To then run the server (on port `:50001`):
 cargo run
 ```
 
+To use the SP1 Prover Network you should also populate the `SP1_PROVER` and `SP1_PRIVATE_KEY` environment variables. You can also use a `.env` file for all environment variables
+
 
 ## Protobuf
 
