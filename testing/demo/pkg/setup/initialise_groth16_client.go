@@ -120,8 +120,7 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 	}
 
 	if clientState.GetCachedValue().(*groth16.ClientState).ClientType() != consensusState.GetCachedValue().(*groth16.ConsensusState).ClientType() {
-		// TODO: why doesn't this return an error?
-		fmt.Println("Client and consensus state client types do not match")
+		return fmt.Errorf("client and consensus state client types do not match")
 	}
 
 	createClientMsgResponse, err := BroadcastMessages(clientCtx, Relayer, 200_000, createClientMsg)
@@ -130,12 +129,12 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 	}
 
 	if createClientMsgResponse.Code != 0 {
-		return fmt.Errorf("failed to create client: %v", createClientMsgResponse.RawLog)
+		return fmt.Errorf("failed to create client: %w", createClientMsgResponse.RawLog)
 	}
 
 	Groth16ClientId, err = ParseClientIDFromEvents(createClientMsgResponse.Events)
 	if err != nil {
-		return fmt.Errorf("failed to parse client id from events: %v", err)
+		return fmt.Errorf("failed to parse client id from events: %w", err)
 	}
 
 	return nil
