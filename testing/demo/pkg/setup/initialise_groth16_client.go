@@ -30,6 +30,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
+	ibctypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
@@ -119,6 +120,10 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 		Signer:         Relayer,
 	}
 
+	fmt.Printf("clientState %v\n", clientState.String())
+	fmt.Printf("consensusState %v\n", consensusState.String())
+	debug(createClientMsg)
+
 	if clientState.GetCachedValue().(*groth16.ClientState).ClientType() != consensusState.GetCachedValue().(*groth16.ConsensusState).ClientType() {
 		return fmt.Errorf("client and consensus state client types do not match")
 	}
@@ -137,6 +142,20 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 		return fmt.Errorf("failed to parse client id from events: %w", err)
 	}
 
+	return nil
+}
+
+func debug(msg *ibctypes.MsgCreateClient) error {
+	clientState, err := ibctypes.UnpackClientState(msg.ClientState)
+	if err != nil {
+		return err
+	}
+	consensusState, err := ibctypes.UnpackConsensusState(msg.ConsensusState)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("clientState.ClientType()=%s, consensusState.ClientType()=%s\n", clientState.ClientType(), consensusState.ClientType())
+	fmt.Printf("clientState.ClientType() == consensusState.ClientType() evaluates to %v\n", clientState.ClientType() == consensusState.ClientType())
 	return nil
 }
 
