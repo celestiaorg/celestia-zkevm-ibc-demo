@@ -266,7 +266,7 @@ func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bo
 		case <-time.After(pollingInterval):
 			reachedCondition, err := fn()
 			if err != nil {
-				return fmt.Errorf("error occurred while waiting for condition: %s", err)
+				return fmt.Errorf("error occurred while waiting for condition: %w", err)
 			}
 
 			if reachedCondition {

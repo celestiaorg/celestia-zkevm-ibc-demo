@@ -532,4 +532,3 @@ pyroscope_trace = false
 # inuse_objects, inuse_space, goroutines, mutex_count, mutex_duration,
 # block_count, block_duration.
 pyroscope_profile_types = ["cpu", "alloc_objects", "inuse_objects", "goroutines", "mutex_count", "mutex_duration", "block_count", "block_duration", ]
-

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"cosmossdk.io/x/tx/signing"
@@ -119,12 +120,13 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 	}
 
 	if clientState.GetCachedValue().(*groth16.ClientState).ClientType() != consensusState.GetCachedValue().(*groth16.ConsensusState).ClientType() {
+		// TODO: why doesn't this return an error?
 		fmt.Println("Client and consensus state client types do not match")
 	}
 
 	createClientMsgResponse, err := BroadcastMessages(clientCtx, Relayer, 200_000, createClientMsg)
 	if err != nil {
-		return fmt.Errorf("failed to broadcast the initial client creation message: %v", err)
+		return fmt.Errorf("failed to broadcast the initial client creation message: %w", err)
 	}
 
 	if createClientMsgResponse.Code != 0 {
@@ -328,8 +330,13 @@ type User interface {
 func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
 	var resp sdk.TxResponse
 	err := WaitForCondition(time.Second*60, time.Second*5, func() (bool, error) {
+		fmt.Printf("querying for txHash: %v\n", txHash)
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
 		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				fmt.Printf("tx not found yet so retrying...\n")
+				return false, nil
+			}
 			return false, err
 		}
 
