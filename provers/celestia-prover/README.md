@@ -10,8 +10,8 @@ The Celestia Prover is a gRPC service that generates zero-knowledge proofs for C
 To run the server you will need to clone the repo and install rust and cargo. To run the node you also need to set the following environment variables:
 
 - `TENDERMINT_RPC_URL` - the url of the tendermint chain you are proving.
-- `EVM_RPC_URL` the json rpc url of the evm chain you are generating the proofs for.
-- `EVM_CONTRACT_ADDRESS` - the evm address of the tendermint sp1 ics07 contract.
+- `RPC_URL` the json rpc url of the evm chain you are generating the proofs for.
+- `CONTRACT_ADDRESS` - the evm address of the tendermint sp1 ics07 contract.
 
 To then run the server (on port `:50001`):
 

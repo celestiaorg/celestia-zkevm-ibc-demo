@@ -35,8 +35,8 @@ pub struct ProverService {
 
 impl ProverService {
     fn new() -> ProverService {
-        let rpc_url = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not set");
-        let contract_address = env::var("EVM_CONTRACT_ADDRESS").expect("EVM_CONTRACT_ADDRESS not set");
+        let rpc_url = env::var("RPC_URL").expect("RPC_URL not set");
+        let contract_address = env::var("CONTRACT_ADDRESS").expect("CONTRACT_ADDRESS not set");
         let url = Url::parse(rpc_url.as_str()).expect("Failed to parse URL");
 
         ProverService {
@@ -81,6 +81,8 @@ impl Prover for ProverService {
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| Status::internal(e.to_string()))?
             .as_secs();
+
+        println!("proving from height {:?} to height {:?}", &trusted_consensus_state.height, &proposed_header.height);
 
         let proof = self.tendermint_prover.generate_proof(
             &client_state,

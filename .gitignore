@@ -1,4 +1,4 @@
 .tmp
 build
-target
-provers/celestia-prover/proto_descriptor.bin
+**/target
+*.bin
