@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+
 	"math/big"
 	"os"
 	"os/exec"
@@ -22,8 +23,8 @@ import (
 )
 
 const (
-	channelId    = "channel-0"
-	firtClientID = "07-tendermint-0"
+	channelId     = "channel-0"
+	firstClientID = "07-tendermint-0"
 )
 
 var TendermintLightClientID string
@@ -38,78 +39,93 @@ type ContractAddresses struct {
 	ICSCore         string `json:"icsCore"`
 }
 
-func DeployContracts() error {
-	fmt.Println("Deploying IBC smart contracts...")
+func InitializeSp1TendermintLightClientOnReth() error {
+	fmt.Println("Deploying IBC smart contracts on the reth node...")
 
-	// Define the deployment command
-	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
-
-	// Export PRIVATE_KEY
-	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
-
-	// Set the working directory
-	cmd.Dir = "./solidity-ibc-eureka/scripts"
-
-	// Direct the command's output to the standard output and standard error of the Go program
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Run the command
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to deploy contracts: %v", err)
+	if err := runDeploymentCommand(); err != nil {
+		return err
 	}
 
-	// print contract addresses from broadcast run-latest.json
-	filePath := "./solidity-ibc-eureka/broadcast/E2ETestDeploy.s.sol/80087/run-latest.json"
-
-	// Read the JSON file
-	file, err := os.ReadFile(filePath)
+	addresses, err := extractDeployedContractAddresses()
 	if err != nil {
-		fmt.Println("Error reading file:", err)
-		os.Exit(1)
+		return err
 	}
-
-	// Parse JSON into a map
-	var runLatest map[string]interface{}
-	if err := json.Unmarshal(file, &runLatest); err != nil {
-		return fmt.Errorf("Error unmarshalling JSON: %w", err)
-	}
-
-	// Extract and print the contract addresses
-	returns, ok := runLatest["returns"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("no valid returns found")
-	}
-
-	returnValue, ok := returns["0"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("no valid return value found")
-	}
-
-	value, ok := returnValue["value"].(string)
-	if !ok {
-		return fmt.Errorf("no valid value found")
-	}
-
-	// Unescape the JSON string
-	unescapedValue := strings.ReplaceAll(value, "\\\"", "\"")
-
-	var addresses ContractAddresses
-	if err := json.Unmarshal([]byte(unescapedValue), &addresses); err != nil {
-		return fmt.Errorf("error unmarshalling contract addresses: %w", err)
-	}
-
 	fmt.Println("Contract Addresses:", addresses)
-
-	ethChainId := big.NewInt(80087)
-	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
 		return fmt.Errorf("failed to connect to ethereum client: %v", err)
 	}
 
-	// get ics core contract
+	if err := createChannelAndCounterpartyOnReth(addresses, ethClient); err != nil {
+		return err
+	}
+	fmt.Println("Channel and counterparty created successfully on reth node")
+
+	if err := createCounterpartyOnSimapp(); err != nil {
+		return err
+	}
+	fmt.Println("Counterparty created successfully on simapp")
+
+	return nil
+
+}
+
+func runDeploymentCommand() error {
+	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
+	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
+	cmd.Dir = "./solidity-ibc-eureka/scripts"
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to deploy contracts: %v", err)
+	}
+
+	return nil
+}
+
+func extractDeployedContractAddresses() (ContractAddresses, error) {
+	filePath := "./solidity-ibc-eureka/broadcast/E2ETestDeploy.s.sol/80087/run-latest.json"
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		return ContractAddresses{}, fmt.Errorf("error reading file: %v", err)
+	}
+
+	var runLatest map[string]interface{}
+	if err := json.Unmarshal(file, &runLatest); err != nil {
+		return ContractAddresses{}, fmt.Errorf("error unmarshalling JSON: %v", err)
+	}
+
+	returns, ok := runLatest["returns"].(map[string]interface{})
+	if !ok {
+		return ContractAddresses{}, fmt.Errorf("no valid returns found")
+	}
+
+	returnValue, ok := returns["0"].(map[string]interface{})
+	if !ok {
+		return ContractAddresses{}, fmt.Errorf("no valid return value found")
+	}
+
+	value, ok := returnValue["value"].(string)
+	if !ok {
+		return ContractAddresses{}, fmt.Errorf("no valid value found")
+	}
+
+	unescapedValue := strings.ReplaceAll(value, "\\\"", "\"")
+
+	var addresses ContractAddresses
+	if err := json.Unmarshal([]byte(unescapedValue), &addresses); err != nil {
+		return ContractAddresses{}, fmt.Errorf("error unmarshalling contract addresses: %v", err)
+	}
+
+	return addresses, nil
+}
+
+func createChannelAndCounterpartyOnReth(addresses ContractAddresses, ethClient *ethclient.Client) error {
+	ethChainId := big.NewInt(80087)
+	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
+
 	icsCoreContract, err := icscore.NewContract(ethcommon.HexToAddress(addresses.ICSCore), ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
@@ -132,27 +148,29 @@ func DeployContracts() error {
 		return fmt.Errorf("failed to add channel: %v", err)
 	}
 
-	receipt := GetTxReciept(context.Background(), ethClient, tx.Hash())
+	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
 
 	event, err := GetEvmEvent(receipt, icsCoreContract.ParseICS04ChannelAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
-
 	if event.Channel.CounterpartyId == channelId {
 		fmt.Println("counterparty channel added successfully")
 	} else {
 		return fmt.Errorf("counterparty channel not set properly on reth node")
 	}
 
-	if event.ChannelId == firtClientID {
+	if event.ChannelId == firstClientID {
 		fmt.Println("channel added successfully")
 	} else {
 		return fmt.Errorf("channel not set properly on reth node")
 	}
 	TendermintLightClientID = event.ChannelId
 
-	// Now that reth contracts are deployed and evm channel is created, we can create counterparty on simapp
+	return nil
+}
+
+func createCounterpartyOnSimapp() error {
 	fmt.Println("Creating counterparty on simapp...")
 
 	clientCtx, err := SetupClientContext()
@@ -199,7 +217,7 @@ func GetTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclie
 	return txOpts
 }
 
-func GetTxReciept(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
+func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
 	var receipt *ethtypes.Receipt
 	var err error
 	err = WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
@@ -255,16 +273,5 @@ func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bo
 				return nil
 			}
 		}
-	}
-}
-
-func main() {
-	err := DeployContracts()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	if err := InitializeLightClient(); err != nil {
-		fmt.Println(err)
 	}
 }

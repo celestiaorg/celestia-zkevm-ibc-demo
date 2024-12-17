@@ -11,8 +11,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /beacon-kit/testing/files/entrypoint.sh
     depends_on:
-      - celestia-network-bridge
-      - reth
+      celestia-network-validator:
+        condition: service_healthy
+      celestia-network-bridge:
+        condition: service_healthy
+      reth:
+        condition: service_started
     networks:
       - beacon-network
 
@@ -51,10 +55,10 @@ services:
       - "26657:26657"
     entrypoint: /testapp_files/entrypoint.sh
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:26657/status"]
-      interval: 5s
+      test: ["CMD-SHELL", "/bin/sh -c 'BLOCK_HEIGHT=$(curl -sf http://localhost:26657/status | jq -r .result.sync_info.latest_block_height); if [ \"$$BLOCK_HEIGHT\" -gt 1 ]; then exit 0; else echo \"Block height too low: $$BLOCK_HEIGHT\"; exit 1; fi'"]
+      interval: 1s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 5s
     networks:
       - beacon-network
@@ -69,13 +73,19 @@ services:
       - ./testing/files/celestia-bridge:/testapp_files
       - ./.tmp/celestia-bridge:/home/celestia
     entrypoint: /testapp_files/entrypoint.sh
-    command: celestia bridge start --p2p.network private --core.ip celestia-network-validator --rpc.addr 0.0.0.0:26658 --keyring.keyname bridge
+    command: celestia bridge start --p2p.network private --core.ip celestia-network-validator --rpc.addr 0.0.0.0 --rpc.port 26658 --keyring.keyname bridge
     ports:
       - "26658:26658"
       - "2121:2121"
     depends_on:
       celestia-network-validator:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "AUTH_TOKEN=$(celestia bridge auth read --node.store=/home/celestia 2>/dev/null | tail -n 1); OUTPUT=$(curl -sf --max-time 0.5 -X POST -H \"Content-type: application/json\" -H \"Accept: application/json\" -H \"Authorization: Bearer $$AUTH_TOKEN\" -d '{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"header.SyncWait\",\"params\":[]}' http://0.0.0.0:26658); if [ $$? -eq 0 ]; then exit 0; else echo \"Catching up. $$OUTPUT\"; exit 1; fi "]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
     networks:
       - beacon-network
 

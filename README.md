@@ -3,7 +3,7 @@
 > ⚠️ **Warning**
 > This repository is a work in progress and under active development.
 
-This repo exists to showcase transferring tokens to and from a Cosmos SDK chain (representing Celestia) and a ZK proveable EVM using the [IBC-Eureka solidity contracts](https://github.com/cosmos/solidity-ibc-eureka/tree/main/src). The diagram below is meant to detail the components involved and, at a high level, how they interact with one another.
+This repo exists to showcase transferring tokens to and from a Cosmos SDK chain (representing Celestia) and a ZK proveable EVM using the [IBC-Eureka solidity contracts](https://github.com/cosmos/solidity-ibc-eureka/blob/main/README.md). The diagram below is meant to detail the components involved and, at a high level, how they interact with one another.
 
 ![mvp-zk-accounts](./mvp-zk-accounts.png)
 
@@ -18,7 +18,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 1. Install [Foundry](https://book.getfoundry.sh/getting-started/installation)
 1. Install [Bun](https://bun.sh/)
 1. Install [Just](https://just.systems/man/en/)
-1. Install [SP1](https://succinctlabs.github.io/sp1/getting-started/install.html) (for end-to-end tests)
+1. Install [SP1](https://docs.succinct.xyz/docs/getting-started/install) (for end-to-end tests)
 
 ### Steps
 
@@ -30,33 +30,33 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
+1. Install contract dependencies and sp1 tendermint light client operator binary in solidity-ibc-eureka which is a requirement before deploying contracts
+
+    ```shell
+    make install-dependencies
+    ```
+
 1. Start a local development environment
 
     ```shell
-    docker compose up --detach
+    make start
     ```
 
     > [!TIP]: Double check that all 5 containers are started. Currently: the bridge might fail because it depends on the validator being available. If this happens, wait until the validator is available then start the bridge and beacond node again.
 
-1. Copy the `.env` file into `./solidity-ibc-eureka`
+1. Set up IBC Clients and Channels:
+
+    - Generate the `contracts/script/genesis.json` file which contains the initialization parameters for the `SP1ICS07Tendermint` light client contract.
+    - Initialize Groth16 light client on simapp.
+    - Create a channel on simapp.
+    - Deploy IBC contracts on the Reth node.
+    - Create a channel on the reth node.
+    - Create a counterparty on the reth node. (it will be pointing to groth16 client ID on simapp)
+    - Create a counterparty on the simapp. (it will be pointing to tendermint client ID on reth)
 
     ```shell
-    cp .env.example .solidity-ibc-eureka/.env
+    make setup
     ```
-
-1. Deploy the Tendermint light client smart contract on the EVM roll-up. Note: this may not be necessary.
-
-    ```shell
-    cd solidity-ibc-eureka && just deploy-sp1-ics07
-    ```
-
-1. Deploy smart contracts on the EVM roll-up.
-
-    ```shell
-    make deploy-contracts
-    ```
-
-    > [!TIP]: While deploying contracts, if you hit an error like: `[Revert] vm.envString: environment variable "E2E_FAUCET_ADDRESS" not found` then comment out the lines that use that environment variable from `./solidity-ibc-eureka/E2ETestDeploy.s.sol`.
 
 ### Helpful commands
 

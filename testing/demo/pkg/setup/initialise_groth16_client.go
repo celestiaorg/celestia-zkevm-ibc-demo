@@ -29,6 +29,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
@@ -42,35 +43,22 @@ const Relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 
 var Groth16ClientId string
 
-func InitializeLightClient() error {
+func InitializeGroth16LightClientOnSimapp() error {
 	fmt.Println("Initializing the groth16 light client")
-	// ETH SET UP
+
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
 		return fmt.Errorf("failed to connect to ethereum client: %v", err)
 	}
 
-	// retrieve the genesis block
-	genesisBlock, err := ethClient.BlockByNumber(context.Background(), big.NewInt(0))
+	genesisBlock, latestBlock, err := getGenesisAndLatestBlock(ethClient)
 	if err != nil {
-		return fmt.Errorf("failed to get genesis block: %v", err)
+		return err
 	}
 
-	latestBlock, err := ethClient.BlockByNumber(context.Background(), nil)
+	clientState, consensusState, err := createClientAndConsensusState(genesisBlock, latestBlock)
 	if err != nil {
-		return fmt.Errorf("failed to get latest block: %v", err)
-	}
-
-	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
-	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
-	if err != nil {
-		return fmt.Errorf("failed to create client state any: %v", err)
-	}
-	latestBlockTime := time.Unix(int64(latestBlock.Time()), 0)
-	consensusState := groth16.NewConsensusState(latestBlockTime, latestBlock.Root().Bytes())
-	consensusStateAny, err := cdctypes.NewAnyWithValue(consensusState)
-	if err != nil {
-		return fmt.Errorf("failed to create consensus state any: %v", err)
+		return err
 	}
 
 	// simapp address
@@ -79,17 +67,61 @@ func InitializeLightClient() error {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
+	if err := createClientOnSimapp(clientCtx, clientState, consensusState); err != nil {
+		return err
+	}
+	fmt.Println("Groth16 client created successfully on simapp")
+
+	if err := createChannelOnSimapp(clientCtx); err != nil {
+		return err
+	}
+	fmt.Println("Channel created successfully on simapp")
+
+	return nil
+}
+
+func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
+	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
+	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create client state any: %v", err)
+	}
+
+	latestBlockTime := time.Unix(int64(latestBlock.Time()), 0)
+	consensusState := groth16.NewConsensusState(latestBlockTime, latestBlock.Root().Bytes())
+	consensusStateAny, err := cdctypes.NewAnyWithValue(consensusState)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create consensus state any: %v", err)
+	}
+
+	return clientStateAny, consensusStateAny, nil
+}
+
+func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *ethtypes.Block, error) {
+	genesisBlock, err := ethClient.BlockByNumber(context.Background(), big.NewInt(0))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get genesis block: %v", err)
+	}
+
+	latestBlock, err := ethClient.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
+	}
+
+	return genesisBlock, latestBlock, nil
+}
+
+func createClientOnSimapp(clientCtx client.Context, clientState, consensusState *cdctypes.Any) error {
 	createClientMsg := &clienttypes.MsgCreateClient{
-		ClientState:    clientStateAny,
-		ConsensusState: consensusStateAny,
+		ClientState:    clientState,
+		ConsensusState: consensusState,
 		Signer:         Relayer,
 	}
 
-	if clientState.ClientType() != consensusState.ClientType() {
+	if clientState.GetCachedValue().(*groth16.ClientState).ClientType() != consensusState.GetCachedValue().(*groth16.ConsensusState).ClientType() {
 		fmt.Println("Client and consensus state client types do not match")
 	}
 
-	// broadcast the initial client creation message
 	createClientMsgResponse, err := BroadcastMessages(clientCtx, Relayer, 200_000, createClientMsg)
 	if err != nil {
 		return fmt.Errorf("failed to broadcast the initial client creation message: %v", err)
@@ -99,13 +131,15 @@ func InitializeLightClient() error {
 		return fmt.Errorf("failed to create client: %v", createClientMsgResponse.RawLog)
 	}
 
-	// parse the client id from the events
-	Groth16ClientId, err := ParseClientIDFromEvents(createClientMsgResponse.Events)
+	Groth16ClientId, err = ParseClientIDFromEvents(createClientMsgResponse.Events)
 	if err != nil {
 		return fmt.Errorf("failed to parse client id from events: %v", err)
 	}
 
-	// establish transfer channel for groth16 client on simapp
+	return nil
+}
+
+func createChannelOnSimapp(clientCtx client.Context) error {
 	cosmosMerklePathPrefix := commitmenttypesv2.NewMerklePath([]byte("simd"))
 	msgCreateChannelResp, err := BroadcastMessages(clientCtx, Relayer, 200_000, &channeltypesv2.MsgCreateChannel{
 		ClientId:         Groth16ClientId,
@@ -326,9 +360,3 @@ func attributeByKey(attributes []abci.EventAttribute, key string) (abci.EventAtt
 	}
 	return attributes[idx], true
 }
-
-// func main() {
-// 	if err := InitializeLightClient(); err != nil {
-// 		fmt.Println(err)
-// 	}
-// }
