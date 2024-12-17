@@ -72,7 +72,7 @@ mod-verify: mod
 ## proto-gen: Generate protobuf files. Requires docker.
 proto-gen:
 	@echo "--> Generating Protobuf files"
-	$(DOCKER) run --rm -v $(CURDIR):/workspace --workdir /workspace tendermintdev/sdk-proto-gen:v0.7 sh ./scripts/protocgen.sh
+	$(DOCKER_BUF) generate
 .PHONY: proto-gen
 
 ## proto-lint: Lint protobuf files. Requires docker.

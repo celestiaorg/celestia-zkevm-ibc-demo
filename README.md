@@ -74,3 +74,15 @@ docker logs reth
 # State is persisted in the .tmp directory. Remove .tmp to start fresh:
 rm -rf .tmp
 ```
+
+
+## Contributing
+
+### Proto Generation
+
+This repo uses protobuf to define the interfaces between several services. To help with this, this
+repo relies on [buf](https://buf.build). If you modify the protos you can regenerate them using:
+
+```
+buf generate
+```
