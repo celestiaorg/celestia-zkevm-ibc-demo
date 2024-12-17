@@ -45,7 +45,7 @@ const Relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 var Groth16ClientId string
 
 func InitializeGroth16LightClientOnSimapp() error {
-	fmt.Println("Initializing the groth16 light client")
+	fmt.Println("Initializing the groth16 light client on the simapp...")
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
@@ -129,7 +129,7 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 	}
 
 	if createClientMsgResponse.Code != 0 {
-		return fmt.Errorf("failed to create client: %w", createClientMsgResponse.RawLog)
+		return fmt.Errorf("failed to create client: %v", createClientMsgResponse.RawLog)
 	}
 
 	Groth16ClientId, err = ParseClientIDFromEvents(createClientMsgResponse.Events)
