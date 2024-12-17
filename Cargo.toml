@@ -1,0 +1,28 @@
+[workspace]
+members = [
+    "provers/celestia-prover",
+]
+resolver = "2"
+
+[workspace.package]
+repository = "https://github.com/celestiaorg/celestia-zkevm-ibc-demo"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+tonic = { version = "0.12", features = ["transport", "codegen", "prost"] }
+tonic-build = "0.12"
+tonic-reflection = "0.12"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+prost = "0.13"
+reqwest = { version = "0.12", features = ["json"] }
+alloy = { version = "0.8.1", features = ["providers"] }
+alloy-primitives = "0.8"
+alloy-provider = { version = "0.8.1", features = ["default"] }
+tendermint-rpc = "0.40"
+ibc-client-tendermint-types = "0.56"
+
+ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/solidity", features = ["rpc"]}
+sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/prover"}
+sp1-ics07-tendermint-utils = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/utils"}

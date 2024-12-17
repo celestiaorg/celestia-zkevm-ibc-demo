@@ -1,7 +1,6 @@
 use tonic::{transport::Server, Request, Response, Status};
 use std::fs;
 use std::env;
-use ibc_client_tendermint_types::ConsensusState;
 // Import the generated proto rust code
 pub mod prover {
     tonic::include_proto!("celestia.prover.v1");
@@ -19,6 +18,7 @@ use sp1_ics07_tendermint_prover::{
 use tendermint_rpc::HttpClient;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use ibc_eureka_solidity_types::sp1_ics07::{
+    IICS07TendermintMsgs::{ConsensusState},
     sp1_ics07_tendermint,
 };
 use reqwest::Url;
@@ -74,7 +74,7 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let trusted_consensus_state = trusted_light_block.to_consensus_state().into();
+        let trusted_consensus_state: ConsensusState = trusted_light_block.to_consensus_state().into();
         let proposed_header = target_light_block.into_header(&trusted_light_block);
 
         let now = std::time::SystemTime::now()
@@ -82,7 +82,7 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?
             .as_secs();
 
-        println!("proving from height {:?} to height {:?}", &trusted_consensus_state.height, &proposed_header.height);
+        println!("proving from height {:?} to height {:?}", &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height);
 
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
@@ -138,7 +138,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(&file_descriptor_set)
-                .build()
+                .build_v1()
                 .unwrap()
         )
         .serve(addr)

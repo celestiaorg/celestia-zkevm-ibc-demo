@@ -1,21 +1,22 @@
 [package]
 name = "celestia-prover"
 version = "0.1.0"
-edition = "2021"
+edition = { workspace = true }
 
 [dependencies]
-tonic = "0.10"
-prost = "0.12"
-tokio = { version = "1.0", features = ["full"] }
+tonic.workspace = true
+prost.workspace = true
+tokio = { workspace = true, features = ["full"] }
 futures = "0.3"
-tonic-reflection = "0.10"
-tendermint-rpc = { version = "0.40.0", features = ["http-client"] }
-ibc-client-tendermint-types = "0.56.0"
-reqwest = "0.12.9"
-alloy = { version = "0.7", default-features = false }
-ibc-eureka-solidity-types = { path = "../../solidity-ibc-eureka/packages/solidity", features = ["rpc"]}
-sp1-ics07-tendermint-prover = { path = "../../solidity-ibc-eureka/packages/prover"}
-sp1-ics07-tendermint-utils = { path = "../../solidity-ibc-eureka/packages/utils", default-features = false }
+tonic-reflection.workspace = true
+tendermint-rpc = { workspace = true, features = ["http-client"] }
+ibc-client-tendermint-types.workspace = true
+reqwest.workspace = true
+alloy = { workspace = true, features = ["providers"] }
+alloy-provider = { workspace = true }
+ibc-eureka-solidity-types.workspace = true
+sp1-ics07-tendermint-prover.workspace = true
+sp1-ics07-tendermint-utils.workspace = true
 
 [build-dependencies]
-tonic-build = "0.10"
+tonic-build.workspace = true
