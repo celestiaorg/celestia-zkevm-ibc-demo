@@ -3285,6 +3285,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-membership"
+version = "0.1.0"
+
+[[package]]
+name = "mock-update-client"
+version = "0.1.0"
+dependencies = [
+ "alloy-sol-types",
+ "bincode",
+ "ibc-client-tendermint-types",
+ "ibc-eureka-solidity-types",
+ "serde_cbor",
+ "sp1-zkvm",
+]
+
+[[package]]
 name = "multimap"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5297,6 +5313,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp1-lib"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a5729da1b05d56c01457e5ecabdc77f1cc941df23f2921163a2f325aec22428"
+dependencies = [
+ "bincode",
+ "serde",
+]
+
+[[package]]
 name = "sp1-primitives"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5552,6 +5578,21 @@ dependencies = [
  "sysinfo",
  "thiserror 1.0.69",
  "tracing",
+]
+
+[[package]]
+name = "sp1-zkvm"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ea02449a9dcaab67219f7b3442ab51b45ae40e7b04f205382295936087fe1d5"
+dependencies = [
+ "cfg-if",
+ "getrandom",
+ "lazy_static",
+ "libm",
+ "rand",
+ "sha2 0.10.8",
+ "sp1-lib",
 ]
 
 [[package]]
