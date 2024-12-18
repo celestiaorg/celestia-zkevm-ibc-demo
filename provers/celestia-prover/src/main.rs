@@ -24,6 +24,7 @@ use ibc_eureka_solidity_types::sp1_ics07::{
 use reqwest::Url;
 use alloy::providers::ProviderBuilder;
 use alloy::primitives::Address;
+use ibc_core_commitment_types::merkle::MerkleProof;
 
 pub struct ProverService {
     tendermint_prover: SP1ICS07TendermintProver<UpdateClientProgram>,
@@ -105,18 +106,34 @@ impl Prover for ProverService {
         request: Request<ProveMembershipRequest>,
     ) -> Result<Response<ProveMembershipResponse>, Status> {
         println!("Got membership request: {:?}", request);
+        let inner_request = request.into_inner();
 
-        // let light_block = self.tendermint_rpc_client.get_light_block(request.height).await.map_err(|e| Status::internal(e.to_string()))?;
+        let trusted_block = self.tendermint_rpc_client.get_light_block(Some(inner_request.height as u32))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        // let proof = self.membership_prover.generate_proof(
-        //     &light_block.signed_header.state_root,
-        //     request.kv_proofs,
-        // );
+
+        let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> = 
+            futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
+                let path = vec![b"ibc".into(), path.into_bytes()];
+
+                let (value, proof) = self.tendermint_rpc_client.prove_path(&path, trusted_block.signed_header.header.height.value() as u32).await?;
+
+                anyhow::Ok((path, value, proof))
+            }))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        
+        println!("Generating membership proof for app hash {:?}", &trusted_block.signed_header.header.app_hash.as_bytes());
+        let proof = self.membership_prover.generate_proof(
+            &trusted_block.signed_header.header.app_hash.as_bytes(),
+            key_proofs,
+        );
 
         // Implement your membership proof logic here
         let response = ProveMembershipResponse {
-            proof: vec![], // Replace with actual proof
-            height: 0,
+            proof: proof.bytes().to_vec(),
+            height: trusted_block.signed_header.header.height.value() as i64,
         };
 
         Ok(Response::new(response))

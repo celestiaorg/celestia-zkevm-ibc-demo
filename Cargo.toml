@@ -22,6 +22,7 @@ alloy-primitives = "0.8"
 alloy-provider = { version = "0.8.1", features = ["default"] }
 tendermint-rpc = "0.40"
 ibc-client-tendermint-types = "0.56"
+ibc-core-commitment-types   = "0.56"
 
 ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/solidity", features = ["rpc"]}
 sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/prover"}

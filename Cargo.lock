@@ -1343,9 +1343,11 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "alloy-provider",
+ "anyhow",
  "dotenv",
  "futures",
  "ibc-client-tendermint-types",
+ "ibc-core-commitment-types",
  "ibc-eureka-solidity-types",
  "prost",
  "reqwest 0.12.9",

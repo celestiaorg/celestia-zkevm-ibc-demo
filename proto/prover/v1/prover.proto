@@ -24,7 +24,7 @@ message KeyValuePair {
 
 message ProveMembershipRequest {
   int64 height = 1;
-  repeated KeyValuePair key_value_pairs = 2;
+  repeated string key_paths = 2;
 }
 
 message ProveMembershipResponse {
