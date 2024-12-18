@@ -18,7 +18,7 @@ use sp1_ics07_tendermint_prover::{
 use tendermint_rpc::HttpClient;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use ibc_eureka_solidity_types::sp1_ics07::{
-    IICS07TendermintMsgs::{ConsensusState},
+    IICS07TendermintMsgs::ConsensusState,
     sp1_ics07_tendermint,
 };
 use reqwest::Url;
@@ -26,7 +26,7 @@ use alloy::providers::ProviderBuilder;
 use alloy::primitives::Address;
 use ibc_core_commitment_types::merkle::MerkleProof;
 
-pub struct ProverService {
+ pub struct ProverService {
     tendermint_prover: SP1ICS07TendermintProver<UpdateClientProgram>,
     tendermint_rpc_client: HttpClient,
     membership_prover: SP1ICS07TendermintProver<MembershipProgram>,
