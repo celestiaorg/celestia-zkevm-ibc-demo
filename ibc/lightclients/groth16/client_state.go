@@ -44,7 +44,7 @@ func (cs ClientState) ClientType() string {
 	return Groth16ClientType
 }
 
-// GetLatestHeight returns latest block height.
+// GetLatestClientHeight returns latest block height.
 func (cs ClientState) GetLatestClientHeight() exported.Height {
 	return clienttypes.Height{
 		RevisionNumber: 0,
