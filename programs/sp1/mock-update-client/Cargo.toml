@@ -1,3 +1,4 @@
+cargo-features = ["edition2024"]
 [package]
 name = "mock-update-client"
 version = "0.1.0"
