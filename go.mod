@@ -35,7 +35,6 @@ require (
 	github.com/consensys/gnark-crypto v0.14.0
 	github.com/cosmos/solidity-ibc-eureka/abigen v0.0.0-20241207083532-66bed7cfbbe1
 	github.com/ethereum/go-ethereum v1.14.12
-	github.com/gogo/protobuf v1.3.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.2
@@ -127,6 +126,7 @@ require (
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
