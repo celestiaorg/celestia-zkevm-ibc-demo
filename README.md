@@ -56,6 +56,12 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make setup
     ```
 
+1. Transfer tokens from simapp to the EVM roll-up.
+
+    ```shell
+    make transfer
+    ```
+
 ### Helpful commands
 
 ```shell
