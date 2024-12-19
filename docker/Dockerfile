@@ -1,4 +1,4 @@
-# Stage 1: generate txsim binary
+# Stage 1: Generate the simapp binary (simd)
 FROM --platform=$BUILDPLATFORM docker.io/golang:1.23.1-alpine3.20 as builder
 
 ARG TARGETOS
@@ -19,9 +19,9 @@ WORKDIR /celestia_zkevm_ibc_demo
 
 RUN uname -a &&\
     CGO_ENABLED=${CGO_ENABLED} GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    make build
+    make build-simapp
 
-# Stage 2: create a minimal image with the binary
+# Stage 2: Create a minimal image with just the binary
 FROM docker.io/alpine:3.20
 
 # Use UID 10,001 because UIDs below 10,000 are a security risk.
@@ -45,7 +45,7 @@ RUN apk update && apk add --no-cache \
     -s /sbin/nologin \
     -u ${UID}
 
-# Copy in the txsim binary
+# Copy in the simd binary
 COPY --from=builder /celestia_zkevm_ibc_demo/build/simd /bin/simd
 
 USER ${USER_NAME}

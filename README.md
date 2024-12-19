@@ -1,6 +1,6 @@
 # ZK-EVM X Celestia Token Transfer Demo
 
-> ⚠️ **Warning**
+> [!WARNING]
 > This repository is a work in progress and under active development.
 
 This repo exists to showcase transferring tokens to and from a Cosmos SDK chain (representing Celestia) and a ZK proveable EVM using the [IBC-Eureka solidity contracts](https://github.com/cosmos/solidity-ibc-eureka/blob/main/README.md). The diagram below is meant to detail the components involved and, at a high level, how they interact with one another.
@@ -30,7 +30,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
-1. Install contract dependencies and sp1 tendermint light client operator binary in solidity-ibc-eureka which is a requirement before deploying contracts
+1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
 
     ```shell
     make install-dependencies
@@ -42,17 +42,15 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make start
     ```
 
-    > [!TIP]: Double check that all 5 containers are started. Currently: the bridge might fail because it depends on the validator being available. If this happens, wait until the validator is available then start the bridge and beacond node again.
-
-1. Set up IBC Clients and Channels:
+1. Set up IBC clients and channels:
 
     - Generate the `contracts/script/genesis.json` file which contains the initialization parameters for the `SP1ICS07Tendermint` light client contract.
     - Initialize Groth16 light client on simapp.
     - Create a channel on simapp.
     - Deploy IBC contracts on the Reth node.
-    - Create a channel on the reth node.
-    - Create a counterparty on the reth node. (it will be pointing to groth16 client ID on simapp)
-    - Create a counterparty on the simapp. (it will be pointing to tendermint client ID on reth)
+    - Create a channel on the Reth node.
+    - Create a counterparty on the Reth node which points to the groth16 client ID on simapp.
+    - Create a counterparty on the simapp which points to the tendermint client ID on Reth.
 
     ```shell
     make setup

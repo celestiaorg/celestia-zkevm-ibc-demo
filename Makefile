@@ -22,18 +22,19 @@ help: Makefile
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 .PHONY: help
 
+## install-dependencies: Install all dependencies needed for the demo.
 install-dependencies:
 	@echo "--> Setting up Solidity IBC Eureka submodule"
 	@cd ./solidity-ibc-eureka && bun install && just install-operator
 	@go run ./testing/demo/pkg/setup-env
 .PHONY: install-dependencies
 
-## start: spins up all processes needed for the demo
+## start: Start all processes needed for the demo.
 start: stop
 	@docker compose up -d
 .PHONY: start
 
-## setup: sets up the IBC clients and channels
+## setup: Set up the IBC clients and channels.
 setup:
 	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
 	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
@@ -41,12 +42,12 @@ setup:
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
 
-## transfer: transfers tokens from simapp network to the EVM rollup
+## transfer: Transfer tokens from simapp network to the EVM rollup.
 transfer:
 	@echo "--> Transferring tokens"
 .PHONY: transfer
 
-## stop: stops all processes and removes the tmp directory
+## stop: Stop all processes and removes the tmp directory.
 stop:
 	@echo "--> Stopping all processes"
 	@docker compose down
@@ -55,18 +56,18 @@ stop:
 	@rm -rf .tmp
 .PHONY: stop
 
-## build: Build the simapp binary into the ./build directory.
+## build-simapp: Build the simapp binary into the ./build directory.
 build-simapp: mod
 	@cd ./simapp/simd/
 	@mkdir -p build/
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
-.PHONY: build
+.PHONY: build-simapp
 
-## install: Build and install the simapp binary into the $GOPATH/bin directory.
+## install-simapp: Build and install the simapp binary into the $GOPATH/bin directory.
 install-simapp:
 	@echo "--> Installing simd"
 	@go install $(BUILD_FLAGS) ./simapp/simd/
-.PHONY: install
+.PHONY: install-simapp
 
 ## mod: Update all go.mod files.
 mod:
@@ -148,9 +149,8 @@ test:
 	@go test -timeout 30m ./...
 .PHONY: test
 
-## run-simapp: Initializes a single local node network. It is useful for testing and development. Try make install && make init-simapp && simd start
+## run-simapp: Initializes a single local node network. It is useful for testing and development.
 run-simapp:
 # Warning this will remove all data in simapp home directory
 	./scripts/init-simapp.sh
 .PHONY: run-simapp
-

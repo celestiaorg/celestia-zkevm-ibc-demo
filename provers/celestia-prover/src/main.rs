@@ -38,7 +38,7 @@ impl ProverService {
     fn new() -> ProverService {
         let rpc_url = env::var("RPC_URL").expect("RPC_URL not set");
         let contract_address = env::var("CONTRACT_ADDRESS").expect("CONTRACT_ADDRESS not set");
-        let url = Url::parse(rpc_url.as_str()).expect("Failed to parse URL");
+        let url = Url::parse(rpc_url.as_str()).expect("Failed to parse RPC_URL");
 
         ProverService {
             tendermint_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16),
@@ -91,8 +91,6 @@ impl Prover for ProverService {
             &proposed_header,
             now,
         );
-        
-        // Implement your state transition proof logic here
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
