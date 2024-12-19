@@ -13,7 +13,7 @@ To run the server you will need to clone the repo and install rust and cargo. To
 - `RPC_URL` the json rpc url of the evm chain you are generating the proofs for.
 - `CONTRACT_ADDRESS` - the evm address of the tendermint sp1 ics07 contract.
 
-To then run the server (on port `:50001`):
+To then run the server (on port `:50051`):
 
 ```
 cargo run
