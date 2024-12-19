@@ -14,14 +14,13 @@ require (
 	cosmossdk.io/x/circuit v0.1.1
 	cosmossdk.io/x/evidence v0.1.1
 	cosmossdk.io/x/feegrant v0.1.1
-	cosmossdk.io/x/tx v0.13.5
+	cosmossdk.io/x/tx v0.13.6
 	cosmossdk.io/x/upgrade v0.1.4
 	github.com/cometbft/cometbft v0.38.15
 	github.com/cosmos/cosmos-db v1.1.0
 	github.com/cosmos/cosmos-sdk v0.50.10
 	github.com/cosmos/gogoproto v1.7.0
-	// e9b5b33def38 is the commit hash of feat/ibc-eureka branch - https://github.com/cosmos/ibc-go/tree/feat/ibc-eureka
-	github.com/cosmos/ibc-go/v9 v9.0.0-20241202053124-ce8dcf235e81
+	github.com/cosmos/ibc-go/v9 v9.0.1
 	github.com/spf13/cast v1.7.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
@@ -30,6 +29,7 @@ require (
 
 require (
 	cosmossdk.io/errors v1.0.1
+	cosmossdk.io/math v1.4.0
 	github.com/celestiaorg/celestia-openrpc v0.5.0
 	github.com/consensys/gnark v0.11.0
 	github.com/consensys/gnark-crypto v0.14.0
@@ -38,7 +38,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.2
-	google.golang.org/grpc v1.68.0
+	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.2
 )
 
@@ -51,7 +51,6 @@ require (
 	cloud.google.com/go/storage v1.41.0 // indirect
 	cosmossdk.io/collections v0.4.0 // indirect
 	cosmossdk.io/depinject v1.0.0 // indirect
-	cosmossdk.io/math v1.4.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -280,6 +279,10 @@ require (
 )
 
 replace (
+	// Replace ibc-go with the most recent commit on the feat/ibc-eureka branch.
+	// ea4e73629c55e35537467d9f032da5be8082b468 is the recent commit as of this writing.
+	// See https://github.com/cosmos/ibc-go/tree/feat/ibc-eureka
+	github.com/cosmos/ibc-go/v9 => github.com/cosmos/ibc-go/v9 v9.0.0-20241218142801-ea4e73629c55
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )

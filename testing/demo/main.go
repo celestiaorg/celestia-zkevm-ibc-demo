@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO: we can delete this whole file because it appears unused.
+// See: https://github.com/celestiaorg/celestia-zkevm-ibc-demo/issues/49
 var rootCmd = &cobra.Command{
 	Use:   "demo",
 	Short: "Runs the full ZK IBC demo",
@@ -32,7 +34,7 @@ and performs a token transfer`,
 		if err := pkg.EstablishIBCConnection(); err != nil {
 			return err
 		}
-		return pkg.Transfer()
+		return nil
 	},
 }
 
@@ -60,14 +62,6 @@ var createIBCConnectionCmd = &cobra.Command{
 	},
 }
 
-var transferCmd = &cobra.Command{
-	Use:   "transfer",
-	Short: "Transfer tokens over IBC",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return pkg.Transfer()
-	},
-}
-
 var stopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Stops and cleans up the demo environment",
@@ -80,7 +74,6 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(setupIBCContractsCmd)
 	rootCmd.AddCommand(createIBCConnectionCmd)
-	rootCmd.AddCommand(transferCmd)
 	rootCmd.AddCommand(stopCmd)
 }
 

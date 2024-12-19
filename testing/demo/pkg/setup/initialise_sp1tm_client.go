@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
@@ -173,12 +174,12 @@ func createChannelAndCounterpartyOnReth(addresses ContractAddresses, ethClient *
 func createCounterpartyOnSimapp() error {
 	fmt.Println("Creating counterparty on simapp...")
 
-	clientCtx, err := SetupClientContext()
+	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	registerCounterPartyResp, err := BroadcastMessages(clientCtx, Relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
+	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, Relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
 		ChannelId:             channelId,
 		CounterpartyChannelId: TendermintLightClientID,
 		Signer:                Relayer,
@@ -220,7 +221,7 @@ func GetTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclie
 func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
 	var receipt *ethtypes.Receipt
 	var err error
-	err = WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
 		receipt, err = ethClient.TransactionReceipt(ctx, hash)
 		if err != nil {
 			return false, nil
@@ -250,28 +251,4 @@ func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log
 	}
 
 	return
-}
-
-// WaitForCondition periodically executes the given function fn based on the provided pollingInterval.
-// The function fn should return true of the desired condition is met. If the function never returns true within the timeoutAfter
-// period, or fn returns an error, the condition will not have been met.
-func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bool, error)) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutAfter)
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("failed waiting for condition after %f seconds", timeoutAfter.Seconds())
-		case <-time.After(pollingInterval):
-			reachedCondition, err := fn()
-			if err != nil {
-				return fmt.Errorf("error occurred while waiting for condition: %s", err)
-			}
-
-			if reachedCondition {
-				return nil
-			}
-		}
-	}
 }

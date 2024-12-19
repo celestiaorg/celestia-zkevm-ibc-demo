@@ -42,9 +42,10 @@ setup:
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
 
-## transfer: Transfer tokens from simapp network to the EVM rollup.
+## transfer: Transfer tokens from simapp to the EVM roll-up.
 transfer:
-	@echo "--> Transferring tokens"
+	@echo "--> Transferring tokens from simapp to the EVM roll-up"
+	@go run ./testing/demo/pkg/transfer/
 .PHONY: transfer
 
 ## stop: Stop all processes and removes the tmp directory.
