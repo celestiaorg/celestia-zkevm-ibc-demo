@@ -4,7 +4,7 @@ The Celestia Prover is a gRPC service that generates zero-knowledge proofs for C
 
 ## Usage
 
-> ⚠️ **Warning**
+> [!WARNING] 
 > This gRPC service is still under development and may not work as described
 
 To run the server you will need to clone the repo and install rust and cargo. To run the node you also need to set the following environment variables:
