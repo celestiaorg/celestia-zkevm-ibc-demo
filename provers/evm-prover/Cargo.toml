@@ -1,0 +1,25 @@
+[package]
+name = "evm-prover"
+version = "0.1.0"
+edition = { workspace = true }
+
+[dependencies]
+tonic.workspace = true
+prost.workspace = true
+tokio = { workspace = true, features = ["full"] }
+futures = "0.3"
+tonic-reflection.workspace = true
+tendermint-rpc = { workspace = true, features = ["http-client"] }
+ibc-client-tendermint-types.workspace = true
+reqwest.workspace = true
+alloy = { workspace = true, features = ["providers"] }
+alloy-provider = { workspace = true }
+ibc-eureka-solidity-types.workspace = true
+sp1-ics07-tendermint-prover.workspace = true
+sp1-ics07-tendermint-utils.workspace = true
+ibc-core-commitment-types   = { workspace = true }
+dotenv = "0.15.0"
+anyhow = "1.0.94"
+
+[build-dependencies]
+tonic-build.workspace = true

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "provers/celestia-prover",
+    "provers/evm-prover",
 ]
 resolver = "2"
 
