@@ -2,9 +2,6 @@ services:
   beacond:
     image: ghcr.io/rollkit/beacon-kit:v0.1.3
     container_name: beacond
-    # environment:
-    #   - TESTAPP_FILES_DIR=/beacon-kit/testing/files  # Add the actual path
-    #   - JWT_SECRET_PATH=${TESTAPP_FILES_DIR}/jwt.hex
     volumes:
       - ./testing/files:/beacon-kit/testing/files
       - ./.tmp:/beacon-kit/.tmp
@@ -90,7 +87,7 @@ services:
       - beacon-network
 
   simapp-validator:
-    image: ghcr.io/celestiaorg/simapp:latest
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp:latest
     container_name: simapp-validator
     volumes:
       - ./.tmp/simapp-validator:/home/celestia
@@ -101,6 +98,18 @@ services:
       - "5123:26657"
     networks:
       - beacon-network
+
+  celestia-prover:
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
+    container_name: celestia-prover
+    environment:
+      - TENDERMINT_RPC_URL=http://celestia-network-validator:26657
+      - RPC_URL=http://reth:8545
+    ports:
+      - "50051:50051"
+    depends_on:
+      beacond:
+        condition: service_started
 
 networks:
   beacon-network:

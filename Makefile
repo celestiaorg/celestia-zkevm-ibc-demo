@@ -6,7 +6,8 @@ IMAGE := ghcr.io/tendermint/docker-build-proto:latest
 DOCKER_PROTO_BUILDER := docker run -v $(shell pwd):/workspace --workdir /workspace $(IMAGE)
 PROJECT_NAME=$(shell basename "$(PWD)")
 HTTPS_GIT := https://github.com/celestiaorg/celestia-zkevm-ibc-demo
-GHCR_REPO := ghcr.io/celestiaorg/simapp
+SIMAPP_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp
+CELESTIA_PROVER_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover
 
 # process linker flags
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=celestia-zkevm-ibc-demo \
@@ -108,13 +109,21 @@ proto-format:
 ## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
 build-simapp-docker:
 	@echo "--> Building Docker image"
-	$(DOCKER) build -t $(GHCR_REPO) -f docker/Dockerfile .
+	$(DOCKER) build -t $(SIMAPP_GHCR_REPO) -f docker/simapp.Dockerfile .
 .PHONY: build-simapp-docker
 
 ## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
 publish-simapp-docker:
-	$(DOCKER) push $(GHCR_REPO)
+	$(DOCKER) push $(SIMAPP_GHCR_REPO)
 .PHONY: publish-simapp-docker
+
+build-celestia-prover-docker:
+	$(DOCKER) build -t $(CELESTIA_PROVER_GHCR_REPO) -f docker/celestia_prover.Dockerfile .
+.PHONY: build-celestia-prover-docker
+
+publish-celestia-prover-docker:
+	$(DOCKER) push $(CELESTIA_PROVER_GHCR_REPO)
+.PHONY: publish-celestia-prover-docker
 
 ## lint: Run all linters; golangci-lint, markdownlint, hadolint, yamllint.
 lint:
@@ -123,7 +132,7 @@ lint:
 	@echo "--> Running markdownlint"
 	@markdownlint --config .markdownlint.yaml '**/*.md'
 	@echo "--> Running hadolint"
-	@hadolint docker/Dockerfile
+	@hadolint docker/**
 	@echo "--> Running yamllint"
 	@yamllint --no-warnings . -c .yamllint.yml
 .PHONY: lint
