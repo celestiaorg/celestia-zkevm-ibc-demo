@@ -1,6 +1,7 @@
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
+use std::path::PathBuf;
 use tonic::{transport::Server, Request, Response, Status};
 
 // Import the generated proto rust code
@@ -70,13 +71,24 @@ impl Prover for ProverService {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
 
-    let addr = "[::1]:50052".parse()?;
+    let addr = "[::]:50052".parse()?;
     let prover = ProverService::new().await?;
 
     println!("BLEVM Prover Server listening on {}", addr);
 
-    // Load the file descriptor set
-    let file_descriptor_set = fs::read("proto_descriptor.bin")?;
+    // Get the path to the proto descriptor file from the environment variable
+    let proto_descriptor_path: String = env::var("EVM_PROTO_DESCRIPTOR_PATH")
+        .expect("EVM_PROTO_DESCRIPTOR_PATH environment variable not set");
+
+    println!(
+        "Loading proto descriptor set from {}",
+        proto_descriptor_path
+    );
+    let file_path = PathBuf::from(proto_descriptor_path);
+
+    // Read the file
+    let file_descriptor_set = fs::read(&file_path)?;
+    println!("Loaded proto descriptor set");
 
     Server::builder()
         .add_service(ProverServer::new(prover))

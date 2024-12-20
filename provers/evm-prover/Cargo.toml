@@ -29,3 +29,11 @@ prost-types = "0.13.4"
 [build-dependencies]
 tonic-build.workspace = true
 sp1-helper = "4.0.1"
+sp1-ics07-tendermint-prover.workspace = true
+sp1-ics07-tendermint-utils.workspace = true
+ibc-core-commitment-types   = { workspace = true }
+dotenv = "0.15.0"
+anyhow = "1.0.94"
+
+[build-dependencies]
+tonic-build.workspace = true
