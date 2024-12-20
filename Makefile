@@ -38,21 +38,22 @@ start: stop
 setup:
 	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
 	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
-	@echo "--> Setting up IBC Clients and Channels"
+	@echo "--> Creating IBC light clients and channel"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
 
-## transfer: Transfer tokens from simapp network to the EVM rollup.
+## transfer: Transfer tokens from simapp to the EVM roll-up.
 transfer:
-	@echo "--> Transferring tokens"
+	@echo "--> Transferring tokens from simapp to the EVM roll-up"
+	@go run ./testing/demo/pkg/transfer/
 .PHONY: transfer
 
-## stop: Stop all processes and removes the tmp directory.
+## stop: Stop all processes and remove the tmp directory.
 stop:
 	@echo "--> Stopping all processes"
 	@docker compose down
 	@docker compose rm
-	@echo "--> Clearing tmp directory"
+	@echo "--> Removing the tmp directory"
 	@rm -rf .tmp
 .PHONY: stop
 
@@ -62,6 +63,10 @@ build-simapp: mod
 	@mkdir -p build/
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
 .PHONY: build-simapp
+
+## build: Build the simapp binary.
+build: build-simapp
+.PHONY: build
 
 ## install-simapp: Build and install the simapp binary into the $GOPATH/bin directory.
 install-simapp:
@@ -106,10 +111,14 @@ proto-format:
 .PHONY: proto-format
 
 ## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
-build-simapp-docker:
+build-simapp-docker: build-simapp
 	@echo "--> Building Docker image"
 	$(DOCKER) build -t $(GHCR_REPO) -f docker/Dockerfile .
 .PHONY: build-simapp-docker
+
+## docker: Build the simapp Docker image.
+docker: build-simapp-docker
+.PHONY: docker
 
 ## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
 publish-simapp-docker:
@@ -154,3 +163,10 @@ run-simapp:
 # Warning this will remove all data in simapp home directory
 	./scripts/init-simapp.sh
 .PHONY: run-simapp
+
+## demo: Run the entire demo.
+demo:
+	@make start
+	@make setup
+	@make transfer
+.PHONY: demo

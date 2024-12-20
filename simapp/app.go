@@ -7,10 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/gogoproto/proto"
-	"github.com/spf13/cast"
-
 	autocliv1 "cosmossdk.io/api/cosmos/autocli/v1"
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	"cosmossdk.io/client/v2/autocli"
@@ -30,8 +26,9 @@ import (
 	"cosmossdk.io/x/upgrade"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-
-	// "github.com/celestiaorg/celestia-zkevm-ibc-demo/x/header"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
+	abci "github.com/cometbft/cometbft/abci/types"
+	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -99,10 +96,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
-	abci "github.com/cometbft/cometbft/abci/types"
-
-	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
+	"github.com/cosmos/gogoproto/proto"
 	ica "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts"
 	icacontroller "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/controller"
 	icacontrollerkeeper "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/controller/keeper"
@@ -117,14 +111,18 @@ import (
 	"github.com/cosmos/ibc-go/v9/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v9/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
+	transferv2 "github.com/cosmos/ibc-go/v9/modules/apps/transfer/v2"
+	ibctransferkeeperv2 "github.com/cosmos/ibc-go/v9/modules/apps/transfer/v2/keeper"
 	ibc "github.com/cosmos/ibc-go/v9/modules/core"
 	ibcclienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
 	porttypes "github.com/cosmos/ibc-go/v9/modules/core/05-port/types"
+	ibcapi "github.com/cosmos/ibc-go/v9/modules/core/api"
 	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v9/modules/core/keeper"
 	solomachine "github.com/cosmos/ibc-go/v9/modules/light-clients/06-solomachine"
 	ibctm "github.com/cosmos/ibc-go/v9/modules/light-clients/07-tendermint"
+	"github.com/spf13/cast"
 )
 
 const appName = "SimApp"
@@ -183,6 +181,7 @@ type SimApp struct {
 	ICAHostKeeper         icahostkeeper.Keeper
 	EvidenceKeeper        evidencekeeper.Keeper
 	TransferKeeper        ibctransferkeeper.Keeper
+	TransferKeeperV2      *ibctransferkeeperv2.Keeper
 	FeeGrantKeeper        feegrantkeeper.Keeper
 	GroupKeeper           groupkeeper.Keeper
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
@@ -407,6 +406,7 @@ func NewSimApp(
 
 	// Create IBC Router
 	ibcRouter := porttypes.NewRouter()
+	ibcRouterV2 := ibcapi.NewRouter()
 
 	// Middleware Stacks
 
@@ -458,8 +458,13 @@ func NewSimApp(
 		AddRoute(icacontrollertypes.SubModuleName, icaControllerStack).
 		AddRoute(icahosttypes.SubModuleName, icaHostStack)
 
+	// register the transfer v2 module.
+	app.TransferKeeperV2 = ibctransferkeeperv2.NewKeeper(app.TransferKeeper, app.IBCKeeper.ChannelKeeperV2)
+	ibcRouterV2.AddRoute(ibctransfertypes.PortID, transferv2.NewIBCModule(app.TransferKeeperV2))
+
 	// Set the IBC Routers
 	app.IBCKeeper.SetRouter(ibcRouter)
+	app.IBCKeeper.SetRouterV2(ibcRouterV2)
 
 	clientKeeper := app.IBCKeeper.ClientKeeper
 	storeProvider := clientKeeper.GetStoreProvider()

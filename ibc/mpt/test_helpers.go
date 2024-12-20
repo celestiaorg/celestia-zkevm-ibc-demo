@@ -48,7 +48,6 @@ func initRnd() *mrand.Rand {
 	}
 
 	rnd := mrand.New(mrand.NewSource(int64(binary.LittleEndian.Uint64(seed[:]))))
-	fmt.Printf("Seed: %x\n", seed)
 	return rnd
 }
 

@@ -4,7 +4,7 @@ The Celestia Prover is a gRPC service that generates zero-knowledge proofs for C
 
 ## Usage
 
-> [!WARNING] 
+> [!WARNING]
 > This gRPC service is still under development and may not work as described
 
 To run the server you will need to clone the repo and install rust and cargo. To run the node you also need to set the following environment variables:
@@ -15,12 +15,11 @@ To run the server you will need to clone the repo and install rust and cargo. To
 
 To then run the server (on port `:50051`):
 
-```
+```shell
 cargo run
 ```
 
 To use the SP1 Prover Network you should also populate the `SP1_PROVER` and `SP1_PRIVATE_KEY` environment variables. You can also use a `.env` file for all environment variables
-
 
 ## Protobuf
 
