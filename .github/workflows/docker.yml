@@ -12,6 +12,6 @@ jobs:
     uses: celestiaorg/.github/.github/workflows/reusable_dockerfile_pipeline.yml@v0.5.0
     with:
       dockerfile: docker/simapp.Dockerfile
-      packageName: simapp
+      packageName: celestia-zkevm-ibc-demo/simapp
       checkout_ref: ${{ github.event.inputs.ref }}
     secrets: inherit
