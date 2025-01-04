@@ -34,6 +34,9 @@ const (
 
 	// channelID is the channel ID on SimApp that was created by the `make setup` command.
 	channelID = "channel-0"
+
+	// ethereumRPC is the RPC endpoint of the EVM chain.
+	ethereumRPC = "http://localhost:8545"
 )
 
 func main() {
@@ -148,8 +151,9 @@ func QueryPacketCommitments(txHash string) error {
 
 // QueryLightClientLatestHeight queries the ICS07 light client on the EVM roll-up for the client state's latest height.
 func QueryLightClientLatestHeight() error {
-	fmt.Printf("Querying ICS07 light client for the client state's latest height...\n")
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	fmt.Printf("Querying SP1 ICS07 tendermint light client for the client state's latest height...\n")
+
+	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return err
 	}
