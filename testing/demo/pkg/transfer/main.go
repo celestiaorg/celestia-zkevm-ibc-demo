@@ -47,18 +47,17 @@ func main() {
 	}
 
 	// We need to query the EVM contract for the last trusted state root that exists in the ICS07 Tendermint smart contract on the EVM.
-	err = QueryLastTrustedStateRoot()
+	err = QueryLastTrustedHeight()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// 2b -> The relayer needs to prove to the EVM rollup that SimApp has actually successfully executed the first part of the transfer: locking up the tokens. Proving this requires two steps:
-	// 1. the relayer queries a state transition proof from the prover process. This will prove the latest state root from the last trusted state root stored in the state of the ICS07 Tendermint smart contract on the EVM. Now the EVM has an up to date record of SimApp's current state (which includes the receipt).
-	// 2. the relayer asks the prover for a proof that the receipt is a merkle leaf of the state root i.e. it's part of state
-
-	// 2c -> The prover has a zk circuit for generating both proofs. One takes tendermint headers and uses the SkippingVerification algorithm to assert the latest header. The other takes IAVL merkle proofs and proves some leaf key as part of the root. These are both STARK proofs which can be processed by the smart contracts on the EVM.
-	// 2d -> The last step of the relayer is to combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
+	// TODO
+	// Query the ICS07 light client on the EVM roll-up for the client state's latest height.
+	// Ask the Celestia prover for a state transition proof from the last height (previous step) to the most recent height on SimApp.
+	// Ask the Celestia prover for a state membership proof that the receipt is a merkle leaf of the state root.
+	// Combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
 
 }
 
@@ -145,7 +144,7 @@ func QueryPacketCommitments(txHash string) error {
 	return nil
 }
 
-func QueryLastTrustedStateRoot() error {
+func QueryLastTrustedHeight() error {
 	fmt.Printf("Querying last trusted state root on EVM...\n")
 	// The SP1 TM light client on the EVM roll-up has two pieces of state that we want to query:
 	// 1. trusted client state
