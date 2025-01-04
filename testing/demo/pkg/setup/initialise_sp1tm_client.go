@@ -72,6 +72,7 @@ func InitializeSp1TendermintLightClientOnReth() error {
 
 }
 
+// runDeploymentCommand deploys the SP1 ICS07 Tendermint light client contract on the EVM roll-up.
 func runDeploymentCommand() error {
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
 	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")

@@ -59,6 +59,7 @@ func InitializeGroth16LightClientOnSimapp() error {
 }
 
 func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
+	// TODO: this clientState isn't created with a state transition verifier key or state inclusion verifier key.
 	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {

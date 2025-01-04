@@ -147,6 +147,10 @@ func QueryPacketCommitments(txHash string) error {
 
 func QueryLastTrustedStateRoot() error {
 	fmt.Printf("Querying last trusted state root on EVM...\n")
+	// The SP1 TM light client on the EVM roll-up has two pieces of state that we want to query:
+	// 1. trusted client state
+	// 2. trusted consensus state
+	// I think we want to query inside the trusted client state to get the last height of SimApp that the light client knows about..
 
 	return nil
 }
