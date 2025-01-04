@@ -118,7 +118,7 @@ install-simapp:
 .PHONY: install-simapp
 
 ## install: Install the simapp binary into the $GOPATH/bin directory.
-install: install-simapp install-relayer
+install: install-simapp
 .PHONY: install
 
 ## mod: Update all go.mod files.

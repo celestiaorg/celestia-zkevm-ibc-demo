@@ -56,17 +56,17 @@ const (
 )
 
 func main() {
-	// txHash, err := SubmitMsgTransfer()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(1)
-	// }
+	txHash, err := SubmitMsgTransfer()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-	// err = QueryPacketCommitments(txHash)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(1)
-	// }
+	err = QueryPacketCommitments(txHash)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	clientHeight, err := QueryLightClientLatestHeight()
 	if err != nil {
