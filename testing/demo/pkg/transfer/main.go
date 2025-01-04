@@ -37,6 +37,8 @@ const (
 
 	// ethereumRPC is the RPC endpoint of the EVM chain.
 	ethereumRPC = "http://localhost:8545"
+
+	celestiaProverEndpoint = "http://localhost:50051"
 )
 
 func main() {
@@ -52,17 +54,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = QueryLightClientLatestHeight()
+	clientHeight, err := QueryLightClientLatestHeight()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
+	latestHeight, err := QueryLatestHeight()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	stateTransitionProof = GetStateTransitionProof(clientHeight, latestHeight)
+
 	// TODO
 	// Ask the Celestia prover for a state transition proof from the last height (previous step) to the most recent height on SimApp.
 	// Ask the Celestia prover for a state membership proof that the receipt is a merkle leaf of the state root.
 	// Combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
-
 }
 
 func SubmitMsgTransfer() (txHash string, err error) {
@@ -150,12 +159,12 @@ func QueryPacketCommitments(txHash string) error {
 }
 
 // QueryLightClientLatestHeight queries the ICS07 light client on the EVM roll-up for the client state's latest height.
-func QueryLightClientLatestHeight() error {
+func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
 	fmt.Printf("Querying SP1 ICS07 tendermint light client for the client state's latest height...\n")
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// HACKHACK
@@ -164,13 +173,39 @@ func QueryLightClientLatestHeight() error {
 	lightClient := "0x83b466f5856dc4f531bb5af45045de06889d63cb"
 	sp1Ics07Contract, err := sp1ics07tendermint.NewContract(ethcommon.HexToAddress(lightClient), ethClient)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	clientState, err := sp1Ics07Contract.GetClientState(nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	fmt.Printf("Client state latest height: %v\n", clientState.LatestHeight)
-	return nil
+	fmt.Printf("Client state latest height: %v, revision height %v, revision number %v.\n", clientState.LatestHeight, clientState.LatestHeight.RevisionHeight, clientState.LatestHeight.RevisionNumber)
+	return clientState.LatestHeight.RevisionHeight, nil
+}
+
+// QueryLatestHeight queries the latest height on SimApp.
+func QueryLatestHeight() (height uint32, err error) {
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return 0, err
+	}
+
+	node, err := clientCtx.GetNode()
+	if err != nil {
+		return 0, err
+	}
+
+	status, err := node.Status(context.Background())
+	if err != nil {
+		return 0, err
+	}
+
+	return uint32(status.SyncInfo.LatestBlockHeight), nil
+}
+
+// GetStateTransitionProof gets the state transition proof from the Celestia prover.
+func GetStateTransitionProof(clientHeight uint32, latestHeight uint32) (stateTransitionProof []byte, err error) {
+
+	return []byte{}, nil
 }
