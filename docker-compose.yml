@@ -103,13 +103,15 @@ services:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
     container_name: celestia-prover
     environment:
-      - TENDERMINT_RPC_URL=http://celestia-network-validator:26657
-      - RPC_URL=http://reth:8545
+      - TENDERMINT_RPC_URL=http://localhost:26657
+      - RPC_URL=http://localhost:8545
     ports:
       - "50051:50051"
     depends_on:
       beacond:
         condition: service_started
+    networks:
+      - beacon-network
 
 networks:
   beacon-network:

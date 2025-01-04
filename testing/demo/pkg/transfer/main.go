@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"cosmossdk.io/math"
+	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -17,6 +19,8 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -32,27 +36,37 @@ const (
 	// amount is the amount of tokens to transfer.
 	amount = 100
 
-	// channelID is the channel ID on SimApp that was created by the `make setup` command.
-	channelID = "channel-0"
-
 	// ethereumRPC is the RPC endpoint of the EVM chain.
 	ethereumRPC = "http://localhost:8545"
 
-	celestiaProverEndpoint = "http://localhost:50051"
+	// celestiaProverEndpoint is the endpoint of the Celestia prover.
+	celestiaProverEndpoint = "localhost:50051"
+
+	// channelID is the channel ID on SimApp.
+	// TODO: fetch this from the `make setup` command output.
+	channelID = "channel-0"
+
+	// clientID is the client ID on SimApp.
+	// TODO: fetch this from the `make setup` command output.
+	clientID = "08-groth16-0"
+
+	// ics07TMContractAddress is the contract address of the ICS07 light client on the EVM roll-up.
+	// TODO: fetch this from the `make setup` command output.
+	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
 )
 
 func main() {
-	txHash, err := SubmitMsgTransfer()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	// txHash, err := SubmitMsgTransfer()
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
 
-	err = QueryPacketCommitments(txHash)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	// err = QueryPacketCommitments(txHash)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
 
 	clientHeight, err := QueryLightClientLatestHeight()
 	if err != nil {
@@ -66,7 +80,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	stateTransitionProof = GetStateTransitionProof(clientHeight, latestHeight)
+	_, err = GetStateTransitionProof(clientHeight, latestHeight)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	// TODO
 	// Ask the Celestia prover for a state transition proof from the last height (previous step) to the most recent height on SimApp.
@@ -167,11 +185,7 @@ func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
 		return 0, err
 	}
 
-	// HACKHACK
-	// Unfortunately the ICS07 light client on the EVM roll-up doesn't have a fixed contract address. Everytime we deploy it, it appears unique:
-	// 0x67cff9B0F9F25c00C71bd8300c3f38553088e234
-	lightClient := "0x83b466f5856dc4f531bb5af45045de06889d63cb"
-	sp1Ics07Contract, err := sp1ics07tendermint.NewContract(ethcommon.HexToAddress(lightClient), ethClient)
+	sp1Ics07Contract, err := sp1ics07tendermint.NewContract(ethcommon.HexToAddress(ics07TMContractAddress), ethClient)
 	if err != nil {
 		return 0, err
 	}
@@ -206,6 +220,26 @@ func QueryLatestHeight() (height uint32, err error) {
 
 // GetStateTransitionProof gets the state transition proof from the Celestia prover.
 func GetStateTransitionProof(clientHeight uint32, latestHeight uint32) (stateTransitionProof []byte, err error) {
+	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to the prover service: %v", err)
+	}
+	defer conn.Close()
 
-	return []byte{}, nil
+	client := proverclient.NewProverClient(conn)
+	request := &proverclient.ProveStateTransitionRequest{
+		ClientId: clientID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	response, err := client.ProveStateTransition(ctx, request)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to request state transition proof: %w", err)
+	}
+
+	fmt.Printf("Proof: %x\n", response.Proof)
+	fmt.Printf("Public Values: %x\n", response.PublicValues)
+	return response.Proof, nil
 }
