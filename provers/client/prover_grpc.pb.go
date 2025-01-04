@@ -19,16 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Prover_Info_FullMethodName                 = "/celestia.prover.v1.Prover/Info"
 	Prover_ProveStateTransition_FullMethodName = "/celestia.prover.v1.Prover/ProveStateTransition"
-	Prover_ProveMembership_FullMethodName      = "/celestia.prover.v1.Prover/ProveMembership"
+	Prover_ProveStateMembership_FullMethodName = "/celestia.prover.v1.Prover/ProveStateMembership"
 )
 
 // ProverClient is the client API for Prover service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProverClient interface {
+	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	ProveStateTransition(ctx context.Context, in *ProveStateTransitionRequest, opts ...grpc.CallOption) (*ProveStateTransitionResponse, error)
-	ProveMembership(ctx context.Context, in *ProveMembershipRequest, opts ...grpc.CallOption) (*ProveMembershipResponse, error)
+	ProveStateMembership(ctx context.Context, in *ProveStateMembershipRequest, opts ...grpc.CallOption) (*ProveStateMembershipResponse, error)
 }
 
 type proverClient struct {
@@ -37,6 +39,16 @@ type proverClient struct {
 
 func NewProverClient(cc grpc.ClientConnInterface) ProverClient {
 	return &proverClient{cc}
+}
+
+func (c *proverClient) Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InfoResponse)
+	err := c.cc.Invoke(ctx, Prover_Info_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *proverClient) ProveStateTransition(ctx context.Context, in *ProveStateTransitionRequest, opts ...grpc.CallOption) (*ProveStateTransitionResponse, error) {
@@ -49,10 +61,10 @@ func (c *proverClient) ProveStateTransition(ctx context.Context, in *ProveStateT
 	return out, nil
 }
 
-func (c *proverClient) ProveMembership(ctx context.Context, in *ProveMembershipRequest, opts ...grpc.CallOption) (*ProveMembershipResponse, error) {
+func (c *proverClient) ProveStateMembership(ctx context.Context, in *ProveStateMembershipRequest, opts ...grpc.CallOption) (*ProveStateMembershipResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ProveMembershipResponse)
-	err := c.cc.Invoke(ctx, Prover_ProveMembership_FullMethodName, in, out, cOpts...)
+	out := new(ProveStateMembershipResponse)
+	err := c.cc.Invoke(ctx, Prover_ProveStateMembership_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +75,9 @@ func (c *proverClient) ProveMembership(ctx context.Context, in *ProveMembershipR
 // All implementations must embed UnimplementedProverServer
 // for forward compatibility.
 type ProverServer interface {
+	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	ProveStateTransition(context.Context, *ProveStateTransitionRequest) (*ProveStateTransitionResponse, error)
-	ProveMembership(context.Context, *ProveMembershipRequest) (*ProveMembershipResponse, error)
+	ProveStateMembership(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error)
 	mustEmbedUnimplementedProverServer()
 }
 
@@ -75,11 +88,14 @@ type ProverServer interface {
 // pointer dereference when methods are called.
 type UnimplementedProverServer struct{}
 
+func (UnimplementedProverServer) Info(context.Context, *InfoRequest) (*InfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
+}
 func (UnimplementedProverServer) ProveStateTransition(context.Context, *ProveStateTransitionRequest) (*ProveStateTransitionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProveStateTransition not implemented")
 }
-func (UnimplementedProverServer) ProveMembership(context.Context, *ProveMembershipRequest) (*ProveMembershipResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProveMembership not implemented")
+func (UnimplementedProverServer) ProveStateMembership(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProveStateMembership not implemented")
 }
 func (UnimplementedProverServer) mustEmbedUnimplementedProverServer() {}
 func (UnimplementedProverServer) testEmbeddedByValue()                {}
@@ -102,6 +118,24 @@ func RegisterProverServer(s grpc.ServiceRegistrar, srv ProverServer) {
 	s.RegisterService(&Prover_ServiceDesc, srv)
 }
 
+func _Prover_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProverServer).Info(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Prover_Info_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProverServer).Info(ctx, req.(*InfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Prover_ProveStateTransition_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ProveStateTransitionRequest)
 	if err := dec(in); err != nil {
@@ -120,20 +154,20 @@ func _Prover_ProveStateTransition_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Prover_ProveMembership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ProveMembershipRequest)
+func _Prover_ProveStateMembership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProveStateMembershipRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ProverServer).ProveMembership(ctx, in)
+		return srv.(ProverServer).ProveStateMembership(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Prover_ProveMembership_FullMethodName,
+		FullMethod: Prover_ProveStateMembership_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProverServer).ProveMembership(ctx, req.(*ProveMembershipRequest))
+		return srv.(ProverServer).ProveStateMembership(ctx, req.(*ProveStateMembershipRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -146,12 +180,16 @@ var Prover_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ProverServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Info",
+			Handler:    _Prover_Info_Handler,
+		},
+		{
 			MethodName: "ProveStateTransition",
 			Handler:    _Prover_ProveStateTransition_Handler,
 		},
 		{
-			MethodName: "ProveMembership",
-			Handler:    _Prover_ProveMembership_Handler,
+			MethodName: "ProveStateMembership",
+			Handler:    _Prover_ProveStateMembership_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

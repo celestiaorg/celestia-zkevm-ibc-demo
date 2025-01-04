@@ -30,6 +30,48 @@ install-dependencies:
 	@go run ./testing/demo/pkg/setup-env
 .PHONY: install-dependencies
 
+## check-dependencies: Check if all dependencies are installed.
+check-dependencies:
+	@echo "--> Checking if all dependencies are installed"
+	@if command -v cargo >/dev/null 2>&1; then \
+		echo "cargo is installed."; \
+	else \
+		echo "Error: cargo is not installed. Please install Rust."; \
+		exit 1; \
+	fi
+	@if command -v forge >/dev/null 2>&1; then \
+		echo "foundry is installed."; \
+	else \
+		echo "Error: forge is not installed. Please install Foundry."; \
+		exit 1; \
+	fi
+	@if command -v bun >/dev/null 2>&1; then \
+		echo "bun is installed."; \
+	else \
+		echo "Error: bun is not installed. Please install bun."; \
+		exit 1; \
+	fi
+	@if command -v just >/dev/null 2>&1; then \
+		echo "just is installed."; \
+	else \
+		echo "Error: just is not installed. Please install just."; \
+		exit 1; \
+	fi
+	@if command -v cargo prove >/dev/null 2>&1; then \
+		echo "cargo prove is installed."; \
+	else \
+		echo "Error: succinct is not installed. Please install SP1."; \
+		exit 1; \
+	fi
+	@if command -v operator >/dev/null 2>&1; then \
+		echo "operator is installed."; \
+	else \
+		echo "Error: operator is not installed. Please run install-dependencies."; \
+		exit 1; \
+	fi
+	@echo "All dependencies are installed."
+.PHONY: check-dependencies
+
 ## start: Start all processes needed for the demo.
 start: stop
 	@docker compose up -d
