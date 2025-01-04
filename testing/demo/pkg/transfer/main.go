@@ -14,6 +14,9 @@ import (
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const (
@@ -146,11 +149,24 @@ func QueryPacketCommitments(txHash string) error {
 // QueryLightClientLatestHeight queries the ICS07 light client on the EVM roll-up for the client state's latest height.
 func QueryLightClientLatestHeight() error {
 	fmt.Printf("Querying ICS07 light client for the client state's latest height...\n")
+	ethClient, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		return err
+	}
 
-	// The SP1 TM light client on the EVM roll-up has a field for client state and inside that is the latest height.
+	// HACKHACK
+	// Unfortunately the ICS07 light client on the EVM roll-up doesn't have a fixed contract address. Everytime we deploy it, it appears unique:
+	// 0x67cff9B0F9F25c00C71bd8300c3f38553088e234
+	lightClient := "0x83b466f5856dc4f531bb5af45045de06889d63cb"
+	sp1Ics07Contract, err := sp1ics07tendermint.NewContract(ethcommon.HexToAddress(lightClient), ethClient)
+	if err != nil {
+		return err
+	}
+	clientState, err := sp1Ics07Contract.GetClientState(nil)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Client state latest height: %v\n", clientState.LatestHeight)
 	return nil
 }
-
-// Unfortunately the ICS07 light client on the EVM roll-up doesn't have a fixed contract address. Everytime we deploy it, it appears unique:
-// 0x67cff9B0F9F25c00C71bd8300c3f38553088e234
-// 0x83b466f5856dc4f531bb5af45045de06889d63cb
