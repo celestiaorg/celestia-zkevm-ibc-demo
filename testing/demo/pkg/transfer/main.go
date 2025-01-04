@@ -27,6 +27,9 @@ const (
 
 	// amount is the amount of tokens to transfer.
 	amount = 100
+
+	// channelID is the channel ID on SimApp that was created by the `make setup` command.
+	channelID = "channel-0"
 )
 
 func main() {
@@ -114,19 +117,20 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 }
 
 func QueryPendingPackets(txHash string) error {
+	// Instead of doing this, the more correct way might be to query the IBC module on SimApp for the pending packets on a particular channel. To do that, we need to figure out which channel to query.
 	fmt.Printf("Querying for pending packets...\n")
 
-	fmt.Printf("Setting up client context...\n")
-	clientCtx, err := utils.SetupClientContext()
-	if err != nil {
-		return err
-	}
+	// fmt.Printf("Setting up client context...\n")
+	// clientCtx, err := utils.SetupClientContext()
+	// if err != nil {
+	// 	return err
+	// }
 
-	txResponse, err := utils.QueryTx(clientCtx, txHash)
-	if err != nil {
-		return fmt.Errorf("failed to query transaction: %v", err)
-	}
-	fmt.Printf("Transaction details: %v\n", txResponse)
-	fmt.Printf("Transaction events: %v\n", txResponse.Events)
+	// txResponse, err := utils.QueryTx(clientCtx, txHash)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to query transaction: %v", err)
+	// }
+	// fmt.Printf("Transaction details: %v\n", txResponse)
+	// fmt.Printf("Transaction events: %v\n", txResponse.Events)
 	return nil
 }
