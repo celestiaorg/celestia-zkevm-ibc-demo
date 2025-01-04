@@ -123,18 +123,16 @@ func QueryPendingPacketCommitments(txHash string) error {
 	if err != nil {
 		return err
 	}
-	// Need to execute:
-	// simd query ibc channelv2 packet-commitments channel-0
-
-	packetCommitments, err := queryPendingPacketCommitments(clientCtx, channelID)
+	packets, err := queryPacketCommitments(clientCtx, channelID)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Pending packet commitments: %v\n", packetCommitments)
+	fmt.Printf("Pending packet commitments: %v\n", packets)
+	// TODO what to do with these packets?
 	return nil
 }
 
-func queryPendingPacketCommitments(clientCtx client.Context, channelID string) ([]*channeltypesv2.PacketState, error) {
+func queryPacketCommitments(clientCtx client.Context, channelID string) ([]*channeltypesv2.PacketState, error) {
 	queryClient := channeltypesv2.NewQueryClient(clientCtx)
 	request := channeltypesv2.QueryPacketCommitmentsRequest{
 		ChannelId: channelID,
