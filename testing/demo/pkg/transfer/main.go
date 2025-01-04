@@ -40,16 +40,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 2a -> Listen for events that SimApp has emitted that there are pending
-	// packets ready to be sent to other chains. It queries the chain for the
-	// receipt based on a predetermined location.
-	err = QueryPendingPacketCommitments(txHash)
+	err = QueryPacketCommitments(txHash)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// 2b -> The relayer needs to prove to the EVM rollup that SimApp has actually successfully executed the first part of the transfer: locking up the tokens. Proving this requires two steps: First the relayer queries a state transition proof from the prover process. This will prove the latest state root from the last trusted state root stored in the state of the ICS07 Tendermint smart contract on the EVM. Now the EVM has an up to date record of SimApp's current state (which includes the receipt). Second, the relayer asks the prover for a proof that the receipt is a merkle leaf of the state root i.e. it's part of state
+	// We need to query the EVM contract for the last trusted state root that exists in the ICS07 Tendermint smart contract on the EVM.
+	err = QueryLastTrustedStateRoot()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// 2b -> The relayer needs to prove to the EVM rollup that SimApp has actually successfully executed the first part of the transfer: locking up the tokens. Proving this requires two steps:
+	// 1. the relayer queries a state transition proof from the prover process. This will prove the latest state root from the last trusted state root stored in the state of the ICS07 Tendermint smart contract on the EVM. Now the EVM has an up to date record of SimApp's current state (which includes the receipt).
+	// 2. the relayer asks the prover for a proof that the receipt is a merkle leaf of the state root i.e. it's part of state
+
 	// 2c -> The prover has a zk circuit for generating both proofs. One takes tendermint headers and uses the SkippingVerification algorithm to assert the latest header. The other takes IAVL merkle proofs and proves some leaf key as part of the root. These are both STARK proofs which can be processed by the smart contracts on the EVM.
 	// 2d -> The last step of the relayer is to combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
 
@@ -116,30 +123,30 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 	}, nil
 }
 
-func QueryPendingPacketCommitments(txHash string) error {
-	fmt.Printf("Querying for pending packet commitments...\n")
+func QueryPacketCommitments(txHash string) error {
+	fmt.Printf("Querying packet commitments on SimApp...\n")
 
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return err
 	}
-	packets, err := queryPacketCommitments(clientCtx, channelID)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Pending packet commitments: %v\n", packets)
-	// TODO what to do with these packets?
-	return nil
-}
 
-func queryPacketCommitments(clientCtx client.Context, channelID string) ([]*channeltypesv2.PacketState, error) {
 	queryClient := channeltypesv2.NewQueryClient(clientCtx)
 	request := channeltypesv2.QueryPacketCommitmentsRequest{
 		ChannelId: channelID,
 	}
 	response, err := queryClient.PacketCommitments(context.Background(), &request)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query packet commitments: %v", err)
+		return fmt.Errorf("failed to query packet commitments: %v", err)
 	}
-	return response.Commitments, nil
+
+	// TODO what to do with these packets?
+	fmt.Printf("Packet commitments: %v\n", response.Commitments)
+	return nil
+}
+
+func QueryLastTrustedStateRoot() error {
+	fmt.Printf("Querying last trusted state root on EVM...\n")
+
+	return nil
 }
