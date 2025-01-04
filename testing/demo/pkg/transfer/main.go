@@ -46,15 +46,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// We need to query the EVM contract for the last trusted state root that exists in the ICS07 Tendermint smart contract on the EVM.
-	err = QueryLastTrustedHeight()
+	err = QueryLightClientLatestHeight()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	// TODO
-	// Query the ICS07 light client on the EVM roll-up for the client state's latest height.
 	// Ask the Celestia prover for a state transition proof from the last height (previous step) to the most recent height on SimApp.
 	// Ask the Celestia prover for a state membership proof that the receipt is a merkle leaf of the state root.
 	// Combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
@@ -122,6 +120,7 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 	}, nil
 }
 
+// QueryPacketCommitments queries the packet commitments on the SimApp.
 func QueryPacketCommitments(txHash string) error {
 	fmt.Printf("Querying packet commitments on SimApp...\n")
 
@@ -144,12 +143,10 @@ func QueryPacketCommitments(txHash string) error {
 	return nil
 }
 
-func QueryLastTrustedHeight() error {
-	fmt.Printf("Querying last trusted state root on EVM...\n")
-	// The SP1 TM light client on the EVM roll-up has two pieces of state that we want to query:
-	// 1. trusted client state
-	// 2. trusted consensus state
-	// I think we want to query inside the trusted client state to get the last height of SimApp that the light client knows about..
+// QueryLightClientLatestHeight queries the ICS07 light client on the EVM roll-up for the client state's latest height.
+func QueryLightClientLatestHeight() error {
+	fmt.Printf("Querying ICS07 light client for the client state's latest height...\n")
 
+	// The SP1 TM light client on the EVM roll-up has a field for client state and inside that is the latest height.
 	return nil
 }
