@@ -16,28 +16,30 @@ import (
 )
 
 const (
-	// relayer is an address registered in simapp
-	relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
+	// senderAddress is an address on SimApp that will send funds via the MsgTransfer.
+	senderAddress = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 
-	// ethereumUserAddress is an address registered in the ethereum chain
-	ethereumUserAddress = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
+	// receiverAddress is an address on the EVM chain that will receive funds via the MsgTransfer.
+	receiverAddress = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
 
-	// denom is the denomination of the token on simapp
+	// denom is the denomination of the token on SimApp.
 	denom = "stake"
 
-	// amount is the amount of tokens to transfer
+	// amount is the amount of tokens to transfer.
 	amount = 100
 )
 
 func main() {
-	err := SubmitMsgTransfer()
+	txHash, err := SubmitMsgTransfer()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// 2a -> Listen for events that SimApp has emitted that there are pending packets ready to be sent to other chains. It queries the chain for the receipt based on a predetermined location.
-	err = QueryPendingPackets()
+	// 2a -> Listen for events that SimApp has emitted that there are pending
+	// packets ready to be sent to other chains. It queries the chain for the
+	// receipt based on a predetermined location.
+	err = QueryPendingPackets(txHash)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -49,38 +51,38 @@ func main() {
 
 }
 
-func SubmitMsgTransfer() error {
+func SubmitMsgTransfer() (txHash string, err error) {
 	fmt.Printf("Setting up client context...\n")
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
-		return fmt.Errorf("failed to setup client context: %v", err)
+		return "", fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	err = submitMsgTransfer(clientCtx)
+	txHash, err = submitMsgTransfer(clientCtx)
 	if err != nil {
-		return fmt.Errorf("failed to submit MsgTransfer: %v", err)
+		return "", fmt.Errorf("failed to submit MsgTransfer: %v", err)
 	}
 
-	return nil
+	return txHash, nil
 }
 
-func submitMsgTransfer(clientCtx client.Context) error {
+func submitMsgTransfer(clientCtx client.Context) (txHash string, err error) {
 	msgTransfer, err := createMsgTransfer()
 	if err != nil {
-		return fmt.Errorf("failed to create MsgTransfer: %w", err)
+		return "", fmt.Errorf("failed to create MsgTransfer: %w", err)
 	}
 
 	fmt.Printf("Broadcasting MsgTransfer...\n")
-	response, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &msgTransfer)
+	response, err := utils.BroadcastMessages(clientCtx, senderAddress, 200_000, &msgTransfer)
 	if err != nil {
-		return fmt.Errorf("failed to broadcast MsgTransfer %w", err)
+		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
 	}
 
 	if response.Code != 0 {
-		return fmt.Errorf("failed to execute MsgTransfer %v", response.RawLog)
+		return "", fmt.Errorf("failed to execute MsgTransfer %v", response.RawLog)
 	}
 	fmt.Printf("Broadcasted MsgTransfer. Response code: %v, tx hash: %v\n", response.Code, response.TxHash)
-	return nil
+	return response.TxHash, nil
 }
 
 func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
@@ -88,8 +90,8 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 	transferPayload := ics20lib.ICS20LibFungibleTokenPacketData{
 		Denom:    coin.Denom,
 		Amount:   coin.Amount.BigInt(),
-		Sender:   relayer,
-		Receiver: ethereumUserAddress,
+		Sender:   senderAddress,
+		Receiver: receiverAddress,
 		Memo:     "test transfer",
 	}
 	transferBz, err := ics20lib.EncodeFungibleTokenPacketData(transferPayload)
@@ -107,12 +109,24 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 		SourceChannel:    ibctesting.FirstChannelID,
 		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
 		Payloads:         []channeltypesv2.Payload{payload},
-		Signer:           relayer,
+		Signer:           senderAddress,
 	}, nil
 }
 
-func QueryPendingPackets() error {
-	fmt.Println("Querying for pending packets...")
-	// TODO: implement
+func QueryPendingPackets(txHash string) error {
+	fmt.Printf("Querying for pending packets...\n")
+
+	fmt.Printf("Setting up client context...\n")
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return err
+	}
+
+	txResponse, err := utils.QueryTx(clientCtx, txHash)
+	if err != nil {
+		return fmt.Errorf("failed to query transaction: %v", err)
+	}
+	fmt.Printf("Transaction details: %v\n", txResponse)
+	fmt.Printf("Transaction events: %v\n", txResponse.Events)
 	return nil
 }
