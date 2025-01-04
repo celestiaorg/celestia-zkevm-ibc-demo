@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -42,7 +43,7 @@ func main() {
 	// 2a -> Listen for events that SimApp has emitted that there are pending
 	// packets ready to be sent to other chains. It queries the chain for the
 	// receipt based on a predetermined location.
-	err = QueryPendingPackets(txHash)
+	err = QueryPendingPacketCommitments(txHash)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -55,7 +56,6 @@ func main() {
 }
 
 func SubmitMsgTransfer() (txHash string, err error) {
-	fmt.Printf("Setting up client context...\n")
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return "", fmt.Errorf("failed to setup client context: %v", err)
@@ -116,21 +116,32 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 	}, nil
 }
 
-func QueryPendingPackets(txHash string) error {
-	// Instead of doing this, the more correct way might be to query the IBC module on SimApp for the pending packets on a particular channel. To do that, we need to figure out which channel to query.
-	fmt.Printf("Querying for pending packets...\n")
+func QueryPendingPacketCommitments(txHash string) error {
+	fmt.Printf("Querying for pending packet commitments...\n")
 
-	// fmt.Printf("Setting up client context...\n")
-	// clientCtx, err := utils.SetupClientContext()
-	// if err != nil {
-	// 	return err
-	// }
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return err
+	}
+	// Need to execute:
+	// simd query ibc channelv2 packet-commitments channel-0
 
-	// txResponse, err := utils.QueryTx(clientCtx, txHash)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to query transaction: %v", err)
-	// }
-	// fmt.Printf("Transaction details: %v\n", txResponse)
-	// fmt.Printf("Transaction events: %v\n", txResponse.Events)
+	packetCommitments, err := queryPendingPacketCommitments(clientCtx, channelID)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Pending packet commitments: %v\n", packetCommitments)
 	return nil
+}
+
+func queryPendingPacketCommitments(clientCtx client.Context, channelID string) ([]*channeltypesv2.PacketState, error) {
+	queryClient := channeltypesv2.NewQueryClient(clientCtx)
+	request := channeltypesv2.QueryPacketCommitmentsRequest{
+		ChannelId: channelID,
+	}
+	response, err := queryClient.PacketCommitments(context.Background(), &request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query packet commitments: %v", err)
+	}
+	return response.Commitments, nil
 }
