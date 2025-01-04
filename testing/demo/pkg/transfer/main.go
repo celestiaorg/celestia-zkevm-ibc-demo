@@ -150,3 +150,7 @@ func QueryLightClientLatestHeight() error {
 	// The SP1 TM light client on the EVM roll-up has a field for client state and inside that is the latest height.
 	return nil
 }
+
+// Unfortunately the ICS07 light client on the EVM roll-up doesn't have a fixed contract address. Everytime we deploy it, it appears unique:
+// 0x67cff9B0F9F25c00C71bd8300c3f38553088e234
+// 0x83b466f5856dc4f531bb5af45045de06889d63cb
