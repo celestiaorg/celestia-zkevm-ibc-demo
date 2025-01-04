@@ -107,16 +107,9 @@ build-simapp: mod
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
 .PHONY: build-simapp
 
-## build: Build all the binaries into the ./build directory.
-build: build-simapp build-relayer
+## build: Build the simapp the binaries into the ./build directory.
+build: build-simapp
 .PHONY: build
-
-## build-relayer: Build the relayer binary into the ./build directory.
-build-relayer: mod
-	@cd ./relayer/
-	@mkdir -p build/
-	@go build $(BUILD_FLAGS) -o build/ ./relayer/
-.PHONY: build-relayer
 
 ## install-simapp: Build and install the simapp binary into the $GOPATH/bin directory.
 install-simapp:
@@ -124,13 +117,7 @@ install-simapp:
 	@go install $(BUILD_FLAGS) ./simapp/simd/
 .PHONY: install-simapp
 
-## install-relayer: Build and install the relayer binary into the $GOPATH/bin directory.
-install-relayer:
-	@echo "--> Installing relayer"
-	@go install $(BUILD_FLAGS) ./relayer
-.PHONY: install-relayer
-
-## install: Install all binaries into the $GOPATH/bin directory.
+## install: Install the simapp binary into the $GOPATH/bin directory.
 install: install-simapp install-relayer
 .PHONY: install
 
