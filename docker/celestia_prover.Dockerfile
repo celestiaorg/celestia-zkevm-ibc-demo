@@ -48,8 +48,8 @@ WORKDIR /home/prover
 COPY --from=builder /celestia_zkevm_ibc_demo/provers/celestia-prover/proto_descriptor.bin .
 
 # Default environment variables that can be overridden
-ENV TENDERMINT_RPC_URL=http://localhost:5123
-ENV RPC_URL=http://localhost:8545
+ENV TENDERMINT_RPC_URL=http://celestia-network-validator:26657
+ENV RPC_URL=http://reth:8545
 ENV CONTRACT_ADDRESS=0x2854CFaC53FCaB6C95E28de8C91B96a31f0af8DD
 ENV PROVER_PORT=50051
 
