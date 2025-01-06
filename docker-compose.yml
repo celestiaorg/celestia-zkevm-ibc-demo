@@ -104,7 +104,7 @@ services:
     container_name: celestia-prover
     environment:
       - TENDERMINT_RPC_URL=http://localhost:26657
-      - RPC_URL=http://localhost:8545
+      # - RPC_URL=http://localhost:8545
     ports:
       - "50051:50051"
     depends_on:
