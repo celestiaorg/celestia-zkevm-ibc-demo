@@ -38,7 +38,7 @@ pub fn main() {
     let request_iter = (0..request_len).map(|_| {
         // loop_encoded_1 is the path we want to verify the membership of
         let loop_encoded_1 = sp1_zkvm::io::read_vec();
-        let path = bincode::deserialize(&loop_encoded_1).unwrap();
+        let path: Vec<Vec<u8>> = bincode::deserialize(&loop_encoded_1).unwrap();
 
         // loop_encoded_2 is the value we want to prove the membership of
         // if it is empty, we are verifying non-membership
@@ -50,8 +50,8 @@ pub fn main() {
         (path, value, merkle_proof)
     });
 
-    let kv_pairs = request_iter
-        .map(|(path, value, merkle_proof)| {
+    let kv_pairs: Vec<KVPair> = request_iter
+        .map(|(path, value, _merkle_proof)| {
             let merkle_path = MerklePath {
                 key_path: path.into_iter().map(Into::into).collect(),
             };
@@ -70,7 +70,7 @@ pub fn main() {
     // output: generate the public output
     let output = MembershipOutput {
         commitmentRoot: app_hash.into(),
-        kvPairs: kv_pairs.collect(),
+        kvPairs: kv_pairs,
     };
 
     sp1_zkvm::io::commit_slice(&output.abi_encode());
