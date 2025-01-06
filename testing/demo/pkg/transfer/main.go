@@ -231,7 +231,7 @@ func GetStateTransitionProof(clientHeight uint32, latestHeight uint32) (stateTra
 		ClientId: ics07TMContractAddress,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 
 	response, err := client.ProveStateTransition(ctx, request)
