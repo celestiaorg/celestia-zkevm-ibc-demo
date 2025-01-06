@@ -9,7 +9,8 @@ pub mod prover {
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     ProveStateTransitionRequest, ProveStateTransitionResponse,
-    ProveMembershipRequest, ProveMembershipResponse,
+    ProveStateMembershipRequest, ProveStateMembershipResponse,
+    InfoRequest, InfoResponse,
 };
 use sp1_ics07_tendermint_prover::{
     programs::{UpdateClientProgram, MembershipProgram},
@@ -31,13 +32,11 @@ use ibc_core_commitment_types::merkle::MerkleProof;
     tendermint_rpc_client: HttpClient,
     membership_prover: SP1ICS07TendermintProver<MembershipProgram>,
     evm_rpc_url: Url,
-    evm_contract_address: Address,
 }
 
 impl ProverService {
     fn new() -> ProverService {
         let rpc_url = env::var("RPC_URL").expect("RPC_URL not set");
-        let contract_address = env::var("CONTRACT_ADDRESS").expect("CONTRACT_ADDRESS not set");
         let url = Url::parse(rpc_url.as_str()).expect("Failed to parse RPC_URL");
 
         ProverService {
@@ -45,23 +44,42 @@ impl ProverService {
             tendermint_rpc_client: HttpClient::from_env(),
             membership_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16),
             evm_rpc_url: url,
-            evm_contract_address: contract_address.parse().expect("Failed to parse contract address"),
         }
     }
 }
 
 #[tonic::async_trait]
 impl Prover for ProverService {
+    async fn info(
+        &self,
+        _request: Request<InfoRequest>,
+    ) -> Result<Response<InfoResponse>, Status> {
+        let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey)
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey)
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let response = InfoResponse {
+            state_transition_verifier_key,
+            state_membership_verifier_key,
+        };
+
+        Ok(Response::new(response))
+    }
+
     async fn prove_state_transition(
         &self,
         request: Request<ProveStateTransitionRequest>,
     ) -> Result<Response<ProveStateTransitionResponse>, Status> {
         println!("Got state transition request: {:?}", request);
+        let inner_request = request.into_inner();
+
+        let client_id = inner_request.client_id.parse::<Address>()
+            .map_err(|e| Status::internal(format!("Failed to parse client_id as EVM address: {}", e)))?;
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_http(self.evm_rpc_url.clone());
-        let contract = sp1_ics07_tendermint::new(self.evm_contract_address, provider);
+        let contract = sp1_ics07_tendermint::new(client_id, provider);
 
         let client_state = contract.getClientState().call().await.map_err(|e| Status::internal(e.to_string()))?._0;
         // fetch the light block at the latest height of the client state
@@ -99,10 +117,10 @@ impl Prover for ProverService {
         Ok(Response::new(response))
     }
 
-    async fn prove_membership(
+    async fn prove_state_membership(
         &self,
-        request: Request<ProveMembershipRequest>,
-    ) -> Result<Response<ProveMembershipResponse>, Status> {
+        request: Request<ProveStateMembershipRequest>,
+    ) -> Result<Response<ProveStateMembershipResponse>, Status> {
         println!("Got membership request: {:?}", request);
         let inner_request = request.into_inner();
 
@@ -129,7 +147,7 @@ impl Prover for ProverService {
         );
 
         // Implement your membership proof logic here
-        let response = ProveMembershipResponse {
+        let response = ProveStateMembershipResponse {
             proof: proof.bytes().to_vec(),
             height: trusted_block.signed_header.header.height.value() as i64,
         };
@@ -141,7 +159,7 @@ impl Prover for ProverService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
-    let addr = "[::1]:50051".parse()?;
+    let addr = "[::]:50051".parse()?;
     let prover = ProverService::new();
 
     println!("Prover Server listening on {}", addr);

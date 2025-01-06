@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
@@ -50,7 +51,7 @@ func InitializeSp1TendermintLightClientOnReth() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Contract Addresses:", addresses)
+	fmt.Printf("Contract Addresses: %v\n", addresses)
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
@@ -60,13 +61,13 @@ func InitializeSp1TendermintLightClientOnReth() error {
 	if err := createChannelAndCounterpartyOnReth(addresses, ethClient); err != nil {
 		return err
 	}
-	fmt.Println("Channel and counterparty created successfully on reth node")
+	fmt.Println("Created channel and counterparty on reth node.")
 
 	if err := createCounterpartyOnSimapp(); err != nil {
 		return err
 	}
-	fmt.Println("Counterparty created successfully on simapp")
 
+	fmt.Println("Created counterparty on simapp.")
 	return nil
 
 }
@@ -173,15 +174,15 @@ func createChannelAndCounterpartyOnReth(addresses ContractAddresses, ethClient *
 func createCounterpartyOnSimapp() error {
 	fmt.Println("Creating counterparty on simapp...")
 
-	clientCtx, err := SetupClientContext()
+	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	registerCounterPartyResp, err := BroadcastMessages(clientCtx, Relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
+	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
 		ChannelId:             channelId,
 		CounterpartyChannelId: TendermintLightClientID,
-		Signer:                Relayer,
+		Signer:                relayer,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to register counterparty: %v", err)
@@ -220,19 +221,16 @@ func GetTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclie
 func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
 	var receipt *ethtypes.Receipt
 	var err error
-	err = WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
 		receipt, err = ethClient.TransactionReceipt(ctx, hash)
 		if err != nil {
 			return false, nil
 		}
-		fmt.Println(receipt, "receipt")
-		fmt.Println(receipt != nil, "IS NOT NIL")
 		return receipt != nil, nil
 	})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("made it here")
 	return receipt
 }
 
@@ -250,28 +248,4 @@ func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log
 	}
 
 	return
-}
-
-// WaitForCondition periodically executes the given function fn based on the provided pollingInterval.
-// The function fn should return true of the desired condition is met. If the function never returns true within the timeoutAfter
-// period, or fn returns an error, the condition will not have been met.
-func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bool, error)) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutAfter)
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("failed waiting for condition after %f seconds", timeoutAfter.Seconds())
-		case <-time.After(pollingInterval):
-			reachedCondition, err := fn()
-			if err != nil {
-				return fmt.Errorf("error occurred while waiting for condition: %s", err)
-			}
-
-			if reachedCondition {
-				return nil
-			}
-		}
-	}
 }

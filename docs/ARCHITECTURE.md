@@ -5,7 +5,7 @@
 
 To provide some context on what we’re trying to achieve, we’re going to start with describing the user flow for transferring TIA to a ZK EVM (Based of the current flow)
 
-![zkevm-ibc-transfer-flow](./zkevm-ibc-transfer-flow.png)
+![zkevm-ibc-transfer-flow](./images/zkevm-ibc-transfer-flow.png)
 
 1. A user submits a `MsgTransfer` to the Celestia chain. Celestia performs some validation checks on the message, then transfers the user’s funds to a module account, effectively locking the funds. The chain then creates a `Commitment` , a receipt of the successful execution of that message as well as an event emitted containing a `Packet` with information to send to the EVM rollup
 2. A relayer listens for the event. It queries a Celestia consensus node for the `Commitment` in the state tree along with the merkle proof, proving the inclusion of that data. The relayer submits the packet along with the inclusion proofs to the rollups namespace.
@@ -26,7 +26,7 @@ The architecture involves several different logical components:
 - Prover: proves the computation to go from one state to the next. Publishes these proofs to the state namespace. An example of this for EVMs is RSP (Reth Succinct Prover) which is a circuit for proving the computation of a single block.
 - Relayer: listens for events from both the EVM rollup full node and the Celestia consensus full node. It queries for commitments and proofs and submits them to the DA layer under the appropriate namespaces. We expect it to often run on the same machine as the sequencer.
 
-![zkevm-ibc-architecture](./zkevm-ibc-architecture.png)
+![zkevm-ibc-architecture](./images/zkevm-ibc-architecture.png)
 
 ## Proving System
 

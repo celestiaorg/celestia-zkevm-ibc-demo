@@ -1,54 +1,34 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
-	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
-	"cosmossdk.io/x/tx/signing"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/client/tx"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/codec/address"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/std"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	legacysigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-// relayer address registered in simapp
-const Relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
-
-var Groth16ClientId string
+// relayer is the address registered on simapp
+const relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 
 func InitializeGroth16LightClientOnSimapp() error {
-	fmt.Println("Initializing the groth16 light client")
+	fmt.Println("Initializing the Groth16 light client on simapp...")
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
-		return fmt.Errorf("failed to connect to ethereum client: %v", err)
+		return fmt.Errorf("failed to connect to Ethereum client: %v", err)
 	}
 
 	genesisBlock, latestBlock, err := getGenesisAndLatestBlock(ethClient)
@@ -61,21 +41,19 @@ func InitializeGroth16LightClientOnSimapp() error {
 		return err
 	}
 
-	// simapp address
-	clientCtx, err := SetupClientContext()
+	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	if err := createClientOnSimapp(clientCtx, clientState, consensusState); err != nil {
+	clientId, err := createClientOnSimapp(clientCtx, clientState, consensusState)
+	if err != nil {
 		return err
 	}
-	fmt.Println("Groth16 client created successfully on simapp")
 
-	if err := createChannelOnSimapp(clientCtx); err != nil {
+	if err := createChannelOnSimapp(clientCtx, clientId); err != nil {
 		return err
 	}
-	fmt.Println("Channel created successfully on simapp")
 
 	return nil
 }
@@ -111,249 +89,69 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 	return genesisBlock, latestBlock, nil
 }
 
-func createClientOnSimapp(clientCtx client.Context, clientState, consensusState *cdctypes.Any) error {
+func createClientOnSimapp(clientCtx client.Context, clientState, consensusState *cdctypes.Any) (clientId string, err error) {
 	createClientMsg := &clienttypes.MsgCreateClient{
 		ClientState:    clientState,
 		ConsensusState: consensusState,
-		Signer:         Relayer,
+		Signer:         relayer,
 	}
 
 	if clientState.GetCachedValue().(*groth16.ClientState).ClientType() != consensusState.GetCachedValue().(*groth16.ConsensusState).ClientType() {
 		fmt.Println("Client and consensus state client types do not match")
 	}
 
-	createClientMsgResponse, err := BroadcastMessages(clientCtx, Relayer, 200_000, createClientMsg)
+	createClientMsgResponse, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, createClientMsg)
 	if err != nil {
-		return fmt.Errorf("failed to broadcast the initial client creation message: %v", err)
+		return "", fmt.Errorf("failed to broadcast the initial client creation message: %v", err)
 	}
 
 	if createClientMsgResponse.Code != 0 {
-		return fmt.Errorf("failed to create client: %v", createClientMsgResponse.RawLog)
+		return "", fmt.Errorf("failed to create client: %v", createClientMsgResponse.RawLog)
 	}
 
-	Groth16ClientId, err = ParseClientIDFromEvents(createClientMsgResponse.Events)
+	clientId, err = parseClientIDFromEvents(createClientMsgResponse.Events)
 	if err != nil {
-		return fmt.Errorf("failed to parse client id from events: %v", err)
+		return "", fmt.Errorf("failed to parse client id from events: %v", err)
 	}
 
-	return nil
+	fmt.Printf("Created Groth16 client with clientId %v on simapp.\n", clientId)
+	return clientId, nil
 }
 
-func createChannelOnSimapp(clientCtx client.Context) error {
+func createChannelOnSimapp(clientCtx client.Context, clientId string) error {
 	cosmosMerklePathPrefix := commitmenttypesv2.NewMerklePath([]byte("simd"))
-	msgCreateChannelResp, err := BroadcastMessages(clientCtx, Relayer, 200_000, &channeltypesv2.MsgCreateChannel{
-		ClientId:         Groth16ClientId,
+	msg := channeltypesv2.MsgCreateChannel{
+		ClientId:         clientId,
 		MerklePathPrefix: cosmosMerklePathPrefix,
-		Signer:           Relayer,
-	})
+		Signer:           relayer,
+	}
+	response, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &msg)
 	if err != nil {
 		return fmt.Errorf("failed to create channel: %v", err)
 	}
-	if msgCreateChannelResp.Code != 0 {
-		return fmt.Errorf("failed to create channel: %v", msgCreateChannelResp.RawLog)
+	if response.Code != 0 {
+		return fmt.Errorf("failed to create channel: %v", response.RawLog)
 	}
 
+	fmt.Println("Created channel on simapp.")
 	return nil
 }
 
-// SetupClientContext initializes a Cosmos SDK ClientContext
-func SetupClientContext() (client.Context, error) {
-	// Get the user's home directory
-	home, err := os.Getwd()
-	if err != nil {
-		return client.Context{}, fmt.Errorf("failed to initialize keyring: %v", err)
-	}
-
-	// Chain-specific configurations
-	chainID := "zkibc-demo"
-	cometNodeURI := "http://localhost:5123"                                // Comet RPC endpoint
-	appName := "celestia-zkevm-ibc-demo"                                   // Name of the application from the genesis file
-	grpcAddr := "localhost:9190"                                           // gRPC endpoint
-	homeDir := filepath.Join(home, "testing", "files", "simapp-validator") // Path to the keyring directory
-
-	// Initialise codec with the necessary registerers
-	interfaceRegistry, _ := cdctypes.NewInterfaceRegistryWithOptions(cdctypes.InterfaceRegistryOptions{
-		ProtoFiles: proto.HybridResolver,
-		SigningOptions: signing.Options{
-			AddressCodec: address.Bech32Codec{
-				Bech32Prefix: sdk.GetConfig().GetBech32AccountAddrPrefix(),
-			},
-			ValidatorAddressCodec: address.Bech32Codec{
-				Bech32Prefix: sdk.GetConfig().GetBech32ValidatorAddrPrefix(),
-			},
-		},
-	})
-	std.RegisterInterfaces(interfaceRegistry)
-	authtypes.RegisterInterfaces(interfaceRegistry)
-	clienttypes.RegisterInterfaces(interfaceRegistry)
-	groth16.RegisterInterfaces(interfaceRegistry)
-	channeltypesv2.RegisterInterfaces(interfaceRegistry)
-	appCodec := codec.NewProtoCodec(interfaceRegistry)
-
-	// Keyring setup
-	kr, err := keyring.New(appName, keyring.BackendTest, homeDir, nil, appCodec)
-	if err != nil {
-		return client.Context{}, fmt.Errorf("failed to initialize keyring: %v", err)
-	}
-
-	rec, err := kr.List()
-	if err != nil {
-		fmt.Println(err, "keyring list error")
-	}
-	addr, err := rec[0].GetAddress()
-	if err != nil {
-		fmt.Println(err, "keyring address error")
-	}
-
-	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return client.Context{}, fmt.Errorf("failed to create gRPC connection: %v", err)
-	}
-
-	if err != nil {
-		return client.Context{}, fmt.Errorf("failed to create tendermint client: %v", err)
-	}
-
-	txConfigOpts := authtx.ConfigOptions{
-		EnabledSignModes:           append(authtx.DefaultSignModes, legacysigning.SignMode_SIGN_MODE_TEXTUAL),
-		TextualCoinMetadataQueryFn: txmodule.NewGRPCCoinMetadataQueryFn(conn),
-	}
-
-	txConfig, err := authtx.NewTxConfigWithOptions(appCodec, txConfigOpts)
-	if err != nil {
-		return client.Context{}, fmt.Errorf("failed to create tx config: %v", err)
-	}
-
-	cometNode, err := client.NewClientFromNode(cometNodeURI)
-	if err != nil {
-		return client.Context{}, err
-	}
-
-	// Initialize ClientContext
-	clientCtx := client.Context{}.
-		WithChainID(chainID).
-		WithKeyring(kr).
-		WithHomeDir(homeDir).
-		WithGRPCClient(conn).
-		WithFromAddress(addr).
-		WithFromName(rec[0].Name).
-		WithSkipConfirmation(true).
-		WithInterfaceRegistry(interfaceRegistry).
-		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithKeyring(kr).
-		WithTxConfig(txConfig).
-		WithBroadcastMode("sync").
-		WithClient(cometNode).
-		WithCodec(appCodec)
-
-	return clientCtx, nil
-}
-
-// GetFactory returns an instance of tx.Factory that is configured with this Broadcaster's CosmosChain
-// and the provided user. ConfigureFactoryOptions can be used to specify arbitrary options to configure the returned
-// factory.
-func GetFactory(clientContext client.Context, user string, factoryOptions tx.Factory) (tx.Factory, error) {
-	sdkAdd, err := sdk.AccAddressFromBech32(user)
-	if err != nil {
-		return tx.Factory{}, err
-	}
-
-	account, err := clientContext.AccountRetriever.GetAccount(clientContext, sdkAdd)
-	if err != nil {
-		return tx.Factory{}, err
-	}
-
-	return defaultTxFactory(clientContext, account), nil
-}
-
-// defaultTxFactory creates a new Factory with default configuration.
-func defaultTxFactory(clientCtx client.Context, account client.Account) tx.Factory {
-	return tx.Factory{}.
-		WithAccountNumber(account.GetAccountNumber()).
-		WithSequence(account.GetSequence()).
-		WithSignMode(legacysigning.SignMode_SIGN_MODE_DIRECT).
-		WithGas(flags.DefaultGasLimit).
-		WithGasPrices("0.0001stake").
-		WithMemo("interchaintest").
-		WithTxConfig(clientCtx.TxConfig).
-		WithAccountRetriever(clientCtx.AccountRetriever).
-		WithKeybase(clientCtx.Keyring).
-		WithChainID(clientCtx.ChainID).
-		WithSimulateAndExecute(false)
-}
-
-// BroadcastMessages broadcasts the provided messages to the given chain and signs them on behalf of the provided user.
-// Once the broadcast response is returned, we wait for two blocks to be created on chain.
-func BroadcastMessages(clientContext client.Context, user string, gas uint64, msgs ...interface {
-	ProtoMessage()
-	Reset()
-	String() string
-}) (*sdk.TxResponse, error) {
-	// Create a tx.Factory instance and apply the factoryOptions function
-	factory := tx.Factory{}
-	factoryOptions := factory.WithGas(gas)
-
-	f, err := GetFactory(clientContext, user, factoryOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	buffer := &bytes.Buffer{}
-	clientContext.Output = buffer
-	clientContext.WithOutput(buffer)
-
-	if err := tx.BroadcastTx(clientContext, f, msgs...); err != nil {
-		return &sdk.TxResponse{}, err
-	}
-
-	if buffer.Len() == 0 {
-		return nil, fmt.Errorf("empty buffer, transaction has not been executed yet")
-	}
-	// unmarshall buffer into txresponse
-	var txResp sdk.TxResponse
-	if err := clientContext.Codec.UnmarshalJSON(buffer.Bytes(), &txResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
-	}
-	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
-}
-
-type User interface {
-	KeyName() string
-	FormattedAddress() string
-}
-
-// getFullyPopulatedResponse returns a fully populated sdk.TxResponse.
-// the QueryTx function is periodically called until a tx with the given hash
-// has been included in a block.
-func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
-	var resp sdk.TxResponse
-	err := WaitForCondition(time.Second*60, time.Second*5, func() (bool, error) {
-		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
-		if err != nil {
-			return false, err
-		}
-
-		resp = *fullyPopulatedTxResp
-		return true, nil
-	})
-	return &resp, err
-}
-
-// ParseClientIDFromEvents parses events emitted from a MsgCreateClient and returns the
-// client identifier.
-func ParseClientIDFromEvents(events []abci.Event) (string, error) {
-	for _, ev := range events {
-		if ev.Type == clienttypes.EventTypeCreateClient {
-			if attribute, found := attributeByKey(ev.Attributes, clienttypes.AttributeKeyClientID); found {
+// parseClientIDFromEvents parses events emitted from a MsgCreateClient and
+// returns the client identifier.
+func parseClientIDFromEvents(events []abci.Event) (string, error) {
+	for _, event := range events {
+		if event.Type == clienttypes.EventTypeCreateClient {
+			if attribute, isFound := getAttributeByKey(event.Attributes, clienttypes.AttributeKeyClientID); isFound {
 				return attribute.Value, nil
 			}
 		}
 	}
-	return "", errors.New("client identifier event attribute not found")
+	return "", fmt.Errorf("client identifier event attribute not found")
 }
 
-// attributeByKey returns the event attribute's value keyed by the given key and a boolean indicating its presence in the given attributes.
-func attributeByKey(attributes []abci.EventAttribute, key string) (abci.EventAttribute, bool) {
+// getAttributeByKey returns the first event attribute with the given key.
+func getAttributeByKey(attributes []abci.EventAttribute, key string) (ea abci.EventAttribute, isFound bool) {
 	idx := slices.IndexFunc(attributes, func(a abci.EventAttribute) bool { return a.Key == key })
 	if idx == -1 {
 		return abci.EventAttribute{}, false

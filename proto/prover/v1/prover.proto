@@ -5,11 +5,23 @@ package celestia.prover.v1;
 option go_package = "provers/client";
 
 service Prover {
+  rpc Info(InfoRequest) returns (InfoResponse);
   rpc ProveStateTransition(ProveStateTransitionRequest) returns (ProveStateTransitionResponse);
-  rpc ProveMembership(ProveMembershipRequest) returns (ProveMembershipResponse);
+  rpc ProveStateMembership(ProveStateMembershipRequest) returns (ProveStateMembershipResponse);
+}
+
+message InfoRequest {
+}
+
+message InfoResponse {
+  // TODO: add more info here as is relevant such as the circuit and state machine types
+  bytes state_transition_verifier_key = 1;
+  bytes state_membership_verifier_key = 2;
 }
 
 message ProveStateTransitionRequest {
+  // for evm, this is the contract address, for ibc-go this is the client id
+  string client_id = 1;
 }
 
 message ProveStateTransitionResponse {
@@ -17,17 +29,12 @@ message ProveStateTransitionResponse {
   bytes public_values = 2;
 }
 
-message KeyValuePair {
-  bytes key = 1;
-  bytes value = 2;
-}
-
-message ProveMembershipRequest {
+message ProveStateMembershipRequest {
   int64 height = 1;
   repeated string key_paths = 2;
 }
 
-message ProveMembershipResponse {
+message ProveStateMembershipResponse {
   bytes proof = 1;
   int64 height = 2;
 }

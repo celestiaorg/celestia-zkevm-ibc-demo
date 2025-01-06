@@ -11,16 +11,14 @@ To run the server you will need to clone the repo and install rust and cargo. To
 
 - `TENDERMINT_RPC_URL` - the url of the tendermint chain you are proving.
 - `RPC_URL` the json rpc url of the evm chain you are generating the proofs for.
-- `CONTRACT_ADDRESS` - the evm address of the tendermint sp1 ics07 contract.
 
 To then run the server (on port `:50001`):
 
-```
+```shell
 cargo run
 ```
 
 To use the SP1 Prover Network you should also populate the `SP1_PROVER` and `SP1_PRIVATE_KEY` environment variables. You can also use a `.env` file for all environment variables
-
 
 ## Protobuf
 
