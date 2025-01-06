@@ -38,7 +38,7 @@ pub fn main() {
     let request_iter = (0..request_len).map(|_| {
         // loop_encoded_1 is the path we want to verify the membership of
         let loop_encoded_1 = sp1_zkvm::io::read_vec();
-        // let path = bincode::deserialize(&loop_encoded_1).unwrap();
+        let path = bincode::deserialize(&loop_encoded_1).unwrap();
 
         // loop_encoded_2 is the value we want to prove the membership of
         // if it is empty, we are verifying non-membership
