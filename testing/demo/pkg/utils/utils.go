@@ -227,11 +227,3 @@ func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bo
 		}
 	}
 }
-
-func QueryTx(clientContext client.Context, txHash string) (*sdk.TxResponse, error) {
-	txResponse, err := authtx.QueryTx(clientContext, txHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query transaction: %v", err)
-	}
-	return txResponse, nil
-}
