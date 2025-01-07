@@ -63,6 +63,7 @@ func copyFile(src, dest string) error {
 
 // replaceEnvVars replaces the specified environment variables in the file
 func replaceEnvVars(filePath string, envVars map[string]string) error {
+	fmt.Printf("envVars %v\n", envVars)
 	input, err := os.ReadFile(filePath)
 	if err != nil {
 		return err

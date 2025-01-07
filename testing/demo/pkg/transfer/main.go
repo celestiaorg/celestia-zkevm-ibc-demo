@@ -10,7 +10,6 @@ import (
 	"cosmossdk.io/math"
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	"github.com/cosmos/cosmos-sdk/client"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
@@ -62,33 +61,36 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = QueryPacketCommitments(txHash)
+	resp, err := QueryPacketCommitments(txHash)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
+	latestHeight := resp.GetHeight()
 	clientHeight, err := QueryLightClientLatestHeight()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	latestHeight, err := QueryLatestHeight()
+	// Ask the Celestia prover for a state transition proof from the client
+	// height to the most recent height on SimApp (should be >= latestHeight).
+	_, err = GetStateTransitionProof(clientHeight)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	_, err = GetStateTransitionProof(clientHeight, latestHeight)
+	// Ask the Celestia prover for a state membership proof that the packet commitments are part of the state root at the latest block height.
+	keyPaths := getKeyPaths(resp.Commitments)
+	_, err = GetMembershipProof(int64(latestHeight.RevisionHeight), keyPaths)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	// TODO
-	// Ask the Celestia prover for a state transition proof from the last height (previous step) to the most recent height on SimApp.
-	// Ask the Celestia prover for a state membership proof that the receipt is a merkle leaf of the state root.
 	// Combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
 }
 
@@ -98,15 +100,6 @@ func SubmitMsgTransfer() (txHash string, err error) {
 		return "", fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	txHash, err = submitMsgTransfer(clientCtx)
-	if err != nil {
-		return "", fmt.Errorf("failed to submit MsgTransfer: %v", err)
-	}
-
-	return txHash, nil
-}
-
-func submitMsgTransfer(clientCtx client.Context) (txHash string, err error) {
 	msgTransfer, err := createMsgTransfer()
 	if err != nil {
 		return "", fmt.Errorf("failed to create MsgTransfer: %w", err)
@@ -154,12 +147,12 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 }
 
 // QueryPacketCommitments queries the packet commitments on the SimApp.
-func QueryPacketCommitments(txHash string) error {
+func QueryPacketCommitments(txHash string) (*channeltypesv2.QueryPacketCommitmentsResponse, error) {
 	fmt.Printf("Querying packet commitments on SimApp...\n")
 
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	queryClient := channeltypesv2.NewQueryClient(clientCtx)
@@ -168,15 +161,15 @@ func QueryPacketCommitments(txHash string) error {
 	}
 	response, err := queryClient.PacketCommitments(context.Background(), &request)
 	if err != nil {
-		return fmt.Errorf("failed to query packet commitments: %v", err)
+		return nil, fmt.Errorf("failed to query packet commitments: %v", err)
 	}
 
-	// TODO what to do with these packets?
-	fmt.Printf("Packet commitments: %v\n", response.Commitments)
-	return nil
+	fmt.Printf("Packet commitments: %v, packet height %v\n", response.GetCommitments(), response.GetHeight())
+	return response, nil
 }
 
-// QueryLightClientLatestHeight queries the ICS07 light client on the EVM roll-up for the client state's latest height.
+// QueryLightClientLatestHeight queries the ICS07 light client on the EVM
+// roll-up for the client state's latest height.
 func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
 	fmt.Printf("Querying SP1 ICS07 tendermint light client for the client state's latest height...\n")
 
@@ -198,28 +191,8 @@ func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
 	return clientState.LatestHeight.RevisionHeight, nil
 }
 
-// QueryLatestHeight queries the latest height on SimApp.
-func QueryLatestHeight() (height uint32, err error) {
-	clientCtx, err := utils.SetupClientContext()
-	if err != nil {
-		return 0, err
-	}
-
-	node, err := clientCtx.GetNode()
-	if err != nil {
-		return 0, err
-	}
-
-	status, err := node.Status(context.Background())
-	if err != nil {
-		return 0, err
-	}
-
-	return uint32(status.SyncInfo.LatestBlockHeight), nil
-}
-
 // GetStateTransitionProof gets the state transition proof from the Celestia prover.
-func GetStateTransitionProof(clientHeight uint32, latestHeight uint32) (stateTransitionProof []byte, err error) {
+func GetStateTransitionProof(clientHeight uint32) (stateTransitionProof []byte, err error) {
 	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect to the prover service: %v", err)
@@ -239,7 +212,38 @@ func GetStateTransitionProof(clientHeight uint32, latestHeight uint32) (stateTra
 		return []byte{}, fmt.Errorf("failed to request state transition proof: %w", err)
 	}
 
-	fmt.Printf("Proof: %x\n", response.Proof)
-	fmt.Printf("Public Values: %x\n", response.PublicValues)
-	return response.Proof, nil
+	fmt.Printf("State transition proof: %x, public values %v\n", response.GetProof(), response.GetPublicValues())
+	return response.GetProof(), nil
+}
+
+// GetMembershipProof gets a membership proof that the key at keyPaths is a Merkle leaf of the state root at a particular block height.
+func GetMembershipProof(height int64, keyPaths []string) (membershipProof []byte, err error) {
+	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to the prover service: %v", err)
+	}
+	defer conn.Close()
+
+	client := proverclient.NewProverClient(conn)
+	request := &proverclient.ProveStateMembershipRequest{
+		Height:   height,
+		KeyPaths: keyPaths,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancel()
+
+	response, err := client.ProveStateMembership(ctx, request)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to request state membership proof: %w", err)
+	}
+
+	fmt.Printf("Membership proof: %x, Height %v\n", response.GetProof(), response.GetHeight())
+	return response.GetProof(), nil
+}
+
+// getKeyPaths returns the Merkle path to packets.
+func getKeyPaths(_ []*channeltypesv2.PacketState) []string {
+	// TODO: implement
+	return []string{}
 }
