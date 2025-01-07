@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
-	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/client"
+	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
