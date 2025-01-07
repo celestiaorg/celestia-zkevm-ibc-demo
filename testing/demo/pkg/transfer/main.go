@@ -1,126 +1,48 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"cosmossdk.io/math"
-	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
-	// senderAddress is an address on SimApp that will send funds via the MsgTransfer.
-	senderAddress = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
-
-	// receiverAddress is an address on the EVM chain that will receive funds via the MsgTransfer.
-	receiverAddress = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
-
+	// sender is an address on SimApp that will send funds via the MsgTransfer.
+	sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
+	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
+	receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
 	// denom is the denomination of the token on SimApp.
 	denom = "stake"
-
-	// amount is the amount of tokens to transfer.
-	amount = 100
-
-	// ethereumRPC is the RPC endpoint of the EVM chain.
-	ethereumRPC = "http://localhost:8545"
-
-	// celestiaProverEndpoint is the endpoint of the Celestia prover.
-	celestiaProverEndpoint = "localhost:50051"
-
-	// channelID is the channel ID on SimApp.
-	// TODO: fetch this from the `make setup` command output.
-	channelID = "channel-0"
-
-	// ics07TMContractAddress is the contract address of the ICS07 light client on the EVM roll-up.
-	// TODO: fetch this from the `make setup` command output.
-	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
 )
 
 func main() {
-	_, err := SubmitMsgTransfer()
+	msg, err := createMsgSendPacket()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
-	resp, err := QueryPacketCommitments()
+	_, err = submitMsgTransfer(msg)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-
-	latestHeight := resp.GetHeight()
-	clientHeight, err := QueryLightClientLatestHeight()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// Ask the Celestia prover for a state transition proof from the client
-	// height to the most recent height on SimApp (should be >= latestHeight).
-	_, err = GetStateTransitionProof(clientHeight)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// Ask the Celestia prover for a state membership proof that the packet commitments are part of the state root at the latest block height.
-	keyPaths := getKeyPaths(resp.Commitments)
-	_, err = GetMembershipProof(int64(latestHeight.RevisionHeight), keyPaths)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// TODO
-	// Combine these proofs and packets and submit a MsgUpdateClient and MsgRecvPacket to the EVM rollup.
 }
 
-func SubmitMsgTransfer() (txHash string, err error) {
-	clientCtx, err := utils.SetupClientContext()
-	if err != nil {
-		return "", fmt.Errorf("failed to setup client context: %v", err)
-	}
-
-	msgTransfer, err := createMsgTransfer()
-	if err != nil {
-		return "", fmt.Errorf("failed to create MsgTransfer: %w", err)
-	}
-
-	fmt.Printf("Broadcasting MsgTransfer...\n")
-	response, err := utils.BroadcastMessages(clientCtx, senderAddress, 200_000, &msgTransfer)
-	if err != nil {
-		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
-	}
-
-	if response.Code != 0 {
-		return "", fmt.Errorf("failed to execute MsgTransfer %v", response.RawLog)
-	}
-	fmt.Printf("Broadcasted MsgTransfer. Response code: %v, tx hash: %v\n", response.Code, response.TxHash)
-	return response.TxHash, nil
-}
-
-func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
-	coin := sdktypes.NewCoin(denom, math.NewInt(amount))
+// createMsgSendPacket returns a msg that sends 100stake over IBC.
+func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
+	coin := sdktypes.NewCoin(denom, math.NewInt(100))
 	transferPayload := ics20lib.ICS20LibFungibleTokenPacketData{
 		Denom:    coin.Denom,
 		Amount:   coin.Amount.BigInt(),
-		Sender:   senderAddress,
-		Receiver: receiverAddress,
+		Sender:   sender,
+		Receiver: receiver,
 		Memo:     "test transfer",
 	}
 	transferBz, err := ics20lib.EncodeFungibleTokenPacketData(transferPayload)
@@ -138,108 +60,25 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 		SourceChannel:    ibctesting.FirstChannelID,
 		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
 		Payloads:         []channeltypesv2.Payload{payload},
-		Signer:           senderAddress,
+		Signer:           sender,
 	}, nil
 }
 
-// QueryPacketCommitments queries the packet commitments on the SimApp.
-func QueryPacketCommitments() (*channeltypesv2.QueryPacketCommitmentsResponse, error) {
-	fmt.Printf("Querying packet commitments on SimApp...\n")
-
+func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err error) {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	queryClient := channeltypesv2.NewQueryClient(clientCtx)
-	request := channeltypesv2.QueryPacketCommitmentsRequest{
-		ChannelId: channelID,
-	}
-	response, err := queryClient.PacketCommitments(context.Background(), &request)
+	fmt.Printf("Broadcasting MsgTransfer...\n")
+	response, err := utils.BroadcastMessages(clientCtx, sender, 200_000, &msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query packet commitments: %v", err)
+		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
 	}
 
-	fmt.Printf("Packet commitments: %v, packet height %v\n", response.GetCommitments(), response.GetHeight())
-	return response, nil
-}
-
-// QueryLightClientLatestHeight queries the ICS07 light client on the EVM
-// roll-up for the client state's latest height.
-func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
-	fmt.Printf("Querying SP1 ICS07 tendermint light client for the client state's latest height...\n")
-
-	ethClient, err := ethclient.Dial(ethereumRPC)
-	if err != nil {
-		return 0, err
+	if response.Code != 0 {
+		return "", fmt.Errorf("failed to execute MsgTransfer %v", response.RawLog)
 	}
-
-	sp1Ics07Contract, err := sp1ics07tendermint.NewContract(ethcommon.HexToAddress(ics07TMContractAddress), ethClient)
-	if err != nil {
-		return 0, err
-	}
-	clientState, err := sp1Ics07Contract.GetClientState(nil)
-	if err != nil {
-		return 0, err
-	}
-
-	fmt.Printf("Client state latest height: %v, revision height %v, revision number %v.\n", clientState.LatestHeight, clientState.LatestHeight.RevisionHeight, clientState.LatestHeight.RevisionNumber)
-	return clientState.LatestHeight.RevisionHeight, nil
-}
-
-// GetStateTransitionProof gets the state transition proof from the Celestia prover.
-func GetStateTransitionProof(clientHeight uint32) (stateTransitionProof []byte, err error) {
-	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("Failed to connect to the prover service: %v", err)
-	}
-	defer conn.Close()
-
-	client := proverclient.NewProverClient(conn)
-	request := &proverclient.ProveStateTransitionRequest{
-		ClientId: ics07TMContractAddress,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
-	defer cancel()
-
-	response, err := client.ProveStateTransition(ctx, request)
-	if err != nil {
-		return []byte{}, fmt.Errorf("failed to request state transition proof: %w", err)
-	}
-
-	fmt.Printf("State transition proof: %x, public values %v\n", response.GetProof(), response.GetPublicValues())
-	return response.GetProof(), nil
-}
-
-// GetMembershipProof gets a membership proof that the key at keyPaths is a Merkle leaf of the state root at a particular block height.
-func GetMembershipProof(height int64, keyPaths []string) (membershipProof []byte, err error) {
-	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("Failed to connect to the prover service: %v", err)
-	}
-	defer conn.Close()
-
-	client := proverclient.NewProverClient(conn)
-	request := &proverclient.ProveStateMembershipRequest{
-		Height:   height,
-		KeyPaths: keyPaths,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
-	defer cancel()
-
-	response, err := client.ProveStateMembership(ctx, request)
-	if err != nil {
-		return []byte{}, fmt.Errorf("failed to request state membership proof: %w", err)
-	}
-
-	fmt.Printf("Membership proof: %x, Height %v\n", response.GetProof(), response.GetHeight())
-	return response.GetProof(), nil
-}
-
-// getKeyPaths returns the Merkle path to packets.
-func getKeyPaths(_ []*channeltypesv2.PacketState) []string {
-	// TODO: implement
-	return []string{}
+	fmt.Printf("Broadcasted MsgTransfer. Response code: %v, tx hash: %v\n", response.Code, response.TxHash)
+	return response.TxHash, nil
 }
