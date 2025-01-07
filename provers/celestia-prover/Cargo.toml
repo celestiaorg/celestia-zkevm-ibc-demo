@@ -27,6 +27,5 @@ ibc-proto = { workspace = true }
 tracing = { workspace = true }
 serde_cbor = "0.11.2"
 
-
 [build-dependencies]
-tonic-build.workspace = true
+tonic-build = { workspace = true }
