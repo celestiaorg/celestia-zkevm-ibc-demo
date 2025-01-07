@@ -30,28 +30,20 @@ const (
 )
 
 func main() {
-	resp, err := QueryPacketCommitments()
+	// Ask the Celestia prover for a state transition proof.
+	_, err := GetStateTransitionProof()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	latestHeight := resp.GetHeight()
-	clientHeight, err := QueryLightClientLatestHeight()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Ask the Celestia prover for a state transition proof from the client
-	// height to the most recent height on SimApp which should be >= latestHeight.
-	_, err = GetStateTransitionProof(clientHeight)
+	packetResp, err := QueryPacketCommitments()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Ask the Celestia prover for a state membership proof that the packet
-	// commitments are part of the state root at the latest block height.
-	keyPaths := getKeyPaths(resp.Commitments)
-	_, err = GetMembershipProof(int64(latestHeight.RevisionHeight), keyPaths)
+	// commitments are part of the state root at a particular block height.
+	_, err = GetMembershipProof(packetResp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,43 +95,45 @@ func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
 	return clientState.LatestHeight.RevisionHeight, nil
 }
 
-// GetStateTransitionProof gets the state transition proof from the Celestia prover.
-func GetStateTransitionProof(clientHeight uint32) (stateTransitionProof []byte, err error) {
+// GetStateTransitionProof returns a state transition proof from the Celestia
+// prover. The prover will query the Tendermint light client on the EVM roll-up
+// for it's last known height and generate a proof from that height all the way
+// up to the latest height on SimApp.
+func GetStateTransitionProof() (proof []byte, err error) {
 	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect to the prover service: %v", err)
 	}
 	defer conn.Close()
 
-	client := proverclient.NewProverClient(conn)
-	request := &proverclient.ProveStateTransitionRequest{
-		ClientId: ics07TMContractAddress,
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 
-	response, err := client.ProveStateTransition(ctx, request)
+	client := proverclient.NewProverClient(conn)
+	request := &proverclient.ProveStateTransitionRequest{ClientId: ics07TMContractAddress}
+
+	resp, err := client.ProveStateTransition(ctx, request)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to request state transition proof: %w", err)
 	}
 
-	fmt.Printf("State transition proof: %x, public values %v\n", response.GetProof(), response.GetPublicValues())
-	return response.GetProof(), nil
+	fmt.Printf("Got state transition proof: %x, public values %v\n", resp.GetProof(), resp.GetPublicValues())
+	return resp.GetProof(), nil
 }
 
-// GetMembershipProof gets a membership proof that the key at keyPaths is a Merkle leaf of the state root at a particular block height.
-func GetMembershipProof(height int64, keyPaths []string) (membershipProof []byte, err error) {
+// GetMembershipProof gets a membership proof that the packets in the input are
+// present in the state root at the input block height on SimApp.
+func GetMembershipProof(input *channeltypesv2.QueryPacketCommitmentsResponse) (proof []byte, err error) {
 	conn, err := grpc.NewClient(celestiaProverEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to connect to the prover service: %v", err)
+		return []byte{}, fmt.Errorf("failed to connect to the prover service: %w", err)
 	}
 	defer conn.Close()
 
 	client := proverclient.NewProverClient(conn)
 	request := &proverclient.ProveStateMembershipRequest{
-		Height:   height,
-		KeyPaths: keyPaths,
+		Height:   int64(input.GetHeight().RevisionHeight),
+		KeyPaths: getKeyPaths(input.Commitments),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
@@ -150,7 +144,7 @@ func GetMembershipProof(height int64, keyPaths []string) (membershipProof []byte
 		return []byte{}, fmt.Errorf("failed to request state membership proof: %w", err)
 	}
 
-	fmt.Printf("Membership proof: %x, Height %v\n", response.GetProof(), response.GetHeight())
+	fmt.Printf("Got membership proof: %x, height %v\n", response.GetProof(), response.GetHeight())
 	return response.GetProof(), nil
 }
 
