@@ -9,16 +9,11 @@ import (
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
-	// ethereumRPC is the RPC endpoint of the EVM chain.
-	ethereumRPC = "http://localhost:8545"
 	// celestiaProverEndpoint is the endpoint of the Celestia prover.
 	celestiaProverEndpoint = "localhost:50051"
 	// channelID is the channel ID on SimApp.
@@ -70,29 +65,6 @@ func QueryPacketCommitments() (*channeltypesv2.QueryPacketCommitmentsResponse, e
 
 	fmt.Printf("Packet commitments: %v, packet height %v\n", response.GetCommitments(), response.GetHeight())
 	return response, nil
-}
-
-// QueryLightClientLatestHeight queries the ICS07 light client on the EVM
-// roll-up for the client state's latest height.
-func QueryLightClientLatestHeight() (latestHeight uint32, err error) {
-	fmt.Printf("Querying SP1 ICS07 tendermint light client for the client state's latest height...\n")
-
-	ethClient, err := ethclient.Dial(ethereumRPC)
-	if err != nil {
-		return 0, err
-	}
-
-	sp1Ics07Contract, err := sp1ics07tendermint.NewContract(ethcommon.HexToAddress(ics07TMContractAddress), ethClient)
-	if err != nil {
-		return 0, err
-	}
-	clientState, err := sp1Ics07Contract.GetClientState(nil)
-	if err != nil {
-		return 0, err
-	}
-
-	fmt.Printf("Client state latest height: %v, revision height %v, revision number %v.\n", clientState.LatestHeight, clientState.LatestHeight.RevisionHeight, clientState.LatestHeight.RevisionNumber)
-	return clientState.LatestHeight.RevisionHeight, nil
 }
 
 // GetStateTransitionProof returns a state transition proof from the Celestia
