@@ -103,6 +103,8 @@ func GetMembershipProof(input *channeltypesv2.QueryPacketCommitmentsResponse) (p
 	defer conn.Close()
 
 	client := proverclient.NewProverClient(conn)
+	// Are packet commitments the correct data type to be proving here?
+	// TODO: investigate existing IBC relayer implementations.
 	request := &proverclient.ProveStateMembershipRequest{
 		Height:   int64(input.GetHeight().RevisionHeight),
 		KeyPaths: getKeyPaths(input.Commitments),
@@ -120,7 +122,8 @@ func GetMembershipProof(input *channeltypesv2.QueryPacketCommitmentsResponse) (p
 	return response.GetProof(), nil
 }
 
-// getKeyPaths returns the Merkle path to packets.
+// getKeyPaths returns a list of strings where each string is a Merkle path for
+// a leaf to the state root.
 func getKeyPaths(_ []*channeltypesv2.PacketState) []string {
 	// TODO: implement
 	return []string{}
