@@ -45,10 +45,6 @@ const (
 	// TODO: fetch this from the `make setup` command output.
 	channelID = "channel-0"
 
-	// clientID is the client ID on SimApp.
-	// TODO: fetch this from the `make setup` command output.
-	clientID = "08-groth16-0"
-
 	// ics07TMContractAddress is the contract address of the ICS07 light client on the EVM roll-up.
 	// TODO: fetch this from the `make setup` command output.
 	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
