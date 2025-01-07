@@ -20,7 +20,7 @@ BUILD_FLAGS := -tags "ledger" -ldflags '$(ldflags)'
 ## help: Get more info on make commands.
 help: Makefile
 	@echo " Choose a command run in "$(PROJECT_NAME)":"
-	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
+	@sed -n 's/^##//p' $< | sort | column -t -s ':' | sed -e 's/^/ /'
 .PHONY: help
 
 ## install-dependencies: Install all dependencies needed for the demo.
