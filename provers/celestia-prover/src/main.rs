@@ -6,14 +6,19 @@ pub mod prover {
     tonic::include_proto!("celestia.prover.v1");
 }
 
-use celestia_prover::programs::{MembershipProgram, UpdateClientProgram};
+// use celestia_prover::programs::{NewMembershipProgram, NewUpdateClientProgram};
+// use celestia_prover::prover::SP1ICS07TendermintProver;
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
 
-use sp1_ics07_tendermint_prover::prover::{SP1ICS07TendermintProver, SupportedProofType};
+// use sp1_ics07_tendermint_prover::prover::{SP1ICS07TendermintProver, SupportedProofType, MembershipProgram, UpdateClientProgram};
+use celestia_prover::{
+    programs::{UpdateClientProgram, MembershipProgram},
+    prover::{SP1ICS07TendermintProver, SupportedProofType},
+};
 
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;

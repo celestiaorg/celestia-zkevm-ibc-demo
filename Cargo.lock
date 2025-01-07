@@ -1350,16 +1350,20 @@ dependencies = [
  "ibc-client-tendermint-types",
  "ibc-core-commitment-types",
  "ibc-eureka-solidity-types",
+ "ibc-proto 0.51.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost",
  "reqwest 0.12.9",
+ "serde_cbor",
  "sp1-ics07-tendermint-prover",
  "sp1-ics07-tendermint-utils",
  "sp1-prover",
+ "sp1-sdk",
  "tendermint-rpc",
  "tokio",
  "tonic",
  "tonic-build",
  "tonic-reflection",
+ "tracing",
 ]
 
 [[package]]
