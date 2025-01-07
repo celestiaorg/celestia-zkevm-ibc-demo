@@ -51,13 +51,13 @@ const (
 )
 
 func main() {
-	txHash, err := SubmitMsgTransfer()
+	_, err := SubmitMsgTransfer()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	resp, err := QueryPacketCommitments(txHash)
+	resp, err := QueryPacketCommitments()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -143,7 +143,7 @@ func createMsgTransfer() (channeltypesv2.MsgSendPacket, error) {
 }
 
 // QueryPacketCommitments queries the packet commitments on the SimApp.
-func QueryPacketCommitments(txHash string) (*channeltypesv2.QueryPacketCommitmentsResponse, error) {
+func QueryPacketCommitments() (*channeltypesv2.QueryPacketCommitmentsResponse, error) {
 	fmt.Printf("Querying packet commitments on SimApp...\n")
 
 	clientCtx, err := utils.SetupClientContext()
