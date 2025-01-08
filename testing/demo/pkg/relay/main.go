@@ -9,7 +9,6 @@ import (
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
-	ibchostv2 "github.com/cosmos/ibc-go/v9/modules/core/24-host/v2"
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,38 +48,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO: combine these proofs and packets and submit a MsgUpdateClient and
-	// MsgRecvPacket to the EVM rollup. See solidity-ibc-eureka for example.
-	//
-	// https://github.com/cosmos/solidity-ibc-eureka/blob/febaabb6915eccfd3e1922793bc0936cd0b4fdfb/e2e/interchaintestv8/ibc_eureka_test.go#L816
-	packetCommitmentPath := ibchostv2.PacketCommitmentKey(sourceChannel, sequence)
-	fmt.Printf("packetCommitmentPath %v\n", packetCommitmentPath)
-
-	// Note: solidity-ibc-eureka tests wrap the MsgSendPacket that we have in transfer.
-	//
-	// https://github.com/cosmos/solidity-ibc-eureka/blob/febaabb6915eccfd3e1922793bc0936cd0b4fdfb/e2e/interchaintestv8/ibc_eureka_test.go#L779-L787
-
-	// proofHeight, ucAndMemProof := updateClientAndMembershipProof(ctx, simd, pt, [][]byte{packetCommitmentPath})
-	// packet := ics26router.IICS26RouterMsgsPacket{
-	// 	Sequence:         uint32(sendPacket.Sequence),
-	// 	SourceChannel:    sendPacket.SourceChannel,
-	// 	DestChannel:      sendPacket.DestinationChannel,
-	// 	TimeoutTimestamp: sendPacket.TimeoutTimestamp,
-	// 	Payloads: []ics26router.IICS26RouterMsgsPayload{
-	// 		{
-	// 			SourcePort: sendPacket.Payloads[0].SourcePort,
-	// 			DestPort:   sendPacket.Payloads[0].DestinationPort,
-	// 			Version:    transfertypes.V1,
-	// 			Encoding:   transfertypes.EncodingABI,
-	// 			Value:      sendPacket.Payloads[0].Value,
-	// 		},
-	// 	},
-	// }
-	// msg := ics26router.IICS26RouterMsgsMsgRecvPacket{
-	// 	Packet:          packet,
-	// 	ProofCommitment: ucAndMemProof,
-	// 	ProofHeight:     *proofHeight,
-	// }
 }
 
 // QueryPacketCommitments queries the packet commitments on the SimApp.

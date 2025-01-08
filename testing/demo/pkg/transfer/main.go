@@ -10,6 +10,7 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
+	ibchostv2 "github.com/cosmos/ibc-go/v9/modules/core/24-host/v2"
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
 )
@@ -23,6 +24,8 @@ const (
 	denom = "stake"
 	// sourceChannel is hard-coded to the name used by the first channel.
 	sourceChannel = ibctesting.FirstChannelID
+	// sequence is hard-coded to the first sequence number.
+	sequence = 1
 )
 
 func main() {
@@ -35,6 +38,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	packetCommitmentPath := ibchostv2.PacketCommitmentKey(sourceChannel, sequence)
+	fmt.Printf("packetCommitmentPath %v\n", packetCommitmentPath)
+
+	// TODO: combine these proofs and packets and submit a MsgUpdateClient and
+	// MsgRecvPacket to the EVM rollup. See solidity-ibc-eureka for example.
+	//
+	// sendPacket, err := createSendPacket()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	//
+	// https://github.com/cosmos/solidity-ibc-eureka/blob/febaabb6915eccfd3e1922793bc0936cd0b4fdfb/e2e/interchaintestv8/ibc_eureka_test.go#L816
+	// proofHeight, ucAndMemProof := updateClientAndMembershipProof(ctx, simd, pt, [][]byte{packetCommitmentPath})
 }
 
 // createMsgSendPacket returns a msg that sends 100stake over IBC.
@@ -84,4 +101,35 @@ func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err err
 	}
 	fmt.Printf("Broadcasted MsgTransfer. Response code: %v, tx hash: %v\n", response.Code, response.TxHash)
 	return response.TxHash, nil
+}
+
+// TODO: refactor this to de-duplicate code from createMsgSendPacket
+func createSendPacket() (channeltypesv2.Packet, error) {
+	coin := sdktypes.NewCoin(denom, math.NewInt(100))
+	transferPayload := ics20lib.ICS20LibFungibleTokenPacketData{
+		Denom:    coin.Denom,
+		Amount:   coin.Amount.BigInt(),
+		Sender:   sender,
+		Receiver: receiver,
+		Memo:     "test transfer",
+	}
+	transferBz, err := ics20lib.EncodeFungibleTokenPacketData(transferPayload)
+	if err != nil {
+		return channeltypesv2.Packet{}, err
+	}
+	payload := channeltypesv2.Payload{
+		SourcePort:      transfertypes.PortID,
+		DestinationPort: transfertypes.PortID,
+		Version:         transfertypes.V1,
+		Encoding:        transfertypes.EncodingABI,
+		Value:           transferBz,
+	}
+
+	return channeltypesv2.Packet{
+		Sequence:           sequence,
+		SourceChannel:      ibctesting.FirstChannelID,
+		DestinationChannel: ibctesting.FirstClientID,
+		TimeoutTimestamp:   uint64(time.Now().Add(30 * time.Minute).Unix()),
+		Payloads:           []channeltypesv2.Payload{payload},
+	}, nil
 }
