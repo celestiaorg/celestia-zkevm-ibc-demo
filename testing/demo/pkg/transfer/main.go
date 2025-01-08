@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
 
 	"cosmossdk.io/math"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
+	"github.com/cosmos/cosmos-sdk/client"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
@@ -19,11 +22,18 @@ const (
 	sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
 	receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
+	// amount is the number of tokens to send via the MsgTransfer.
+	amount = 100
 	// denom is the denomination of the token on SimApp.
 	denom = "stake"
 )
 
 func main() {
+	initialBalance, err := getBalance(sender)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	msg, err := createMsgSendPacket()
 	if err != nil {
 		log.Fatal(err)
@@ -33,11 +43,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	balance, err := getBalance(sender)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if initialBalance == balance {
+		log.Fatalf("initialBalance %v == balance %v", initialBalance, balance)
+	}
 }
 
 // createMsgSendPacket returns a msg that sends 100stake over IBC.
 func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
-	coin := sdktypes.NewCoin(denom, math.NewInt(100))
+	coin := sdktypes.NewCoin(denom, math.NewInt(amount))
 	transferPayload := ics20lib.ICS20LibFungibleTokenPacketData{
 		Denom:    coin.Denom,
 		Amount:   coin.Amount.BigInt(),
@@ -81,4 +100,34 @@ func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err err
 	}
 	fmt.Printf("Broadcasted MsgTransfer. Response code: %v, tx hash: %v\n", response.Code, response.TxHash)
 	return response.TxHash, nil
+}
+
+func getBalance(address string) (int64, error) {
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return 0, fmt.Errorf("failed to setup client context: %v", err)
+	}
+
+	balance, err := queryBalance(clientCtx, address)
+	if err != nil {
+		return 0, err
+	}
+	return balance, nil
+}
+
+func queryBalance(clientCtx client.Context, address string) (int64, error) {
+	bankQueryClient := banktypes.NewQueryClient(clientCtx)
+
+	res, err := bankQueryClient.Balance(
+		context.Background(),
+		&banktypes.QueryBalanceRequest{
+			Address: address,
+			Denom:   denom,
+		},
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.Balance.Amount.Int64(), nil
 }
