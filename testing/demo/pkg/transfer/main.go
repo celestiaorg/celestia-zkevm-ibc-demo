@@ -21,6 +21,8 @@ const (
 	receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
 	// denom is the denomination of the token on SimApp.
 	denom = "stake"
+	// sourceChannel is hard-coded to the name used by the first channel.
+	sourceChannel = ibctesting.FirstChannelID
 )
 
 func main() {
@@ -57,12 +59,8 @@ func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
 		Value:           transferBz,
 	}
 
-	// Note: solidity-ibc-eureka tests wrap the MsgSendPacket in an ordinary
-	// packet but this wrapping seems unnecessary.
-	//
-	// https://github.com/cosmos/solidity-ibc-eureka/blob/febaabb6915eccfd3e1922793bc0936cd0b4fdfb/e2e/interchaintestv8/ibc_eureka_test.go#L779-L787
 	return channeltypesv2.MsgSendPacket{
-		SourceChannel:    ibctesting.FirstChannelID,
+		SourceChannel:    sourceChannel,
 		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
 		Payloads:         []channeltypesv2.Payload{payload},
 		Signer:           sender,
