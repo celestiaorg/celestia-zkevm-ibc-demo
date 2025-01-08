@@ -56,6 +56,11 @@ func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
 		Encoding:        transfertypes.EncodingABI,
 		Value:           transferBz,
 	}
+
+	// Note: solidity-ibc-eureka tests wrap the MsgSendPacket in an ordinary
+	// packet but this wrapping seems unnecessary.
+	//
+	// https://github.com/cosmos/solidity-ibc-eureka/blob/febaabb6915eccfd3e1922793bc0936cd0b4fdfb/e2e/interchaintestv8/ibc_eureka_test.go#L779-L787
 	return channeltypesv2.MsgSendPacket{
 		SourceChannel:    ibctesting.FirstChannelID,
 		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
