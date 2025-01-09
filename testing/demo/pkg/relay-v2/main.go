@@ -18,6 +18,7 @@ import (
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -51,24 +52,56 @@ const (
 	ethereumRPC = "http://localhost:8545/"
 	// TODO: verify if this works
 	anvilFaucetPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	// TODO: get the tendermint clientID that is deployed on the EVM roll-up
+	clientID = "TBD"
 )
 
 func main() {
-	// Update the Tendermint light client on the EVM roll-up with the stateTransitionProof
-	stateTransitionProof := []byte{}
-	err := updateTendermintLightClient(stateTransitionProof)
+	err := updateTendermintLightClient()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Receive packet on EVM
 	err = receivePacketOnEVM()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func updateTendermintLightClient(stateTransitionProof []byte) error {
+// updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
+func updateTendermintLightClient() error {
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return err
+	}
+	icsCore, err := icscore.NewContract(ethcommon.HexToAddress(icsCore), ethClient)
+	if err != nil {
+		return err
+	}
+	faucet, err := crypto.ToECDSA(ethcommon.FromHex(anvilFaucetPrivateKey))
+	if err != nil {
+		return err
+	}
+	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, faucet)
+	if err != nil {
+		return err
+	}
+	// sendPacket, err := createSendPacket()
+	// if err != nil {
+	// 	return err
+	// }
+	// fmt.Printf("sendPacket %v\n", sendPacket)
+	// Update the Tendermint light client on the EVM roll-up with the stateTransitionProof
+	// stateTransitionProof := []byte{}
+	// TODO: figure out how to encode the state transition proof into this msg
+	msg := []byte{}
+	tx, err := icsCore.UpgradeClient(getTransactOpts(faucet, eth), clientID, msg)
+	receipt := getTxReciept(context.Background(), eth, tx.Hash())
+	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
+		return fmt.Errorf("Want %v, got %v\n", ethtypes.ReceiptStatusSuccessful, receipt.Status)
+	}
+	recvBlockNumber := receipt.BlockNumber.Uint64()
+	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
 	return nil
 }
 
@@ -129,12 +162,12 @@ func receivePacketOnEVM() error {
 	if err != nil {
 		return err
 	}
-	tx, err := ics26Contract.RecvPacket(GetTransactOpts(faucet, eth), msg)
+	tx, err := ics26Contract.RecvPacket(getTransactOpts(faucet, eth), msg)
 	if err != nil {
 		return err
 	}
 
-	receipt := GetTxReciept(context.Background(), eth, tx.Hash())
+	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
 		return fmt.Errorf("Want %v, got %v\n", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
@@ -174,7 +207,7 @@ func createSendPacket() (channeltypesv2.Packet, error) {
 	}, nil
 }
 
-func GetTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.TransactOpts {
+func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.TransactOpts {
 	ethClient, err := ethclient.Dial(chain.RPC)
 	if err != nil {
 		log.Fatal(err)
@@ -201,7 +234,7 @@ func GetTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	return txOpts
 }
 
-func GetTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.Hash) *ethtypes.Receipt {
+func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.Hash) *ethtypes.Receipt {
 	ethClient, err := ethclient.Dial(chain.RPC)
 	if err != nil {
 		log.Fatal(err)
