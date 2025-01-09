@@ -19,7 +19,7 @@ import (
 
 	"cosmossdk.io/math"
 
-	"github.com/srdtrk/solidity-ibc-eureka/e2e/v8/testvalues"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/testvalues"
 )
 
 type Ethereum struct {

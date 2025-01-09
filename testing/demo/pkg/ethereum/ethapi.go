@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	ethereumtypes "github.com/srdtrk/solidity-ibc-eureka/e2e/v8/types/ethereum"
 )
 
 type EthAPI struct {
@@ -17,9 +15,9 @@ type EthAPI struct {
 }
 
 type EthGetProofResponse struct {
-	StorageHash  string                       `json:"storageHash"`
-	StorageProof []ethereumtypes.StorageProof `json:"storageProof"`
-	AccountProof []string                     `json:"accountProof"`
+	StorageHash  string         `json:"storageHash"`
+	StorageProof []StorageProof `json:"storageProof"`
+	AccountProof []string       `json:"accountProof"`
 }
 
 func NewEthAPI(rpc string) (EthAPI, error) {

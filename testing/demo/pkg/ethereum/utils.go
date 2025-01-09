@@ -10,7 +10,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/srdtrk/solidity-ibc-eureka/e2e/v8/testvalues"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/testvalues"
 )
 
 type ForgeScriptReturnValues struct {
