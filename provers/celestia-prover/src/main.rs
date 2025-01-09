@@ -1,33 +1,32 @@
-use tonic::{transport::Server, Request, Response, Status};
-use std::fs;
 use std::env;
+use std::fs;
+use tonic::{transport::Server, Request, Response, Status};
+use std::path::PathBuf;
 // Import the generated proto rust code
 pub mod prover {
     tonic::include_proto!("celestia.prover.v1");
 }
 
+use alloy::primitives::Address;
+use alloy::providers::ProviderBuilder;
+use ibc_core_commitment_types::merkle::MerkleProof;
+use ibc_eureka_solidity_types::sp1_ics07::{
+    sp1_ics07_tendermint, IICS07TendermintMsgs::ConsensusState,
+};
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
+    InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
-    ProveStateMembershipRequest, ProveStateMembershipResponse,
-    InfoRequest, InfoResponse,
-};
-use sp1_ics07_tendermint_prover::{
-    programs::{UpdateClientProgram, MembershipProgram},
-    prover::{SP1ICS07TendermintProver, SupportedProofType},
-};
-use tendermint_rpc::HttpClient;
-use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
-use ibc_eureka_solidity_types::sp1_ics07::{
-    IICS07TendermintMsgs::ConsensusState,
-    sp1_ics07_tendermint,
 };
 use reqwest::Url;
-use alloy::providers::ProviderBuilder;
-use alloy::primitives::Address;
-use ibc_core_commitment_types::merkle::MerkleProof;
+use sp1_ics07_tendermint_prover::{
+    programs::{MembershipProgram, UpdateClientProgram},
+    prover::{SP1ICS07TendermintProver, SupportedProofType},
+};
+use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
+use tendermint_rpc::HttpClient;
 
- pub struct ProverService {
+pub struct ProverService {
     tendermint_prover: SP1ICS07TendermintProver<UpdateClientProgram>,
     tendermint_rpc_client: HttpClient,
     membership_prover: SP1ICS07TendermintProver<MembershipProgram>,
@@ -50,10 +49,7 @@ impl ProverService {
 
 #[tonic::async_trait]
 impl Prover for ProverService {
-    async fn info(
-        &self,
-        _request: Request<InfoRequest>,
-    ) -> Result<Response<InfoResponse>, Status> {
+    async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey)
             .map_err(|e| Status::internal(e.to_string()))?;
         let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey)
@@ -73,27 +69,40 @@ impl Prover for ProverService {
         println!("Got state transition request: {:?}", request);
         let inner_request = request.into_inner();
 
-        let client_id = inner_request.client_id.parse::<Address>()
-            .map_err(|e| Status::internal(format!("Failed to parse client_id as EVM address: {}", e)))?;
+        let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
+            Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
+        })?;
+        println!("Client ID: {:?}", client_id);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_http(self.evm_rpc_url.clone());
+        println!("Provider: {:?}", provider);
         let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("Contract: {:?}", contract);
 
-        let client_state = contract.getClientState().call().await.map_err(|e| Status::internal(e.to_string()))?._0;
+        let client_state = contract
+            .getClientState()
+            .call()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            ._0;
+        println!("DESERIALIZED CLIENT STATE: {:?}", client_state);
         // fetch the light block at the latest height of the client state
-        let trusted_light_block = self.tendermint_rpc_client
+        let trusted_light_block = self
+            .tendermint_rpc_client
             .get_light_block(Some(client_state.latestHeight.revisionHeight))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        // fetch the latest light block 
-        let target_light_block = self.tendermint_rpc_client
+        // fetch the latest light block
+        let target_light_block = self
+            .tendermint_rpc_client
             .get_light_block(None)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let trusted_consensus_state: ConsensusState = trusted_light_block.to_consensus_state().into();
+        let trusted_consensus_state: ConsensusState =
+            trusted_light_block.to_consensus_state().into();
         let proposed_header = target_light_block.into_header(&trusted_light_block);
 
         let now = std::time::SystemTime::now()
@@ -101,7 +110,10 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?
             .as_secs();
 
-        println!("proving from height {:?} to height {:?}", &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height);
+        println!(
+            "proving from height {:?} to height {:?}",
+            &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height
+        );
 
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
@@ -124,23 +136,33 @@ impl Prover for ProverService {
         println!("Got membership request: {:?}", request);
         let inner_request = request.into_inner();
 
-        let trusted_block = self.tendermint_rpc_client.get_light_block(Some(inner_request.height as u32))
+        let trusted_block = self
+            .tendermint_rpc_client
+            .get_light_block(Some(inner_request.height as u32))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-
-        let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> = 
+        let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
             futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
                 let path = vec![b"ibc".into(), path.into_bytes()];
 
-                let (value, proof) = self.tendermint_rpc_client.prove_path(&path, trusted_block.signed_header.header.height.value() as u32).await?;
+                let (value, proof) = self
+                    .tendermint_rpc_client
+                    .prove_path(
+                        &path,
+                        trusted_block.signed_header.header.height.value() as u32,
+                    )
+                    .await?;
 
                 anyhow::Ok((path, value, proof))
             }))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        
-        println!("Generating membership proof for app hash {:?}", &trusted_block.signed_header.header.app_hash.as_bytes());
+
+        println!(
+            "Generating membership proof for app hash {:?}",
+            &trusted_block.signed_header.header.app_hash.as_bytes()
+        );
         let proof = self.membership_prover.generate_proof(
             &trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
@@ -164,8 +186,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Prover Server listening on {}", addr);
 
-    // Load the file descriptor set
-    let file_descriptor_set = fs::read("proto_descriptor.bin")?;
+    // Get the path to the proto descriptor file from the environment variable
+    let proto_descriptor_path = env::var("PROTO_DESCRIPTOR_PATH")
+        .expect("PROTO_DESCRIPTOR_PATH environment variable not set");
+
+    println!("Loading proto descriptor set from {}", proto_descriptor_path);
+    let file_path = PathBuf::from(proto_descriptor_path);
+
+    // Read the file
+    let file_descriptor_set = fs::read(&file_path)?;
+    println!("Loaded proto descriptor set");
+
 
     Server::builder()
         .add_service(ProverServer::new(prover))
@@ -173,7 +204,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(&file_descriptor_set)
                 .build_v1()
-                .unwrap()
+                .unwrap(),
         )
         .serve(addr)
         .await?;
