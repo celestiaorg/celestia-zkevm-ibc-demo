@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
@@ -22,7 +23,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/srdtrk/solidity-ibc-eureka/e2e/v8/ethereum"
 )
 
 // TODO: fetch these from the `make setup` command output.
@@ -125,7 +125,10 @@ func receivePacketOnEVM() error {
 	if err != nil {
 		return err
 	}
-	eth := ethereum.NewEthereum(context.Background, ethereumRPC, nil, faucet)
+	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, faucet)
+	if err != nil {
+		return err
+	}
 	tx, err := ics26Contract.RecvPacket(GetTransactOpts(faucet, eth), msg)
 	if err != nil {
 		return err
