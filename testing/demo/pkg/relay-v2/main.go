@@ -101,9 +101,10 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("tx gas %v\n", tx.Gas())
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
+		fmt.Printf("receipt %v\n", receipt)
+		fmt.Printf("receipt logs %v\n", receipt.Logs)
 		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
@@ -259,7 +260,17 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 		return receipt != nil, nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to fetch receipt: %v", err)
 	}
+
+	// Log more details about the receipt
+	fmt.Printf("Transaction hash: %s\n", hash.Hex())
+	fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
+	fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+	fmt.Printf("Logs: %v\n", receipt.Logs)
+	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
+		fmt.Println("Transaction failed. Inspect logs or contract.")
+	}
+
 	return receipt
 }
