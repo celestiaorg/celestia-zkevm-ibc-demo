@@ -1,3 +1,4 @@
+use ibc_proto::ibc::core::client::v1::{QueryClientStateRequest, QueryConsensusStateRequest};
 use std::env;
 use std::fs;
 use tonic::{transport::Server, Request, Response, Status};
@@ -9,8 +10,8 @@ pub mod prover {
 
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
-    ProveMembershipRequest, ProveMembershipResponse, ProveStateTransitionRequest,
-    ProveStateTransitionResponse,
+    InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
+    ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
 
 use celestia_rpc::{BlobClient, Client, HeaderClient};
@@ -23,6 +24,8 @@ use ethers::{
     types::BlockNumber,
 };
 
+use ibc_proto::ibc::core::client::v1::query_client::QueryClient as ClientQueryClient;
+
 /// The ELF file for the Succinct RISC-V zkVM.
 const BLEVM_ELF: &[u8] = include_elf!("blevm");
 
@@ -30,6 +33,7 @@ pub struct ProverService {
     celestia_client: Client,
     evm_client: Provider<Http>,
     sp1_prover: ProverClient,
+    simapp_client: ClientQueryClient<tonic::transport::Channel>,
 }
 
 impl ProverService {
@@ -41,11 +45,14 @@ impl ProverService {
 
         let evm_rpc = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
         let evm_client = Provider::try_from(evm_rpc)?;
+        let simapp_rpc = env::var("SIMAPP_RPC_URL").expect("SIMAPP_RPC_URL not provided");
+        let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
 
         Ok(ProverService {
             celestia_client,
             evm_client,
             sp1_prover: ProverClient::new(),
+            simapp_client,
         })
     }
 
@@ -61,10 +68,70 @@ impl ProverService {
             .try_into()
             .map_err(|e| Status::internal(format!("Failed to convert block number: {}", e)))
     }
+
+    async fn query_client_state(
+        &self,
+        client_id: &str,
+    ) -> Result<(String, u64), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(QueryClientStateRequest {
+            client_id: client_id.to_string(),
+        });
+
+        let response = self
+            .simapp_client
+            .clone()
+            .client_state(request)
+            .await?
+            .into_inner();
+
+        let _client_state = response.client_state.ok_or("Client state not found")?;
+
+        // let genesis_state_root = client_state.genesis_state_root;
+        // let latest_height: u64 = client_state.latest_height.parse()?;
+
+        Ok(("".to_string(), 0))
+    }
+
+    async fn query_consensus_state(
+        &self,
+        client_id: &str,
+        height: u64,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(QueryConsensusStateRequest {
+            client_id: client_id.to_string(),
+            revision_height: height,
+            revision_number: 0,
+            latest_height: false,
+        });
+
+        let response = self
+            .simapp_client
+            .clone()
+            .consensus_state(request)
+            .await?
+            .into_inner();
+
+        let _consensus_state = response
+            .consensus_state
+            .ok_or("Consensus state not found")?;
+
+        // let state_root = consensus_state.state_root;
+
+        Ok("".to_string())
+    }
 }
 
 #[tonic::async_trait]
 impl Prover for ProverService {
+    async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
+        let response = InfoResponse {
+            state_membership_verifier_key: vec![],
+            state_transition_verifier_key: vec![],
+        };
+
+        Ok(Response::new(response))
+    }
+
     async fn prove_state_transition(
         &self,
         request: Request<ProveStateTransitionRequest>,
@@ -153,10 +220,10 @@ impl Prover for ProverService {
         Ok(Response::new(response))
     }
 
-    async fn prove_membership(
+    async fn prove_state_membership(
         &self,
-        _request: Request<ProveMembershipRequest>,
-    ) -> Result<Response<ProveMembershipResponse>, Status> {
+        _request: Request<ProveStateMembershipRequest>,
+    ) -> Result<Response<ProveStateMembershipResponse>, Status> {
         // TODO: Implement membership proofs later
         Err(Status::unimplemented(
             "Membership proofs not yet implemented",
