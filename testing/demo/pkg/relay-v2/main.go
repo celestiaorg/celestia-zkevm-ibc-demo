@@ -99,9 +99,10 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("tx gas %v\n", tx.Gas())
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		return fmt.Errorf("Want %v, got %v\n", ethtypes.ReceiptStatusSuccessful, receipt.Status)
+		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
 	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
@@ -172,7 +173,7 @@ func receivePacketOnEVM() error {
 
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		return fmt.Errorf("Want %v, got %v\n", ethtypes.ReceiptStatusSuccessful, receipt.Status)
+		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
 	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
@@ -233,6 +234,9 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
 	txOpts.GasPrice = gasPrice
+
+	// Set a specific gas limit
+	txOpts.GasLimit = 3000000 // Example gas limit; adjust as needed
 
 	return txOpts
 }

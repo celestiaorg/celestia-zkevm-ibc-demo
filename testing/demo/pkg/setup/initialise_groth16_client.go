@@ -60,6 +60,8 @@ func InitializeGroth16LightClientOnSimapp() error {
 
 func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
 	// TODO: this clientState isn't created with a state transition verifier key or state inclusion verifier key.
+	// Query the EVM prover for the verifier keys
+	// See: https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/proto/prover/v1/prover.proto#L16-L20
 	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {
