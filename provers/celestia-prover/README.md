@@ -11,41 +11,43 @@ To run the server you will need to clone the repo and install rust and cargo.
 
 ## Running it in Docker
 
-Before running this program please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md)
+Before running this program, please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md).
 
-After the one-time setup each time running the program minimum these steps are necessary:
+After the one-time setup, the following minimum steps are necessary each time you run the program:
 
-Spin up the containers including the prover service :
+1. Spin up the containers including the prover service:
 
-```shell
-make start
-```
+   ```shell
+   make start
+   ```
 
-The server will be running (on port `:50051`):
+   The server will be running (on port `:50051`):
 
-Deploy contracts and initialise light clients:
-```shell
-make setup
-```
+1. Deploy contracts and initialize light clients:
 
-Extract the EVM address labeled with ics07Tendermint which will be used as a `client_id` when querying state transition proofs:
+    ```shell
+    make setup
+    ```
 
-```shell
-grpcurl -plaintext -d '{"client_id": ""}' localhost:50051 celestia.prover.v1.Prover/ProveStateTransition
-```
+1. Extract the EVM address labeled with `ics07Tendermint` which will be used as a `client_id` when querying state transition proofs:
 
-Groth16 `client_id` is deterministic and after each deployment it'll be - `08-groth16-0`
+    ```shell
+    grpcurl -plaintext -d '{"client_id": ""}' localhost:50051 celestia.prover.v1.Prover/ProveStateTransition
+    ```
 
+    The Groth16 `client_id` is deterministic and will consistently be `08-groth16-0` after each deployment.
 
 ## Running it locally
-
-The setup steps for this is the same. It also requires commenting out the prover part in `docker_compose.yml`
 
 When debugging the prover it's much faster to run it locally from the root of the project:
 
 ```shell
 cargo run -p celestia-prover
 ```
+
+The setup steps remain the same. Additionally, you need to comment out the prover section in  `docker_compose.yml`
+
+## Prover network
 
 To use the SP1 Prover Network you should also populate the `SP1_PROVER` and `SP1_PRIVATE_KEY` environment variables. You can also use a `.env` file for all environment variables
 
