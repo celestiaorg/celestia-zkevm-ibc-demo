@@ -28,13 +28,13 @@ import (
 
 // TODO: fetch these from the `make setup` command output.
 const (
-	erc20           = "0x94b9b5bd518109db400adc62ab2022d2f0008ff7"
-	escrow          = "0x51488819811d51c7a3efcc5f0756740e252da783"
-	ibcstore        = "0x686bd6a5be8a2d9d923814b8e9a3957c3c103573"
+	erc20           = "0xb1c938f5ba4b3593377f399e12175e8db0c787ff"
+	escrow          = "0xf73bd8a7184bec941b3f9ef5e6f6df981e105535"
+	ibcstore        = "0x5bbab04b4740275903edb0fdb4e9d0e9a25abfef"
 	ics07Tendermint = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
-	ics20Transfer   = "0xe2c1756b8825c54638f98425c113b51730cc47f6"
-	ics26Router     = "0xe53275a1fca119e1c5eeb32e7a72e54835a63936"
-	icsCore         = "0x505f890889415cf041001f5190b7800266b0dddd"
+	ics20Transfer   = "0x48fd1226d797400779bbfaf1706f5fb8da04ae91"
+	ics26Router     = "0x7e7ad18adc99b94d4c728fdf13d4de97b926a0d8"
+	icsCore         = "0x70ac5980099d71f4cb561bbc0fcfef08aa6279ec"
 )
 
 const (
