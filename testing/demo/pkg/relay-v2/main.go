@@ -96,6 +96,9 @@ func updateTendermintLightClient() error {
 	// TODO: figure out how to encode the state transition proof into this msg
 	msg := []byte{}
 	tx, err := icsCore.UpgradeClient(getTransactOpts(faucet, eth), clientID, msg)
+	if err != nil {
+		return err
+	}
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
 		return fmt.Errorf("Want %v, got %v\n", ethtypes.ReceiptStatusSuccessful, receipt.Status)

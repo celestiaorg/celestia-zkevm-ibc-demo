@@ -9,7 +9,6 @@ import (
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
-	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -23,10 +22,6 @@ const (
 	// ics07TMContractAddress is the contract address of the ICS07 light client on the EVM roll-up.
 	// TODO: fetch this from the `make setup` command output.
 	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
-	// sourceChannel is hard-coded to the name used by the first channel.
-	sourceChannel = ibctesting.FirstChannelID
-	// sequence is hard-coded to the first sequence number used by the MsgSendPacket.
-	sequence = 1
 )
 
 func main() {
