@@ -50,10 +50,12 @@ const (
 	sequence = 1
 	// ethereumRPC is the Reth RPC endpoint.
 	ethereumRPC = "http://localhost:8545/"
-	// TODO: verify if this works
-	anvilFaucetPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	// TODO: get the tendermint clientID that is deployed on the EVM roll-up
-	clientID = "TBD"
+	// ethereumAddress is an address on the EVM chain.
+	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
+	// ethPrivateKey is the private key for ethereumAddress.
+	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
+	// cliendID is for the SP1 Tendermint light client on the EVM roll-up.
+	clientID = "07-tendermint-0"
 )
 
 func main() {
@@ -78,7 +80,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	faucet, err := crypto.ToECDSA(ethcommon.FromHex(anvilFaucetPrivateKey))
+	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
 	if err != nil {
 		return err
 	}
@@ -158,7 +160,7 @@ func receivePacketOnEVM() error {
 		return err
 	}
 
-	faucet, err := crypto.ToECDSA(ethcommon.FromHex(anvilFaucetPrivateKey))
+	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
 	if err != nil {
 		return err
 	}
