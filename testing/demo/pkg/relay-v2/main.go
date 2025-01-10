@@ -97,7 +97,7 @@ func updateTendermintLightClient() error {
 	// stateTransitionProof := []byte{}
 	// TODO: figure out how to encode the state transition proof into this msg
 	msg := []byte{}
-	tx, err := icsCore.UpgradeClient(getTransactOpts(faucet, eth), clientID, msg)
+	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, msg)
 	if err != nil {
 		return err
 	}
