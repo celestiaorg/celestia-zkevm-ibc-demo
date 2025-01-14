@@ -5,6 +5,7 @@ use tonic::{transport::Server, Request, Response, Status};
 pub mod prover {
     tonic::include_proto!("celestia.prover.v1");
 }
+use std::path::PathBuf;
 
 // use celestia_prover::programs::{NewMembershipProgram, NewUpdateClientProgram};
 // use celestia_prover::prover::SP1ICS07TendermintProver;
@@ -16,7 +17,7 @@ use prover::{
 
 // use sp1_ics07_tendermint_prover::prover::{SP1ICS07TendermintProver, SupportedProofType, MembershipProgram, UpdateClientProgram};
 use celestia_prover::{
-    programs::{UpdateClientProgram, MembershipProgram},
+    programs::{MembershipProgram, UpdateClientProgram},
     prover::{SP1ICS07TendermintProver, SupportedProofType},
 };
 
@@ -121,6 +122,7 @@ impl Prover for ProverService {
             &proposed_header,
             now,
         );
+        println!("Generated proof: {:?}", proof);
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
@@ -186,8 +188,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Prover Server listening on {}", addr);
 
-    // Load the file descriptor set
-    let file_descriptor_set = fs::read("proto_descriptor.bin")?;
+    // Get the path to the proto descriptor file from the environment variable
+    let proto_descriptor_path = env::var("PROTO_DESCRIPTOR_PATH")
+        .expect("PROTO_DESCRIPTOR_PATH environment variable not set");
+
+    println!(
+        "Loading proto descriptor set from {}",
+        proto_descriptor_path
+    );
+    let file_path = PathBuf::from(proto_descriptor_path);
+
+    // Read the file
+    let file_descriptor_set = fs::read(&file_path)?;
+    println!("Loaded proto descriptor set");
 
     Server::builder()
         .add_service(ProverServer::new(prover))
