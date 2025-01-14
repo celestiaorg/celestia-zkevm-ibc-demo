@@ -29,13 +29,13 @@ After the one-time setup, the following minimum steps are necessary each time yo
     make setup
     ```
 
-1. Extract the EVM address labeled with `ics07Tendermint` which will be used as a `client_id` when querying state transition proofs:
+1. Make sure to set `SP1_PROVER=network` in `.env` and get sp1 prover network private key from celestia 1Password.
+
+1. Copy the EVM address labeled with `ics07Tendermint` from terminal output which will be used as a `client_id` when querying state transition proofs:
 
     ```shell
     grpcurl -plaintext -d '{"client_id": ""}' localhost:50051 celestia.prover.v1.Prover/ProveStateTransition
     ```
-
-    The Groth16 `client_id` is deterministic and will consistently be `08-groth16-0` after each deployment.
 
 ## Running it locally
 
