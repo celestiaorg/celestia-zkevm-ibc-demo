@@ -72,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
 
     let addr = "[::]:50052".parse()?;
+
     let prover = ProverService::new().await?;
 
     println!("BLEVM Prover Server listening on {}", addr);
