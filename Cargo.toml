@@ -3,6 +3,7 @@ members = [
     "provers/celestia-prover",
     "programs/sp1/mock-update-client",
     "programs/sp1/mock-membership",
+    "runner-mock-membership",
 ]
 resolver = "2"
 
