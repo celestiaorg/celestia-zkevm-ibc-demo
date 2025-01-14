@@ -27,5 +27,7 @@ ibc-core-commitment-types   = { workspace = true }
 ibc-proto = { workspace = true }
 dotenv = "0.15.0"
 anyhow = "1.0.94"
+serde = "1.0.217"
+prost-types = "0.13.4"
 [build-dependencies]
 tonic-build.workspace = true
