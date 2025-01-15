@@ -95,9 +95,9 @@ func updateTendermintLightClient() error {
 	// fmt.Printf("sendPacket %v\n", sendPacket)
 	// Update the Tendermint light client on the EVM roll-up with the stateTransitionProof
 	// stateTransitionProof := []byte{}
-	// TODO: figure out how to encode the state transition proof into this msg
-	msg := []byte{}
-	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, msg)
+	// TODO: figure out how to encode the state transition proof into this updateMsg
+	updateMsg := []byte{}
+	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, updateMsg)
 	if err != nil {
 		return err
 	}
