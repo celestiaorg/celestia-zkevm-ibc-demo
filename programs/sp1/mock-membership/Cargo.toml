@@ -1,0 +1,16 @@
+[package]
+name = "mock-membership"
+repository.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sp1-zkvm = "3.4.0"
+ibc-core-commitment-types     = { workspace = true }
+ibc-eureka-solidity-types     = { workspace = true }
+bincode = "1.3.3"
+serde_cbor = "0.11.2"
+alloy-sol-types = "0.8.15"
+ibc-proto                     = { workspace = true }
+
