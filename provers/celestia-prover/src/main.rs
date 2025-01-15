@@ -122,7 +122,7 @@ impl Prover for ProverService {
             &proposed_header,
             now,
         );
-        println!("Generated proof: {:?}", proof);
+
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
@@ -135,7 +135,7 @@ impl Prover for ProverService {
         &self,
         request: Request<ProveStateMembershipRequest>,
     ) -> Result<Response<ProveStateMembershipResponse>, Status> {
-        println!("Got membership request: {:?}", request);
+        println!("Got state membership request...");
         let inner_request = request.into_inner();
 
         let trusted_block = self
@@ -161,13 +161,14 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        println!(
-            "Generating membership proof for app hash {:?}",
-            &trusted_block.signed_header.header.app_hash.as_bytes()
-        );
         let proof = self.membership_prover.generate_proof(
             &trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
+        );
+
+        println!(
+            "Generated membership proof for height: {:?}",
+            trusted_block.signed_header.header.height.value() as i64
         );
 
         // Implement your membership proof logic here
