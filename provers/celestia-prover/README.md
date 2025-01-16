@@ -71,7 +71,7 @@ Push new image to GHCR:
 make publish-celestia-prover-docker
 ```
 
-If you update the circuits please regenerated the `elf` files:
+If you update the circuits please regenerate the `elf` files:
 
 ```shell
 ~/.sp1/bin/cargo-prove prove build --elf-name mock-membership-elf 
