@@ -7,15 +7,12 @@ pub mod prover {
 }
 use std::path::PathBuf;
 
-// use celestia_prover::programs::{NewMembershipProgram, NewUpdateClientProgram};
-// use celestia_prover::prover::SP1ICS07TendermintProver;
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
 
-// use sp1_ics07_tendermint_prover::prover::{SP1ICS07TendermintProver, SupportedProofType, MembershipProgram, UpdateClientProgram};
 use celestia_prover::{
     programs::{MembershipProgram, UpdateClientProgram},
     prover::{SP1ICS07TendermintProver, SupportedProofType},

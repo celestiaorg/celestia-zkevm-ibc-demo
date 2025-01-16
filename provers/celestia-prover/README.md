@@ -47,10 +47,6 @@ cargo run -p celestia-prover
 
 The setup steps remain the same. Additionally, you need to comment out the prover section in  `docker_compose.yml`
 
-## Prover network
-
-To use the SP1 Prover Network you should also populate the `SP1_PROVER` and `SP1_PRIVATE_KEY` environment variables. You can also use a `.env` file for all environment variables
-
 ## Protobuf
 
 gRPC depends on proto defined types. These are stored in `proto/prover/v1` from the root directory.
