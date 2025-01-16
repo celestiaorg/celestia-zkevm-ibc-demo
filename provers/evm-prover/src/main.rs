@@ -1,4 +1,4 @@
-use ibc_proto::ibc::core::client::v1::{QueryClientStateRequest, QueryConsensusStateRequest};
+use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
 use prost::Message;
 use std::env;
 use std::fs;
@@ -27,11 +27,6 @@ use ethers::{
 };
 
 use ibc_proto::ibc::core::client::v1::query_client::QueryClient as ClientQueryClient;
-
-fn decode_client_state(value: &[u8]) -> Result<ClientState, Box<dyn std::error::Error>> {
-    let client_state = ClientState::decode(value)?;
-    Ok(client_state)
-}
 
 /// The ELF file for the Succinct RISC-V zkVM.
 const BLEVM_ELF: &[u8] = include_elf!("blevm");
@@ -63,7 +58,7 @@ impl ProverService {
         })
     }
 
-    async fn get_latest_block_number(&self) -> Result<u64, Status> {
+    async fn get_latest_height(&self) -> Result<u64, Status> {
         self.evm_client
             .get_block(BlockNumber::Latest)
             .await
@@ -76,10 +71,7 @@ impl ProverService {
             .map_err(|e| Status::internal(format!("Failed to convert block number: {}", e)))
     }
 
-    async fn query_client_state(
-        &self,
-        client_id: &str,
-    ) -> Result<(Vec<u8>, u64), Box<dyn std::error::Error>> {
+    async fn get_trusted_height(&self, client_id: &str) -> Result<u64, Status> {
         let request = tonic::Request::new(QueryClientStateRequest {
             client_id: client_id.to_string(),
         });
@@ -91,41 +83,12 @@ impl ProverService {
             .await?
             .into_inner();
 
-        let client_state_json = response.client_state.ok_or("Client state not found")?;
-        let client_state: ClientState = decode_client_state(&client_state_json.value)?;
-
-        let genesis_state_root = client_state.genesis_state_root;
-        let latest_height: u64 = client_state.latest_height;
-
-        Ok((genesis_state_root, latest_height))
-    }
-
-    async fn query_consensus_state(
-        &self,
-        client_id: &str,
-        height: u64,
-    ) -> Result<String, Box<dyn std::error::Error>> {
-        let request = tonic::Request::new(QueryConsensusStateRequest {
-            client_id: client_id.to_string(),
-            revision_height: height,
-            revision_number: 0,
-            latest_height: false,
-        });
-
-        let response = self
-            .simapp_client
-            .clone()
-            .consensus_state(request)
-            .await?
-            .into_inner();
-
-        let _consensus_state = response
-            .consensus_state
-            .ok_or("Consensus state not found")?;
-
-        // let state_root = consensus_state.state_root;
-
-        Ok("".to_string())
+        let client_state_json = response
+            .client_state
+            .ok_or_else(|| Status::internal("Failed to query client state"))?;
+        let client_state = ClientState::decode(client_state_json.value.as_slice())
+            .map_err(|e| Status::internal(format!("Failed to decode client state: {}", e)))?;
+        Ok(client_state.latest_height)
     }
 }
 
@@ -145,9 +108,26 @@ impl Prover for ProverService {
         request: Request<ProveStateTransitionRequest>,
     ) -> Result<Response<ProveStateTransitionResponse>, Status> {
         println!("Got state transition request: {:?}", request);
-        // Get the latest block number from EVM rollup
-        let latest_height = self.get_latest_block_number().await?;
 
+        let inner_request = request.into_inner();
+
+        // Get the latest height from EVM rollup.
+        let latest_height = self.get_latest_height().await?;
+
+        // Get the trusted height from groth16 client.
+        let trusted_height = self
+            .get_trusted_height(inner_request.client_id.as_str())
+            .await?;
+
+        println!(
+            "proving from height {:?} to height {:?}",
+            latest_height, trusted_height
+        );
+
+        // TODO: Generate aggregate proofs for blocks in the range [trusted_height, latest_height]
+        // blocked on blevm.generate_aggregate_proofs(trusted_height, latest_height)
+
+        // Currently this uses a fixture to create a single block proof
         // Load the zkEVM input from the file
         let input_bytes = fs::read(format!("input/1/{}.bin", latest_height))
             .map_err(|e| Status::internal(format!("Failed to read input file: {}", e)))?;
@@ -245,9 +225,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:50051".parse()?;
     let prover = ProverService::new().await?;
-
-    let client_state = prover.query_client_state("08-groth16-0").await?;
-    println!("{:#?}, {:#?}", client_state.0, client_state.1);
 
     println!("BLEVM Prover Server listening on {}", addr);
 
