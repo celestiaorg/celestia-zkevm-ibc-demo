@@ -34,6 +34,9 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 
     ```shell
     cp .env.example .env
+
+    # Get the SP1_PRIVATE_KEY from Celestia 1Password and populate it in the .env file
+    vim .env
     ```
 
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
