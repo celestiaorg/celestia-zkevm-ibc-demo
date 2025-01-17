@@ -19,6 +19,7 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -123,14 +124,57 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
 	fmt.Printf("got resp %v\n", resp)
+	// TODO: fetch vKey from some where
+	vKey := [32]byte{}
 
 	// Create and ABI encode the update message
 	// updateMsg, err := icscore.PackClientMessage(proof.Proof)
 	// if err != nil {
 	// 	return fmt.Errorf("failed to pack client message: %w", err)
 	// }
-	updateMsg := []byte{}
 
+	// updateMsg either looks like
+	// clienttypes.MsgUpdateClient{
+	// 	ClientId:      s.EthereumLightClientID,
+	// 	ClientMessage: wasmHeaderAny,
+	// 	Signer:        simdRelayerUser.FormattedAddress(),
+	// })
+	// or
+	// abi.Encode(sp1Proof)
+	// updateMsg := abi.Encode()
+	// struct MsgUpdateClient {
+	//     SP1Proof sp1Proof;
+	// }
+	//
+	// updateMsg := sp1ics07tendermint.IMembershipMsgsSP1MembershipAndUpdateClientProof{
+	// 	Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
+	// 		VKey:         [32]byte{}, // TODO
+	// 		PublicValues: resp.PublicValues,
+	// 		Proof:        resp.Proof,
+	// 	},
+	// }
+
+	if err != nil {
+		return fmt.Errorf("failed to encode update message: %w", err)
+	}
+
+	abiSp1ProofType := abi.Type{
+		T: abi.TupleTy,
+		TupleElems: []*abi.Type{
+			// Field 1 => 'bytes32 vKey'
+			{T: abi.FixedBytesTy, Size: 32},
+			// Field 2 => 'bytes publicValues'
+			{T: abi.BytesTy},
+			// Field 3 => 'bytes proof'
+			{T: abi.BytesTy},
+		},
+	}
+	args := abi.Arguments{{Name: "sp1Proof", Type: abiSp1ProofType}}
+	updateMsg, err := args.Pack([3]interface{}{vKey, resp.PublicValues, resp.Proof}) // panics here
+	if err != nil {
+		return err
+	}
+	fmt.Printf("abi encoded updateMsg %v\n", updateMsg)
 	fmt.Printf("Invoking icsCore.UpdateClient...\n")
 	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, updateMsg)
 	if err != nil {
