@@ -29,11 +29,11 @@ import (
 )
 
 // TODO: fetch these from the `make setup` command output.
-const (
-	ics26Router            = "0xe53275a1fca119e1c5eeb32e7a72e54835a63936"
-	icsCore                = "0x505f890889415cf041001f5190b7800266b0dddd"
-	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
-)
+// const (
+// 	ics26Router            = "0xe53275a1fca119e1c5eeb32e7a72e54835a63936"
+// 	icsCore                = "0x505f890889415cf041001f5190b7800266b0dddd"
+// 	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
+// )
 
 const (
 	// sender is an address on SimApp that will send funds via the MsgTransfer.
@@ -70,11 +70,17 @@ func main() {
 
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
 func updateTendermintLightClient() error {
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("addresses %v\n", addresses)
+
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return err
 	}
-	icsCore, err := icscore.NewContract(ethcommon.HexToAddress(icsCore), ethClient)
+	icsCore, err := icscore.NewContract(ethcommon.HexToAddress(addresses.ICSCore), ethClient)
 	if err != nil {
 		return err
 	}
@@ -95,7 +101,7 @@ func updateTendermintLightClient() error {
 	defer conn.Close()
 
 	proverClient := proverclient.NewProverClient(conn)
-	request := &proverclient.ProveStateTransitionRequest{ClientId: ics07TMContractAddress}
+	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 
 	// Get state transition proof from Celestia prover with retry logic
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -143,6 +149,11 @@ func updateTendermintLightClient() error {
 }
 
 func receivePacketOnEVM() error {
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return err
+	}
+
 	sendPacket, err := createSendPacket()
 	if err != nil {
 		return err
@@ -186,7 +197,7 @@ func receivePacketOnEVM() error {
 	if err != nil {
 		return err
 	}
-	ics26Contract, err := ics26router.NewContract(ethcommon.HexToAddress(ics26Router), ethClient)
+	ics26Contract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
 		return err
 	}

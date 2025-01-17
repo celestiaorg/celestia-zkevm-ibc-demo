@@ -100,8 +100,7 @@ relay:
 
 ## relay2: Relay the token transfer from simapp to the EVM roll-up.
 relay2:
-	@echo "--> Relaying the token transfer using relay-v2"
-	@go run ./testing/demo/pkg/relay-v2/
+	go run testing/demo/pkg/relay-v2/main.go
 .PHONY: relay
 
 ## stop: Stop all processes and remove the tmp directory.
