@@ -27,7 +27,6 @@ help: Makefile
 install-dependencies:
 	@echo "--> Setting up Solidity IBC Eureka submodule"
 	@cd ./solidity-ibc-eureka && bun install && just install-operator
-	@go run ./testing/demo/pkg/setup-env
 .PHONY: install-dependencies
 
 ## check-dependencies: Check if all dependencies are installed.

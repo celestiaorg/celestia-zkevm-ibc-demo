@@ -107,6 +107,7 @@ services:
       # for Celestia (with IBC Eurekea enabled).
       - TENDERMINT_RPC_URL=http://simapp-validator:26657
       - RPC_URL=http://reth:8545
+      - PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
     ports:
       - "50051:50051"
     depends_on:
