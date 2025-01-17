@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cosmossdk.io/math"
+	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
@@ -24,17 +25,14 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/srdtrk/solidity-ibc-eureka/e2e/v8/ethereum"
+	"google.golang.org/grpc"
 )
 
 // TODO: fetch these from the `make setup` command output.
 const (
-	erc20           = "0xb1c938f5ba4b3593377f399e12175e8db0c787ff"
-	escrow          = "0xf73bd8a7184bec941b3f9ef5e6f6df981e105535"
-	ibcstore        = "0x5bbab04b4740275903edb0fdb4e9d0e9a25abfef"
-	ics07Tendermint = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
-	ics20Transfer   = "0x48fd1226d797400779bbfaf1706f5fb8da04ae91"
-	ics26Router     = "0x7e7ad18adc99b94d4c728fdf13d4de97b926a0d8"
-	icsCore         = "0x70ac5980099d71f4cb561bbc0fcfef08aa6279ec"
+	ics26Router            = "0xe53275a1fca119e1c5eeb32e7a72e54835a63936"
+	icsCore                = "0x505f890889415cf041001f5190b7800266b0dddd"
+	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
 )
 
 const (
@@ -64,10 +62,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = receivePacketOnEVM()
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err = receivePacketOnEVM()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 }
 
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
@@ -88,19 +86,51 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	// sendPacket, err := createSendPacket()
+
+	// Connect to the Celestia prover
+	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	if err != nil {
+		return fmt.Errorf("failed to connect to prover: %w", err)
+	}
+	defer conn.Close()
+
+	proverClient := proverclient.NewProverClient(conn)
+	request := &proverclient.ProveStateTransitionRequest{ClientId: ics07TMContractAddress}
+
+	// Get state transition proof from Celestia prover with retry logic
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	var resp *proverclient.ProveStateTransitionResponse
+	// var err error
+	for retries := 0; retries < 3; retries++ {
+		resp, err = proverClient.ProveStateTransition(ctx, request)
+		if err == nil {
+			break
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("context cancelled while getting state transition proof: %w", ctx.Err())
+		}
+		time.Sleep(time.Second * time.Duration(retries+1))
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
+	}
+	fmt.Printf("got resp %v\n", resp)
+
+	// Create and ABI encode the update message
+	// updateMsg, err := icscore.PackClientMessage(proof.Proof)
 	// if err != nil {
-	// 	return err
+	// 	return fmt.Errorf("failed to pack client message: %w", err)
 	// }
-	// fmt.Printf("sendPacket %v\n", sendPacket)
-	// Update the Tendermint light client on the EVM roll-up with the stateTransitionProof
-	// stateTransitionProof := []byte{}
-	// TODO: figure out how to encode the state transition proof into this updateMsg
 	updateMsg := []byte{}
+
+	fmt.Printf("Invoking icsCore.UpdateClient...\n")
 	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, updateMsg)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("icsCore.UpdateClient did not error\n")
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
 		fmt.Printf("receipt %v\n", receipt)
