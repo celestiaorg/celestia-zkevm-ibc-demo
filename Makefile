@@ -72,8 +72,8 @@ check-dependencies:
 .PHONY: check-dependencies
 
 ## start: Start all processes needed for the demo.
-start: stop
-	@docker compose up -d
+start:
+	@docker compose up --detach
 .PHONY: start
 
 ## setup: Set up the IBC clients and channels.
@@ -239,5 +239,5 @@ demo:
 	@make start
 	@make setup
 	@make transfer
-	@make relay
+	@make relay2
 .PHONY: demo
