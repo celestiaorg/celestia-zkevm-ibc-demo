@@ -30,6 +30,12 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
+1. Create the `.env` file
+
+    ```shell
+    cp .env.example .env
+    ```
+
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
 
     ```shell
