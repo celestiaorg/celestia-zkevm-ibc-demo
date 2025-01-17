@@ -30,13 +30,11 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
-1. Create the `.env` file
+1. Create and populate the `.env` file
 
     ```shell
     cp .env.example .env
-
-    # Get the SP1_PRIVATE_KEY from Celestia 1Password and populate it in the .env file
-    vim .env
+    # Modify the .env file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
     ```
 
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
