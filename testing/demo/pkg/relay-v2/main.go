@@ -19,7 +19,6 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -68,6 +67,20 @@ func main() {
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
+}
+
+// Exactly matches the Solidity shape for "MsgUpdateClient"
+//
+//	struct MsgUpdateClient { SP1Proof sp1Proof; }
+type GoMsgUpdateClient struct {
+	Sp1Proof GoSP1Proof
+}
+
+// Exactly matches "SP1Proof { bytes32 vKey; bytes publicValues; bytes proof; }"
+type GoSP1Proof struct {
+	VKey         [32]byte
+	PublicValues []byte
+	Proof        []byte
 }
 
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
@@ -125,67 +138,63 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
 	fmt.Printf("got resp %v\n", resp)
+
 	// TODO: fetch vKey from some where
 	vKey := [32]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}
-
-	// Create and ABI encode the update message
-	// updateMsg, err := icscore.PackClientMessage(proof.Proof)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to pack client message: %w", err)
+	// updateMsg := sp1ics07tendermint.IMembershipMsgsSP1MembershipAndUpdateClientProof{
+	// 	Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
+	// 		VKey:         vKey,
+	// 		PublicValues: resp.PublicValues,
+	// 		Proof:        resp.Proof,
+	// 	},
 	// }
-
-	// updateMsg either looks like
-	// clienttypes.MsgUpdateClient{
-	// 	ClientId:      s.EthereumLightClientID,
-	// 	ClientMessage: wasmHeaderAny,
-	// 	Signer:        simdRelayerUser.FormattedAddress(),
-	// })
-	// or
-	// abi.Encode(sp1Proof)
-	// updateMsg := abi.Encode()
-	// struct MsgUpdateClient {
-	//     SP1Proof sp1Proof;
-	// }
-	//
-	updateMsg := sp1ics07tendermint.IMembershipMsgsSP1MembershipAndUpdateClientProof{
-		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
+	myMsg := GoMsgUpdateClient{
+		Sp1Proof: GoSP1Proof{
 			VKey:         vKey,
 			PublicValues: resp.PublicValues,
 			Proof:        resp.Proof,
 		},
 	}
-
-	if err != nil {
-		return fmt.Errorf("failed to encode update message: %w", err)
-	}
-
-	// 1) The nested type for SP1Proof
 	sp1ProofType := abi.Type{
-		T: abi.TupleTy,
 		TupleElems: []*abi.Type{
-			{T: abi.FixedBytesTy, Size: 32}, // vKey
-			{T: abi.BytesTy},                // publicValues
-			{T: abi.BytesTy},                // proof
+			{
+				T:            abi.FixedBytesTy,
+				Size:         32,
+				TupleRawName: "vKey",
+			},
+			{
+				T:            abi.BytesTy,
+				TupleRawName: "publicValues",
+			},
+			{
+				T:            abi.BytesTy,
+				TupleRawName: "proof",
+			},
 		},
 	}
 
-	// 2) The top-level type for MsgUpdateClient => has exactly 1 field "sp1Proof"
+	// 2) Outer type: MsgUpdateClient => a single field "sp1Proof"
 	msgUpdateClientType := abi.Type{
 		T: abi.TupleTy,
-		// one field:
 		TupleElems: []*abi.Type{
-			&sp1ProofType,
+			{
+				T: abi.TupleTy,
+				// also fill in the subelems here or reference sp1ProofType
+				TupleElems:   sp1ProofType.TupleElems,
+				TupleRawName: "foo",
+			},
 		},
+		TupleRawName: "bar",
+		TupleType:
 	}
-
 	args := abi.Arguments{{Name: "msgUpdateClient", Type: msgUpdateClientType}}
-	abiEncodedUpdateMsg, err := args.Pack(updateMsg) // panics here
+	encoded, err := args.Pack(myMsg)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("abi encoded updateMsg %v\n", updateMsg)
+	fmt.Printf("abi encoded updateMsg %v\n", encoded)
 	fmt.Printf("Invoking icsCore.UpdateClient...\n")
-	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, abiEncodedUpdateMsg)
+	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
 	if err != nil {
 		return err
 	}
