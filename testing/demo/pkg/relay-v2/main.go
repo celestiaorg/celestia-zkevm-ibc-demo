@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -127,13 +128,20 @@ func updateTendermintLightClient() error {
 	}
 	fmt.Printf("got resp %v\n", resp)
 
-	// TODO: fetch vKey from some where
-	vKey := [32]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}
-
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
 	}
+
+	// The update client verifier key is set in solidity-ibc-eureka/scripts/genesis.json
+	updateClientVkey := "00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3"
+	verifierKey, err := hex.DecodeString(updateClientVkey)
+	if err != nil {
+		return fmt.Errorf("error decoding hex: %w", err)
+	}
+	// Convert the byte slice into a [32]byte array
+	var vKey [32]byte
+	copy(vKey[:], verifierKey)
 
 	msg := sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
 		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
