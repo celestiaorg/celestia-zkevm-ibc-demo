@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use sp1_sdk::HashableKey;
 use tonic::{transport::Server, Request, Response, Status};
 // Import the generated proto rust code
 pub mod prover {
@@ -52,9 +53,9 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
-        let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey)
+        let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey.bytes32())
             .map_err(|e| Status::internal(e.to_string()))?;
-        let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey)
+        let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey.bytes32())
             .map_err(|e| Status::internal(e.to_string()))?;
         let response = InfoResponse {
             state_transition_verifier_key,
