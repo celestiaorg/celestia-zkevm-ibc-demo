@@ -130,7 +130,7 @@ func updateTendermintLightClient() error {
 	// TODO: fetch vKey from some where
 	vKey := [32]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}
 
-	parsedABI, err := getParsedABI()
+	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
 	}
@@ -144,10 +144,9 @@ func updateTendermintLightClient() error {
 	}
 
 	fmt.Printf("Packing msg...\n")
-	encoded, err := parsedABI.Pack(msg)
-
+	encoded, err := arguments.Pack(msg)
 	if err != nil {
-		return fmt.Errorf("error packing msg %w\n", err)
+		return fmt.Errorf("error packing msg %w", err)
 	}
 	fmt.Printf("Pcaked msg %v\n", encoded)
 
@@ -336,13 +335,13 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	return receipt
 }
 
-func getParsedABI() (abi.Arguments, error) {
-	var SingleABI = "[{\"type\":\"function\",\"name\":\"dummyEncode\",\"stateMutability\":\"pure\",\"inputs\":[{\"name\":\"o3\",\"type\":\"tuple\",\"internalType\":\"struct IUpdateClientMsgs.MsgUpdateClient\",\"components\":[{\"name\":\"sp1Proof\",\"type\":\"tuple\",\"internalType\":\"struct ISP1Msgs.SP1Proof\",\"components\":[{\"name\":\"vKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"publicValues\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]}],\"outputs\":[]}]"
+func getUpdateClientArguments() (abi.Arguments, error) {
+	var updateClientABI = "[{\"type\":\"function\",\"name\":\"updateClient\",\"stateMutability\":\"pure\",\"inputs\":[{\"name\":\"o3\",\"type\":\"tuple\",\"internalType\":\"struct IUpdateClientMsgs.MsgUpdateClient\",\"components\":[{\"name\":\"sp1Proof\",\"type\":\"tuple\",\"internalType\":\"struct ISP1Msgs.SP1Proof\",\"components\":[{\"name\":\"vKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"publicValues\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]}],\"outputs\":[]}]"
 
-	parsed, err := abi.JSON(strings.NewReader(SingleABI))
+	parsed, err := abi.JSON(strings.NewReader(updateClientABI))
 	if err != nil {
 		return nil, err
 	}
 
-	return parsed.Methods["dummyEncode"].Inputs, nil
+	return parsed.Methods["updateClient"].Inputs, nil
 }
