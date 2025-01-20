@@ -30,8 +30,13 @@ After the one-time setup, the following minimum steps are necessary each time yo
     ```
 
 1. Make sure to set `SP1_PROVER=network` in `.env` and get sp1 prover network private key from celestia 1Password.
+1. Verify it's running by querying an endpoint.
 
-1. Copy the EVM address labeled with `ics07Tendermint` from terminal output which will be used as a `client_id` when querying state transition proofs:
+    ```shell
+    grpcurl -plaintext localhost:50051 celestia.prover.v1.Prover/Info
+    ```
+
+1. [Optional] Request a proof. Copy the EVM address labeled with `ics07Tendermint` from terminal output which will be used as a `client_id` when querying state transition proofs:
 
     ```shell
     grpcurl -plaintext -d '{"client_id": ""}' localhost:50051 celestia.prover.v1.Prover/ProveStateTransition
@@ -70,5 +75,5 @@ make publish-celestia-prover-docker
 If you update the circuits please regenerate the `elf` files:
 
 ```shell
-~/.sp1/bin/cargo-prove prove build --elf-name mock-membership-elf 
+~/.sp1/bin/cargo-prove prove build --elf-name mock-membership-elf
 ```
