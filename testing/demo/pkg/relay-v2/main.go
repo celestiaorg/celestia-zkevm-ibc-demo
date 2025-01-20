@@ -134,7 +134,7 @@ func updateTendermintLightClient() error {
 	}
 
 	// The update client verifier key is set in solidity-ibc-eureka/scripts/genesis.json
-	updateClientVkey := "00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3"
+	updateClientVkey := "409417091e6e4961546661834d83a3f048814cde71efa42b034496540826523b"
 	verifierKey, err := hex.DecodeString(updateClientVkey)
 	if err != nil {
 		return fmt.Errorf("error decoding hex: %w", err)
