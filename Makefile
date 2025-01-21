@@ -80,7 +80,7 @@ start:
 setup:
 	@echo "--> Setting the verifier key in scripts/genesis.json"
 	@sed -i '' 's|"updateClientVkey": "0x00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3"|"updateClientVkey": "0x409417091e6e4961546661834d83a3f048814cde71efa42b034496540826523b"|' solidity-ibc-eureka/scripts/genesis.json
-	@echo "--> Set the verifier key."
+	@echo "--> Set the verifier key to 0x409417091e6e4961546661834d83a3f048814cde71efa42b034496540826523b."
 	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
 	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
 	@echo "--> Creating IBC light clients and channel"
