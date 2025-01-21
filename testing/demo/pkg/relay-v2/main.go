@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -110,7 +111,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get celestia prover info %w", err)
 	}
 	verifierKey := info.StateTransitionVerifierKey
-	fmt.Printf("Got celestia prover info. State transition verifier key %v\n", verifierKey)
+	fmt.Printf("Got celestia prover info. State transition verifier key %v, hex encoded %v\n", verifierKey, hex.EncodeToString(verifierKey))
 	// Convert the verifierKey byte slice into a [32]byte array
 	var VKey [32]byte
 	copy(VKey[:], verifierKey)
