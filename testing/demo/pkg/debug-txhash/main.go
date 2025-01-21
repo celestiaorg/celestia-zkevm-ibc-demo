@@ -23,7 +23,7 @@ func getRevertReason(txHash ethcommon.Hash, rpcURL string) []byte {
 }
 
 func main() {
-	txHash := ethcommon.HexToHash("0x5985006fc7c5c5487af994e683b6cdf03c0cc8e505ca885e6f427a6389da9af5")
+	txHash := ethcommon.HexToHash("0xeb18b1724c3a444658ec02efa0a8084425ad8f1b9e891a8e465fec42949bdcf3")
 	rpcURL := "http://localhost:8545/"
 	result := getRevertReason(txHash, rpcURL)
 	fmt.Printf("result %v\n", string(result))
