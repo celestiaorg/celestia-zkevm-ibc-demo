@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -104,15 +103,23 @@ func updateTendermintLightClient() error {
 	}
 	defer conn.Close()
 
+	fmt.Printf("Getting celestia prover info...\n")
 	proverClient := proverclient.NewProverClient(conn)
-	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
+	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
+	if err != nil {
+		return fmt.Errorf("failed to get celestia prover info %w", err)
+	}
+	verifierKey := info.StateTransitionVerifierKey
+	fmt.Printf("Got celestia prover info. State transition verifier key %v\n", verifierKey)
+	// Convert the verifierKey byte slice into a [32]byte array
+	var VKey [32]byte
+	copy(VKey[:], verifierKey)
 
+	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-
 	var resp *proverclient.ProveStateTransitionResponse
-	// var err error
 	for retries := 0; retries < 3; retries++ {
 		resp, err = proverClient.ProveStateTransition(ctx, request)
 		if err == nil {
@@ -128,30 +135,18 @@ func updateTendermintLightClient() error {
 	}
 	fmt.Printf("got resp %v\n", resp)
 
-	arguments, err := getUpdateClientArguments()
-	if err != nil {
-		return err
-	}
-
-	// The update client verifier key is set in solidity-ibc-eureka/scripts/genesis.json
-	// hex encoded 0x00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3
-	updateClientVkey := "00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3"
-	verifierKey, err := hex.DecodeString(updateClientVkey)
-	if err != nil {
-		return fmt.Errorf("error decoding hex: %w", err)
-	}
-	// Convert the byte slice into a [32]byte array
-	var vKey [32]byte
-	copy(vKey[:], verifierKey)
-
 	msg := sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
 		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
-			VKey:         vKey,
+			VKey:         VKey,
 			PublicValues: resp.PublicValues,
 			Proof:        resp.Proof,
 		},
 	}
 
+	arguments, err := getUpdateClientArguments()
+	if err != nil {
+		return err
+	}
 	fmt.Printf("Packing msg...\n")
 	encoded, err := arguments.Pack(msg)
 	if err != nil {
