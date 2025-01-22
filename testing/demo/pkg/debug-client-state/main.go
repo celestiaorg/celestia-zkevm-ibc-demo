@@ -59,7 +59,14 @@ func main() {
 	}
 
 	fmt.Printf("Decoded clientState: %#v\n", clientState)
+
+	parsedABI.Pack("getClientState")
+	parsedABI.Pack()
+	// clientState
 }
+
+// Decoded clientState: []interface {}{struct { ChainId string "json:\"chainId\""; TrustLevel struct { Numerator uint8 "json:\"numerator\""; Denominator uint8 "json:\"denominator\"" } "json:\"trustLevel\""; LatestHeight struct { RevisionNumber uint32 "json:\"revisionNumber\""; RevisionHeight uint32 "json:\"revisionHeight\"" } "json:\"latestHeight\""; TrustingPeriod uint32 "json:\"trustingPeriod\""; UnbondingPeriod uint32 "json:\"unbondingPeriod\""; IsFrozen bool "json:\"isFrozen\""; ZkAlgorithm uint8 "json:\"zkAlgorithm\"" }
+// {ChainId:"zkibc-demo", TrustLevel:struct { Numerator uint8 "json:\"numerator\""; Denominator uint8 "json:\"denominator\"" }{Numerator:0x1, Denominator:0x3}, LatestHeight:struct { RevisionNumber uint32 "json:\"revisionNumber\""; RevisionHeight uint32 "json:\"revisionHeight\"" }{RevisionNumber:0x0, RevisionHeight:0x5}, TrustingPeriod:0x127500, UnbondingPeriod:0x1baf80, IsFrozen:false, ZkAlgorithm:0x1}}
 
 // sp1ics07tendermint.IICS07TendermintMsgsClientStateABI
 // {
