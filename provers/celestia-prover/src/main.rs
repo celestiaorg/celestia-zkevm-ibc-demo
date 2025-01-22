@@ -120,6 +120,7 @@ impl Prover for ProverService {
             &proposed_header,
             now,
         );
+        println!("generated proof {:?}", proof.bytes());
 
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),

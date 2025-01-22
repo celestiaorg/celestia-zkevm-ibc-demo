@@ -135,6 +135,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
 	fmt.Printf("got resp %v\n", resp)
+	fmt.Printf("got resp.proof %v\n", hex.EncodeToString(resp.Proof))
 
 	msg := sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
 		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
