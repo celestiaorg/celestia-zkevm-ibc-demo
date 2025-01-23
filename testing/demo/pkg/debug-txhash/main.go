@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -23,7 +24,10 @@ func getRevertReason(txHash ethcommon.Hash, rpcURL string) []byte {
 }
 
 func main() {
-	txHash := ethcommon.HexToHash("0xd69bfa0dc9cd1bf69c2dc38e15a6771354fd387a084e2cb4604f187c55c862a1")
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: %s <transaction-hash>", os.Args[0])
+	}
+	txHash := ethcommon.HexToHash(os.Args[1])
 	rpcURL := "http://localhost:8545/"
 	result := getRevertReason(txHash, rpcURL)
 	fmt.Printf("result %v\n", string(result))
