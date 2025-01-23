@@ -1,57 +1,59 @@
 services:
-  beacond:
-    image: ghcr.io/rollkit/beacon-kit:v0.1.3
-    container_name: beacond
-    volumes:
-      - ./testing/files:/beacon-kit/testing/files
-      - ./.tmp:/beacon-kit/.tmp
-      - /var/run/docker.sock:/var/run/docker.sock
-    entrypoint: /beacon-kit/testing/files/entrypoint.sh
-    depends_on:
-      celestia-network-validator:
-        condition: service_healthy
-      celestia-network-bridge:
-        condition: service_healthy
-      reth:
-        condition: service_started
-    networks:
-      - beacon-network
+  # beacond:
+  #   image: ghcr.io/rollkit/beacon-kit:v0.1.3
+  #   container_name: beacond
+  #   volumes:
+  #     - ./testing/files:/beacon-kit/testing/files
+  #     - ./.tmp:/beacon-kit/.tmp
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   entrypoint: /beacon-kit/testing/files/entrypoint.sh
+  #   depends_on:
+  #     celestia-network-validator:
+  #       condition: service_healthy
+  #     celestia-network-bridge:
+  #       condition: service_healthy
+  #     reth:
+  #       condition: service_started
+  #   networks:
+  #     - beacon-network
 
   sovereign: # sov sdk is a zk rollup framework. This is a zk rollup image with an EVM module using celestia bridge
     image: sovrollup # this will be replaced with an image from ghcr
     container_name: sovereign
     volumes:
-      - ./testing/files/sovereign:/testapp_files
-    entrypoint: /testapp_files/entrypoint.sh
-    ports:
-      - "9091:9090"
-      - "5124:26657"
-    networks:
-      - beacon-network
+      - ./testing/files/celestia_rollup_config.toml:/celestia_config.toml
+    entrypoint: /examples/sov-rollup/entrypoint.sh 
+    depends_on:
+      celestia-network-validator:
+        condition: service_healthy
+      celestia-network-bridge:
+        condition: service_healthy
+    # ports:
+    # - "9091:9090"
+    # - "5124:26657"
 
-
-  reth:
-    image: ghcr.io/paradigmxyz/reth  # Use the official Reth image
-    container_name: reth
-    ports:
-      - "30303:30303"  # P2P port
-      - "8545:8545"    # HTTP port
-      - "8551:8551"    # Auth RPC port
-    volumes:
-      - ./testing/files:/testapp_files  # Mount the directory for test app files
-      - ./.tmp:/.tmp                    # Mount a temporary directory for data
-    command: |
-      node
-      --chain /testapp_files/eth-genesis.json
-      --http
-      --http.addr 0.0.0.0
-      --http.api eth,net
-      --authrpc.addr 0.0.0.0
-      --authrpc.jwtsecret /testapp_files/jwt.hex
-      --datadir /.tmp/eth-home
-      --ipcpath /.tmp/eth-home/eth-engine.ipc
-    networks:
-      - beacon-network
+  # reth:
+  #   image: ghcr.io/paradigmxyz/reth # Use the official Reth image
+  #   container_name: reth
+  #   ports:
+  #     - "30303:30303" # P2P port
+  #     - "8545:8545" # HTTP port
+  #     - "8551:8551" # Auth RPC port
+  #   volumes:
+  #     - ./testing/files:/testapp_files # Mount the directory for test app files
+  #     - ./.tmp:/.tmp # Mount a temporary directory for data
+  #   command: |
+  #     node
+  #     --chain /testapp_files/eth-genesis.json
+  #     --http
+  #     --http.addr 0.0.0.0
+  #     --http.api eth,net
+  #     --authrpc.addr 0.0.0.0
+  #     --authrpc.jwtsecret /testapp_files/jwt.hex
+  #     --datadir /.tmp/eth-home
+  #     --ipcpath /.tmp/eth-home/eth-engine.ipc
+  #   networks:
+  #     - beacon-network
 
   celestia-network-validator:
     image: ghcr.io/celestiaorg/celestia-app:v3.0.0-mocha
@@ -65,7 +67,11 @@ services:
       - "26657:26657"
     entrypoint: /testapp_files/entrypoint.sh
     healthcheck:
-      test: ["CMD-SHELL", "/bin/sh -c 'BLOCK_HEIGHT=$(curl -sf http://localhost:26657/status | jq -r .result.sync_info.latest_block_height); if [ \"$$BLOCK_HEIGHT\" -gt 1 ]; then exit 0; else echo \"Block height too low: $$BLOCK_HEIGHT\"; exit 1; fi'"]
+      test:
+        [
+          "CMD-SHELL",
+          '/bin/sh -c ''BLOCK_HEIGHT=$(curl -sf http://localhost:26657/status | jq -r .result.sync_info.latest_block_height); if [ "$$BLOCK_HEIGHT" -gt 1 ]; then exit 0; else echo "Block height too low: $$BLOCK_HEIGHT"; exit 1; fi''',
+        ]
       interval: 1s
       timeout: 5s
       retries: 10
@@ -91,7 +97,11 @@ services:
       celestia-network-validator:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "AUTH_TOKEN=$(celestia bridge auth read --node.store=/home/celestia 2>/dev/null | tail -n 1); OUTPUT=$(curl -sf --max-time 0.5 -X POST -H \"Content-type: application/json\" -H \"Accept: application/json\" -H \"Authorization: Bearer $$AUTH_TOKEN\" -d '{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"header.SyncWait\",\"params\":[]}' http://0.0.0.0:26658); if [ $$? -eq 0 ]; then exit 0; else echo \"Catching up. $$OUTPUT\"; exit 1; fi "]
+      test:
+        [
+          "CMD-SHELL",
+          'AUTH_TOKEN=$(celestia bridge auth read --node.store=/home/celestia 2>/dev/null | tail -n 1); OUTPUT=$(curl -sf --max-time 0.5 -X POST -H "Content-type: application/json" -H "Accept: application/json" -H "Authorization: Bearer $$AUTH_TOKEN" -d ''{"id":1,"jsonrpc":"2.0","method":"header.SyncWait","params":[]}'' http://0.0.0.0:26658); if [ $$? -eq 0 ]; then exit 0; else echo "Catching up. $$OUTPUT"; exit 1; fi ',
+        ]
       interval: 1s
       timeout: 5s
       retries: 10
