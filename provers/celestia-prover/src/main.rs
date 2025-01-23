@@ -25,8 +25,6 @@ use ibc_core_commitment_types::merkle::MerkleProof;
 use ibc_eureka_solidity_types::sp1_ics07::{
     sp1_ics07_tendermint, IICS07TendermintMsgs::ConsensusState,
 };
-use num_bigint::BigInt;
-use num_bigint::Sign;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
@@ -55,12 +53,8 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
-        let state_transition_verifier_key =
-            bincode::serialize(&self.tendermint_prover.vkey.hash_bytes())
-                .map_err(|e| Status::internal(e.to_string()))?;
-        let state_membership_verifier_key =
-            bincode::serialize(&self.membership_prover.vkey.hash_bytes())
-                .map_err(|e| Status::internal(e.to_string()))?;
+        let state_transition_verifier_key = self.tendermint_prover.vkey.bytes32();
+        let state_membership_verifier_key = self.membership_prover.vkey.bytes32();
         let response = InfoResponse {
             state_transition_verifier_key,
             state_membership_verifier_key,
@@ -125,52 +119,12 @@ impl Prover for ProverService {
             now,
         );
 
-        // Add field reduction and detailed logging
-        let bn254_field_modulus = BigInt::parse_bytes(
-            b"30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001",
-            16,
-        )
-        .expect("could not parse bn254 field modules as bytes");
-
-        let reduced_public_values: Vec<u8> = proof
-            .public_values
-            .as_slice()
-            .iter()
-            .flat_map(|value| {
-                let value_bigint = BigInt::from_bytes_be(Sign::Plus, &[*value]);
-                let reduced = value_bigint % &bn254_field_modulus;
-                reduced.to_bytes_be().1
-            })
-            .collect();
-
-        println!("Original public values:");
-        for (i, val) in proof.public_values.as_slice().iter().enumerate() {
-            println!("Input {}: 0x{}", i, hex::encode(&[*val]));
-        }
-
-        println!("\nReduced public values:");
-        for (i, val) in reduced_public_values.iter().enumerate() {
-            println!("Input {}: 0x{}", i, hex::encode(&[*val]));
-        }
-
-        assert_eq!(proof.public_values.as_slice(), reduced_public_values);
-
-        let result = self
-            .tendermint_prover
-            .prover_client
-            .verify(&proof, &self.tendermint_prover.vkey);
-        match result {
-            Ok(val) => {
-                println!("proof verified {:?}", val)
-            }
-            Err(error) => {
-                println!("proof failed to verify {:?}", error);
-            }
-        }
+        let hash = proof.public_values.hash_bn254().to_string();
+        println!("public values hash bn254 {:?}", hash);
 
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
-            public_values: reduced_public_values,
+            public_values: proof.public_values.to_vec(),
         };
 
         Ok(Response::new(response))

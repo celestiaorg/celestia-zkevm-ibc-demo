@@ -111,10 +111,14 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get celestia prover info %w", err)
 	}
 	verifierKey := info.StateTransitionVerifierKey
-	fmt.Printf("Got celestia prover info. State transition verifier key %v, hex encoded %v\n", verifierKey, hex.EncodeToString(verifierKey))
+	fmt.Printf("Got celestia prover info. State transition verifier key %v", verifierKey)
+	result, err := hex.DecodeString(strings.TrimLeft(verifierKey, "0x"))
+	if err != nil {
+		return fmt.Errorf("failed to decode verifier key %w", err)
+	}
 	// Convert the verifierKey byte slice into a [32]byte array
 	var VKey [32]byte
-	copy(VKey[:], verifierKey)
+	copy(VKey[:], result)
 
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
