@@ -1,6 +1,6 @@
+use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
-use sp1_sdk::HashableKey;
 use tonic::{transport::Server, Request, Response, Status};
 // Import the generated proto rust code
 pub mod prover {
@@ -53,10 +53,12 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
-        let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey.hash_bytes())
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey.hash_bytes())
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let state_transition_verifier_key =
+            bincode::serialize(&self.tendermint_prover.vkey.hash_bytes())
+                .map_err(|e| Status::internal(e.to_string()))?;
+        let state_membership_verifier_key =
+            bincode::serialize(&self.membership_prover.vkey.hash_bytes())
+                .map_err(|e| Status::internal(e.to_string()))?;
         let response = InfoResponse {
             state_transition_verifier_key,
             state_membership_verifier_key,
@@ -121,10 +123,14 @@ impl Prover for ProverService {
             now,
         );
         println!("generated proof {:?}", proof.bytes());
+        println!(
+            "generated proof public values {:?}",
+            proof.public_values.as_slice().to_vec()
+        );
 
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
-            public_values: proof.public_values.to_vec(),
+            public_values: proof.public_values.as_slice().to_vec(),
         };
 
         Ok(Response::new(response))
@@ -161,7 +167,7 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let proof = self.membership_prover.generate_proof(
-            &trusted_block.signed_header.header.app_hash.as_bytes(),
+            trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
         );
 
