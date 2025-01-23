@@ -1,0 +1,58 @@
+[da]
+# The JWT used to authenticate with the celestia light client. Instructions for generating this token can be found in the README
+celestia_rpc_auth_token = 0xc4d70beb372fc886335d5bef3aabd63b4324b621132f5d8de67a06ddd0405fcd
+# The address of the *trusted* Celestia light client to interact with
+celestia_rpc_address = "http://127.0.0.0:26658" 
+# The largest response the rollup will accept from the Celestia node. Defaults to 100 MB
+max_celestia_response_body_size = 104_857_600
+# The maximum time to wait for a response to an RPC query against Celestia node. Defaults to 60 seconds.
+celestia_rpc_timeout_seconds = 60
+
+[storage]
+# The path to the rollup's data directory. Paths that do not begin with `/` are interpreted as relative paths.
+path = "demo_data"
+
+# We define the rollup's genesis to occur at block number `genesis_height`. The rollup will ignore
+# any blocks before this height, and any blobs at this height will not be processed
+[runner]
+genesis_height = 3
+# Block time for celestia is configured in `docker/run-validator.sh` and we try to set this one to be lower,
+# So status is updated more frequently.
+da_polling_interval_ms = 200
+
+[runner.rpc_config]
+# the host and port to bind the rpc server for
+bind_host = "127.0.0.1"
+bind_port = 12345
+[runner.axum_config]
+bind_host = "127.0.0.1"
+bind_port = 12346
+# In case the rollup is running behind a proxy
+# public_address = "http://rollup.sovereign.xyz"
+
+[monitoring]
+telegraf_address = "127.0.0.1:8094"
+# Defines how many measurements a rollup node will accumulate before sending it to the Telegraf.
+# It is expected from the rollup node to produce metrics all the time,
+# so measurements are buffered by size and not sent by time.
+# and below 67 KB, which is the maximal UDP packet size.
+# It also means that if a single serialized metric is larger than this value, a UDP packet will be larger.
+# The default value is 508.
+# max_datagram_size = 508
+# How many metrics are allowed to be in pending state, before new metrics will be dropped.
+# This is a number of metrics, not serialized bytes.
+# The total number of bytes to be held in memory might vary per metric + `max_datagram_size`
+# max_pending_metrics = 100
+
+[proof_manager]
+aggregated_proof_block_jump = 10
+prover_address = "sov1l6n2cku82yfqld30lanm2nfw43n2auc8clw7r5u5m6s7qhzze66"
+max_number_of_transitions_in_db = 100
+max_number_of_transitions_in_memory = 30
+
+[sequencer]
+max_allowed_blocks_behind = 5
+# DA address of this sequencer. Should match address of connected bridge/full node.
+# Taken from ../../docker/credentials/bridge-0.addr
+da_address = "celestia1a68m2l85zn5xh0l07clk4rfvnezhywc53g8x7s"
+[sequencer.preferred]

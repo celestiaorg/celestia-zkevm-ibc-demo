@@ -17,6 +17,19 @@ services:
     networks:
       - beacon-network
 
+  sovereign: # sov sdk is a zk rollup framework. This is a zk rollup image with an EVM module using celestia bridge
+    image: sovrollup # this will be replaced with an image from ghcr
+    container_name: sovereign
+    volumes:
+      - ./testing/files/sovereign:/testapp_files
+    entrypoint: /testapp_files/entrypoint.sh
+    ports:
+      - "9091:9090"
+      - "5124:26657"
+    networks:
+      - beacon-network
+
+
   reth:
     image: ghcr.io/paradigmxyz/reth  # Use the official Reth image
     container_name: reth
