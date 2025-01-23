@@ -25,6 +25,8 @@ use ibc_core_commitment_types::merkle::MerkleProof;
 use ibc_eureka_solidity_types::sp1_ics07::{
     sp1_ics07_tendermint, IICS07TendermintMsgs::ConsensusState,
 };
+use num_bigint::BigInt;
+use num_bigint::Sign;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
@@ -122,15 +124,53 @@ impl Prover for ProverService {
             &proposed_header,
             now,
         );
-        println!("generated proof {:?}", proof.bytes());
-        println!(
-            "generated proof public values {:?}",
-            proof.public_values.as_slice().to_vec()
-        );
+
+        // Add field reduction and detailed logging
+        let bn254_field_modulus = BigInt::parse_bytes(
+            b"30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001",
+            16,
+        )
+        .expect("could not parse bn254 field modules as bytes");
+
+        let reduced_public_values: Vec<u8> = proof
+            .public_values
+            .as_slice()
+            .iter()
+            .flat_map(|value| {
+                let value_bigint = BigInt::from_bytes_be(Sign::Plus, &[*value]);
+                let reduced = value_bigint % &bn254_field_modulus;
+                reduced.to_bytes_be().1
+            })
+            .collect();
+
+        println!("Original public values:");
+        for (i, val) in proof.public_values.as_slice().iter().enumerate() {
+            println!("Input {}: 0x{}", i, hex::encode(&[*val]));
+        }
+
+        println!("\nReduced public values:");
+        for (i, val) in reduced_public_values.iter().enumerate() {
+            println!("Input {}: 0x{}", i, hex::encode(&[*val]));
+        }
+
+        assert_eq!(proof.public_values.as_slice(), reduced_public_values);
+
+        let result = self
+            .tendermint_prover
+            .prover_client
+            .verify(&proof, &self.tendermint_prover.vkey);
+        match result {
+            Ok(val) => {
+                println!("proof verified {:?}", val)
+            }
+            Err(error) => {
+                println!("proof failed to verify {:?}", error);
+            }
+        }
 
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
-            public_values: proof.public_values.as_slice().to_vec(),
+            public_values: reduced_public_values,
         };
 
         Ok(Response::new(response))
