@@ -32,13 +32,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TODO: fetch these from the `make setup` command output.
-// const (
-// 	ics26Router            = "0xe53275a1fca119e1c5eeb32e7a72e54835a63936"
-// 	icsCore                = "0x505f890889415cf041001f5190b7800266b0dddd"
-// 	ics07TMContractAddress = "0x25cdbd2bf399341f8fee22ecdb06682ac81fdc37"
-// )
-
 const (
 	// sender is an address on SimApp that will send funds via the MsgTransfer.
 	sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
@@ -78,7 +71,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("addresses %v\n", addresses)
+	fmt.Printf("Extracted deployed contract addresses: %#v\n", addresses)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
@@ -110,17 +103,13 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get celestia prover info %w", err)
 	}
-	verifierKey := info.StateTransitionVerifierKey
-	fmt.Printf("Got celestia prover info. State transition verifier key %v", verifierKey)
-	trimmed := strings.TrimPrefix(verifierKey, "0x")
-	result, err := hex.DecodeString(trimmed)
+	fmt.Printf("Got celestia prover info. StateTransitionVerifierKey: %v", info.StateTransitionVerifierKey)
+	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
 	}
-	// Convert the verifierKey byte slice into a [32]byte array
-	var VKey [32]byte
-	copy(VKey[:], result)
-	fmt.Printf("VKey %v\n", VKey)
+	var verifierKey [32]byte
+	copy(verifierKey[:], verifierKeyDecoded)
 
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
@@ -140,38 +129,29 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
-	fmt.Printf("got resp %v\n", resp)
-	fmt.Printf("got resp.proof %v\n", hex.EncodeToString(resp.Proof))
-
-	msg := sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
-		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
-			VKey:         VKey,
-			PublicValues: resp.PublicValues,
-			Proof:        resp.Proof,
-		},
-	}
-
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Packing msg...\n")
-	encoded, err := arguments.Pack(msg)
+	encoded, err := arguments.Pack(sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
+		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
+			VKey:         verifierKey,
+			PublicValues: resp.PublicValues,
+			Proof:        resp.Proof,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("error packing msg %w", err)
 	}
-	fmt.Printf("Pcaked msg %v\n", encoded)
 
 	fmt.Printf("Invoking icsCore.UpdateClient...\n")
 	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("icsCore.UpdateClient did not error\n")
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		fmt.Printf("receipt %v\n", receipt)
-		fmt.Printf("receipt logs %v\n", receipt.Logs)
+		fmt.Printf("receipt %v and logs %v\n", receipt, receipt.Logs)
 		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
