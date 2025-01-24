@@ -119,9 +119,6 @@ impl Prover for ProverService {
             now,
         );
 
-        let hash = proof.public_values.hash_bn254().to_string();
-        println!("public values hash bn254 {:?}", hash);
-
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
