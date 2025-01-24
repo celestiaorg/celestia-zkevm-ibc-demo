@@ -15,6 +15,7 @@ Before running this program, please follow the steps outlined in this [README.md
 
 After the one-time setup, the following minimum steps are necessary each time you run the program:
 
+1. Modify the `.env` file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
 1. Spin up the containers including the prover service:
 
    ```shell
@@ -29,7 +30,6 @@ After the one-time setup, the following minimum steps are necessary each time yo
     make setup
     ```
 
-1. Make sure to set `SP1_PROVER=network` in `.env` and get sp1 prover network private key from celestia 1Password.
 1. Verify it's running by querying an endpoint.
 
     ```shell
@@ -50,7 +50,7 @@ When debugging the prover it's much faster to run it locally from the root of th
 cargo run -p celestia-prover
 ```
 
-The setup steps remain the same. Additionally, you need to comment out the prover section in  `docker_compose.yml`
+The setup steps remain the same. Additionally, you need to comment out the prover section in `docker_compose.yml`
 
 ## Protobuf
 
