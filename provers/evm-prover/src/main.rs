@@ -36,11 +36,17 @@ pub struct ProverService {
     evm_client: Provider<Http>,
     sp1_prover: ProverClient,
     simapp_client: ClientQueryClient<tonic::transport::Channel>,
+    namespace: Namespace,
 }
 
 impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let token = env::var("CELESTIA_NODE_AUTH_TOKEN").expect("Token not provided");
+        let namespace_str = env::var("CELESTIA_NAMESPACE").expect("Namespace not provided");
+
+        let namespace = Namespace::new_v0(&alloy::hex::decode(namespace_str)?)
+            .map_err(|e| Status::internal(format!("Failed to create namespace: {}", e)))?;
+
         let celestia_client = Client::new("ws://localhost:26658", Some(&token))
             .await
             .expect("Failed creating Celestia RPC client");
@@ -55,6 +61,7 @@ impl ProverService {
             evm_client,
             sp1_prover: ProverClient::new(),
             simapp_client,
+            namespace,
         })
     }
 
@@ -135,22 +142,18 @@ impl Prover for ProverService {
         let input: ClientExecutorInput = bincode::deserialize(&input_bytes)
             .map_err(|e| Status::internal(format!("Failed to deserialize input: {}", e)))?;
 
-        // Use the namespace from the request or a default
-        let namespace = Namespace::new_v0(&alloy::hex::decode("0f0f0f0f0f0f0f0f0f0f").unwrap())
-            .map_err(|e| Status::internal(format!("Failed to create namespace: {}", e)))?;
-
         // Create blob from the EVM block
         let block = input.current_block.clone();
         let block_bytes = bincode::serialize(&block)
             .map_err(|e| Status::internal(format!("Failed to serialize block: {}", e)))?;
 
-        let blob = Blob::new(namespace, block_bytes, celestia_types::AppVersion::V3)
+        let blob = Blob::new(self.namespace, block_bytes, celestia_types::AppVersion::V3)
             .map_err(|e| Status::internal(format!("Failed to create blob: {}", e)))?;
 
         // Fetch the blob from the chain to get its index
         let blob_from_chain = self
             .celestia_client
-            .blob_get(latest_height, namespace, blob.commitment.clone())
+            .blob_get(latest_height, self.namespace, blob.commitment.clone())
             .await
             .map_err(|e| Status::internal(format!("Failed to get blob: {}", e)))?;
 
@@ -176,14 +179,14 @@ impl Prover for ProverService {
         // Get NMT proofs
         let nmt_multiproofs = self
             .celestia_client
-            .blob_get_proof(latest_height, namespace, blob.commitment.clone())
+            .blob_get_proof(latest_height, self.namespace, blob.commitment.clone())
             .await
             .map_err(|e| Status::internal(format!("Failed to get proof: {}", e)))?;
 
         // Setup SP1 inputs
         let mut stdin = SP1Stdin::new();
         stdin.write(&input);
-        stdin.write(&namespace);
+        stdin.write(&self.namespace);
         stdin.write(&header.header.hash());
         stdin.write(&header.dah);
         stdin.write(&nmt_multiproofs);
