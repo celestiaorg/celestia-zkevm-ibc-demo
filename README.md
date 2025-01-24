@@ -62,15 +62,14 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make setup
     ```
 
-1. Transfer tokens from SimApp to the EVM roll-up.
+1. Run the demo
 
     ```shell
+    # Transfer tokens from SimApp to the EVM roll-up.
     make transfer
-    ```
-
-1. To stop and teardown the test environment (when you're finished)
-
-    ```shell
+    # Relay the token transfer
+    make relay
+    # To stop and teardown the test environment (when you're finished)
     make stop
     ```
 

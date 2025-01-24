@@ -94,13 +94,7 @@ transfer:
 relay:
 # Note: this is split out from transfer to speed up local development. This
 # command can be merged into transfer to make the demo fewer steps to run.
-	@echo "--> Relaying the token transfer"
-	@go run ./testing/demo/pkg/relay/
-.PHONY: relay
-
-## relay2: Relay the token transfer from simapp to the EVM roll-up.
-relay2:
-	go run testing/demo/pkg/relay-v2/main.go
+	go run testing/demo/pkg/relay/main.go
 .PHONY: relay
 
 ## stop: Stop all processes and remove the tmp directory.
@@ -238,5 +232,5 @@ demo:
 	@make start
 	@make setup
 	@make transfer
-	@make relay2
+	@make relay
 .PHONY: demo
