@@ -4,14 +4,16 @@ The EVM Prover is a gRPC service that generates zero-knowledge proofs for EVM st
 
 ## Usage
 
-> [!WARNING] 
+> [!WARNING]
 > This gRPC service is still under development and may not work as described
 
 To run the server you will need to clone the repo and install rust and cargo. To run the node you also need to set the following environment variables:
 
-- `TENDERMINT_RPC_URL` - the url of the tendermint chain you are proving.
-- `RPC_URL` the json rpc url of the evm chain you are generating the proofs for.
-- `CONTRACT_ADDRESS` - the evm address of the tendermint sp1 ics07 contract.
+- `CELESTIA_NODE_AUTH_TOKEN` - the auth token for the celestia node you are connecting to.
+- `EVM_RPC_URL` - the json rpc url of the evm chain you are generating the proofs for.
+- `SIMAPP_RPC_URL` - the grpc url of the simapp chain you are generating the proofs for.
+- `SP1_ELF_blevm` - the path to the ELF file for the Succinct RISC-V zkVM.
+- `CELESTIA_NAMESPACE` - the namespace of the rollup on celestia node you are connecting to.
 
 To then run the server (on port `:50051`):
 
