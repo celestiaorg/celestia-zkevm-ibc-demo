@@ -49,6 +49,22 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     # Modify the .env file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
     ```
 
+1. Modify the `docker-compose.yml` file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+
+    ```diff
+    celestia-prover:
+        image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
+        container_name: celestia-prover
+        environment:
+        # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
+        # for Celestia (with IBC Eurekea enabled).
+        - TENDERMINT_RPC_URL=http://simapp-validator:26657
+        - RPC_URL=http://reth:8545
+        - PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+    +      - SP1_PROVER=network
+    +      - SP1_PRIVATE_KEY=PRIVATE_KEY
+    ```
+
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
 
     ```shell
