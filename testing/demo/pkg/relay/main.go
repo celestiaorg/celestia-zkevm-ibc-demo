@@ -10,16 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"cosmossdk.io/math"
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
-	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
-	ibchostv2 "github.com/cosmos/ibc-go/v9/modules/core/24-host/v2"
-	ibctesting "github.com/cosmos/ibc-go/v9/testing"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -34,16 +26,6 @@ import (
 )
 
 const (
-	// sender is an address on SimApp that will send funds via the MsgTransfer.
-	sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
-	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
-	receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
-	// denom is the denomination of the token on SimApp.
-	denom = "stake"
-	// sourceChannel is hard-coded to the name used by the first channel.
-	sourceChannel = ibctesting.FirstChannelID
-	// sequence is hard-coded to the first sequence number.
-	sequence = 1
 	// ethereumRPC is the Reth RPC endpoint.
 	ethereumRPC = "http://localhost:8545/"
 	// ethereumAddress is an address on the EVM chain.
@@ -59,11 +41,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// err = receivePacketOnEVM()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 }
 
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
@@ -158,113 +135,6 @@ func updateTendermintLightClient() error {
 	recvBlockNumber := receipt.BlockNumber.Uint64()
 	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
 	return nil
-}
-
-func receivePacketOnEVM() error {
-	addresses, err := utils.ExtractDeployedContractAddresses()
-	if err != nil {
-		return err
-	}
-
-	sendPacket, err := createSendPacket()
-	if err != nil {
-		return err
-	}
-
-	packetCommitmentPath := ibchostv2.PacketCommitmentKey(sourceChannel, sequence)
-	fmt.Printf("packetCommitmentPath %v\n", packetCommitmentPath)
-
-	packet := ics26router.IICS26RouterMsgsPacket{
-		Sequence:         uint32(sendPacket.Sequence),
-		SourceChannel:    sendPacket.SourceChannel,
-		DestChannel:      sendPacket.DestinationChannel,
-		TimeoutTimestamp: sendPacket.TimeoutTimestamp,
-		Payloads: []ics26router.IICS26RouterMsgsPayload{
-			{
-				SourcePort: sendPacket.Payloads[0].SourcePort,
-				DestPort:   sendPacket.Payloads[0].DestinationPort,
-				Version:    transfertypes.V1,
-				Encoding:   transfertypes.EncodingABI,
-				Value:      sendPacket.Payloads[0].Value,
-			},
-		},
-	}
-
-	// TODO: replace this with query to celestia-prover after mock circuits
-	// are implemented.
-	membershipProof := []byte{}
-
-	// TODO: replace this with a real proof height.
-	proofHeight := ics26router.IICS02ClientMsgsHeight{
-		RevisionNumber: uint32(0),
-		RevisionHeight: uint32(10),
-	}
-	msg := ics26router.IICS26RouterMsgsMsgRecvPacket{
-		Packet:          packet,
-		ProofCommitment: membershipProof,
-		ProofHeight:     proofHeight,
-	}
-
-	ethClient, err := ethclient.Dial(ethereumRPC)
-	if err != nil {
-		return err
-	}
-	ics26Contract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
-	if err != nil {
-		return err
-	}
-
-	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
-	if err != nil {
-		return err
-	}
-	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, faucet)
-	if err != nil {
-		return err
-	}
-	tx, err := ics26Contract.RecvPacket(getTransactOpts(faucet, eth), msg)
-	if err != nil {
-		return err
-	}
-
-	receipt := getTxReciept(context.Background(), eth, tx.Hash())
-	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
-	}
-	recvBlockNumber := receipt.BlockNumber.Uint64()
-	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
-	return nil
-}
-
-// TODO: refactor this to de-duplicate code from createMsgSendPacket
-func createSendPacket() (channeltypesv2.Packet, error) {
-	coin := sdktypes.NewCoin(denom, math.NewInt(100))
-	transferPayload := ics20lib.ICS20LibFungibleTokenPacketData{
-		Denom:    coin.Denom,
-		Amount:   coin.Amount.BigInt(),
-		Sender:   sender,
-		Receiver: receiver,
-		Memo:     "test transfer",
-	}
-	transferBz, err := ics20lib.EncodeFungibleTokenPacketData(transferPayload)
-	if err != nil {
-		return channeltypesv2.Packet{}, err
-	}
-	payload := channeltypesv2.Payload{
-		SourcePort:      transfertypes.PortID,
-		DestinationPort: transfertypes.PortID,
-		Version:         transfertypes.V1,
-		Encoding:        transfertypes.EncodingABI,
-		Value:           transferBz,
-	}
-
-	return channeltypesv2.Packet{
-		Sequence:           sequence,
-		SourceChannel:      ibctesting.FirstChannelID,
-		DestinationChannel: ibctesting.FirstClientID,
-		TimeoutTimestamp:   uint64(time.Now().Add(30 * time.Minute).Unix()),
-		Payloads:           []channeltypesv2.Payload{payload},
-	}, nil
 }
 
 func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.TransactOpts {
