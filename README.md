@@ -118,7 +118,7 @@ If someone were to send tokens from the EVM rollup back to SimApp, the source ch
 This repo uses protobuf to define the interfaces between several services. To help with this, this
 repo relies on [buf](https://buf.build). If you modify the protos you can regenerate them using:
 
-```
+```shell
 make proto-gen
 ```
 
