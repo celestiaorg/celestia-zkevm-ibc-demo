@@ -42,6 +42,7 @@ async fn main() {
         Namespace::new_v0(&hex::decode("0f0f0f0f0f0f0f0f0f0f").unwrap()).unwrap();
 
     // Hardcode the height of the block containing the blob
+    // https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w%3D&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8%3D&height=2988873
     let height: u64 = 2988873;
 
     // Load the zkEVM input from a file, which contains the EVM block that becomes our blob
