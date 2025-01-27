@@ -1,0 +1,34 @@
+[workspace]
+members = [
+    "blevm",
+    "blevm-mock",
+    "script",
+    "blevm-aggregator",
+    "common",
+]
+resolver = "2"
+
+[workspace.dependencies]
+serde = { version = "1.0.200", default-features = false, features = ["derive"] }
+alloy-sol-types = "0.7.7"
+rsp-client-executor = {git = "https://github.com/succinctlabs/rsp.git", rev="c01149568a2ed4d3e766756e8b847c870a0b1e4e"}
+reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-20240830", default-features = false, features = [
+    "alloy-compat",
+    "optimism",
+    "std",
+] }
+celestia-types = {git="https://github.com/S1nus/lumina.git", rev="c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3"}
+celestia-rpc = {git="https://github.com/S1nus/lumina.git", rev="c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3"}
+tendermint-proto = "*"
+tendermint = "*"
+bincode = "1.3.3"
+nmt-rs = "*"
+sp1-sdk = "3.4.0"
+sp1-zkvm = "3.4.0"
+sp1-helper = "3.4.0"
+
+[patch.crates-io]
+ecdsa-core = { git = "https://github.com/sp1-patches/signatures", package = "ecdsa", tag = "ecdsa-v0.16.9-patch-v3.3.0" }
+sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "sha2-v0.10.8-patch-v1" }
+crypto-bigint = { git = "https://github.com/sp1-patches/RustCrypto-bigint", tag = "crypto_bigint-v0.5.5-patch-v1" }
+tiny-keccak = { git = "https://github.com/sp1-patches/tiny-keccak", tag = "tiny_keccak-v2.0.2-patch-v1" }
