@@ -31,6 +31,8 @@ pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().ok();
+
     // Setup the client.
     let token = std::env::var("CELESTIA_NODE_AUTH_TOKEN").expect("Token not provided");
     let client = Client::new("ws://localhost:26658", Some(&token))
@@ -210,6 +212,7 @@ async fn main() {
 
     let (pk, vk) = client.setup(&BLEVM_ELF);
 
+    println!("Generating proof...");
     let proof = client.prove(&pk, stdin).core().run().unwrap();
 
     let proof_bytes = bincode::serialize(&proof).expect("Failed to serialize proof");
