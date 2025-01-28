@@ -46,10 +46,10 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 
     ```shell
     cp .env.example .env
-    # Modify the .env file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+    # Modify the .env file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
     ```
 
-1. Modify the `docker-compose.yml` file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+1. Modify the `docker-compose.yml` file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
 
     ```diff
     celestia-prover:
