@@ -1,88 +1,117 @@
 use bincode;
-use celestia_types::consts::appconsts::LATEST_VERSION;
+use celestia_rpc::{BlobClient, Client, HeaderClient};
+use celestia_types::nmt::NamespacedHash;
 use celestia_types::AppVersion;
-use celestia_types::{blob::Commitment, Blob, TxConfig};
+use celestia_types::Blob;
 use celestia_types::{
     nmt::{Namespace, NamespaceProof, NamespacedHashExt},
     ExtendedHeader,
 };
-use nmt_rs::simple_merkle::tree::MerkleHash;
+use core::cmp::max;
 use nmt_rs::{
     simple_merkle::{db::MemDb, proof::Proof, tree::MerkleTree},
     TmSha2Hasher,
 };
-use tendermint::{hash::Algorithm, Hash as TmHash};
+use rsp_client_executor::io::ClientExecutorInput;
+use sp1_sdk::include_elf;
+use sp1_sdk::{ProverClient, SP1Stdin};
+use std::{error::Error, fs};
 use tendermint_proto::{
     v0_37::{types::BlockId as RawBlockId, version::Consensus as RawConsensusVersion},
     Protobuf,
 };
 
-use celestia_rpc::{BlobClient, Client, HeaderClient};
-use core::cmp::max;
-use rsp_client_executor::{
-    io::ClientExecutorInput, ChainVariant, ClientExecutor, EthereumVariant, CHAIN_ID_ETH_MAINNET,
-    CHAIN_ID_LINEA_MAINNET, CHAIN_ID_OP_MAINNET,
-};
-use sp1_sdk::{include_elf, ProverClient, SP1Stdin};
-use std::fs;
+// Constants
+const NAMESPACE_HEX: &str = "0f0f0f0f0f0f0f0f0f0f";
 
-/// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
-pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
+/// Configuration for the Celestia client
+pub struct CelestiaConfig {
+    node_url: String,
+    auth_token: String,
+}
 
-#[tokio::main]
-async fn main() {
-    // Setup the client.
-    let token = std::env::var("CELESTIA_NODE_AUTH_TOKEN").expect("Token not provided");
-    let client = Client::new("ws://localhost:26658", Some(&token))
-        .await
-        .expect("Failed creating rpc client");
+/// Configuration for the proof generation
+pub struct ProverConfig {
+    elf_bytes: &'static [u8],
+}
 
-    // Use the namespace I posted the blob to
-    let namespace: Namespace =
-        Namespace::new_v0(&hex::decode("0f0f0f0f0f0f0f0f0f0f").unwrap()).unwrap();
+/// Input data for block proving
+pub struct BlockProverInput {
+    block_height: u64,
+    l2_block_data: Vec<u8>,
+}
 
-    // Hardcode the height of the block containing the blob
-    let height: u64 = 2988873;
+/// Handles interaction with Celestia network
+pub struct CelestiaClient {
+    client: Client,
+    namespace: Namespace,
+}
 
-    // Load the zkEVM input from a file, which contains the EVM block that becomes our blob
-    let input_bytes = fs::read("input/1/18884864.bin").expect("could not read file");
-    let input: ClientExecutorInput =
-        bincode::deserialize(&input_bytes).expect("could not deserialize");
+impl CelestiaClient {
+    pub async fn new(config: CelestiaConfig, namespace: Namespace) -> Result<Self, Box<dyn Error>> {
+        let client = Client::new(&config.node_url, Some(&config.auth_token))
+            .await
+            .map_err(|e| format!("Failed creating RPC client: {}", e))?;
 
-    // the EVM block from the input is our blob
-    let block = input.current_block.clone();
-    let block_bytes = bincode::serialize(&block).unwrap();
-    let blob_from_file = Blob::new(namespace, block_bytes, AppVersion::V3).unwrap();
-    println!(
-        "commitment from test vector: {}",
-        hex::encode(blob_from_file.commitment.0)
-    );
+        Ok(Self { client, namespace })
+    }
 
-    // Fetch the blob from the chain, so we can get its index (where it starts in the square)
+    pub async fn get_blob_and_header(
+        &self,
+        height: u64,
+        blob: &Blob,
+    ) -> Result<(Blob, ExtendedHeader), Box<dyn Error>> {
+        let blob_from_chain = self
+            .client
+            .blob_get(height, self.namespace, blob.commitment.clone())
+            .await
+            .map_err(|e| format!("Failed getting blob: {}", e))?;
 
-    let blob_from_chain = client
-        .blob_get(height, namespace, blob_from_file.commitment.clone())
-        .await
-        .expect("Failed getting blob");
+        let header = self
+            .client
+            .header_get_by_height(height)
+            .await
+            .map_err(|e| format!("Failed getting header: {}", e))?;
 
-    // Get the header and retrieve the EDS roots needed for proving inclusion
-    let header: ExtendedHeader = client.header_get_by_height(height).await.unwrap();
+        Ok((blob_from_chain, header))
+    }
 
-    let eds_row_roots = header.dah.row_roots();
-    let eds_column_roots = header.dah.column_roots();
+    pub async fn get_nmt_proofs(
+        &self,
+        height: u64,
+        blob: &Blob,
+    ) -> Result<Vec<NamespaceProof>, Box<dyn Error>> {
+        Ok(self
+            .client
+            .blob_get_proof(height, self.namespace, blob.commitment.clone())
+            .await
+            .map_err(|e| format!("Failed getting NMT proofs: {}", e))?)
+    }
+}
 
-    // Compute these values needed for proving inclusion
-    let eds_size: u64 = eds_row_roots.len().try_into().unwrap();
-    let ods_size = eds_size / 2;
-
-    // Header hash is a merkle tree of the header fields
-    // We can use this to prove the data hash is in the celestia header
-    let hasher = TmSha2Hasher {};
+pub fn generate_header_proofs(
+    header: &ExtendedHeader,
+) -> Result<(Vec<u8>, Proof<TmSha2Hasher>), Box<dyn Error>> {
     let mut header_field_tree: MerkleTree<MemDb<[u8; 32]>, TmSha2Hasher> =
-        MerkleTree::with_hasher(hasher);
+        MerkleTree::with_hasher(TmSha2Hasher::new());
 
-    let field_bytes = vec![
-        Protobuf::<RawConsensusVersion>::encode_vec(header.header.version),
+    let field_bytes = prepare_header_fields(header);
+
+    for leaf in field_bytes {
+        header_field_tree.push_raw_leaf(&leaf);
+    }
+
+    let (data_hash_bytes, data_hash_proof) = header_field_tree.get_index_with_proof(6);
+
+    // Verify the computed root matches the header hash
+    assert_eq!(header.hash().as_ref(), header_field_tree.root());
+
+    Ok((data_hash_bytes, data_hash_proof))
+}
+
+pub fn prepare_header_fields(header: &ExtendedHeader) -> Vec<Vec<u8>> {
+    vec![
+        Protobuf::<RawConsensusVersion>::encode_vec(header.header.version.clone()),
         header.header.chain_id.clone().encode_vec(),
         header.header.height.encode_vec(),
         header.header.time.encode_vec(),
@@ -104,56 +133,26 @@ async fn main() {
             .encode_vec(),
         header.header.evidence_hash.unwrap_or_default().encode_vec(),
         header.header.proposer_address.encode_vec(),
-    ];
+    ]
+}
 
-    for leaf in field_bytes {
-        header_field_tree.push_raw_leaf(&leaf);
-    }
+pub fn generate_row_proofs(
+    header: &ExtendedHeader,
+    blob: &Blob,
+    blob_index: u64,
+) -> Result<(Proof<TmSha2Hasher>, Vec<NamespacedHash>), Box<dyn Error>> {
+    let eds_row_roots = header.dah.row_roots();
+    let eds_column_roots = header.dah.column_roots();
+    let eds_size: u64 = eds_row_roots.len().try_into()?;
+    let ods_size = eds_size / 2;
 
-    let computed_header_hash = header_field_tree.root();
-    let (data_hash_bytes_from_tree, data_hash_proof) = header_field_tree.get_index_with_proof(6);
-    let data_hash_from_tree = TmHash::decode_vec(&data_hash_bytes_from_tree).unwrap();
-    assert_eq!(
-        data_hash_from_tree.as_bytes(),
-        header.header.data_hash.unwrap().as_bytes()
-    );
-    assert_eq!(header.hash().as_ref(), header_field_tree.root());
-
-    // Sanity check, verify the data hash merkle proof
-    let hasher = TmSha2Hasher {};
-    data_hash_proof
-        .verify_range(
-            &header_field_tree.root(),
-            &[hasher.hash_leaf(&data_hash_bytes_from_tree)],
-        )
-        .unwrap();
-
-    let nmt_multiproofs = client
-        .blob_get_proof(height, namespace, blob_from_file.commitment.clone())
-        .await
-        .unwrap();
-    /*
-    let row_root_multiproof: Proof<TmSha2Hasher> =
-        serde_json::from_str(&fs::read_to_string("row_root_multiproof.json").unwrap()).unwrap();
-    println!(
-        "row root multiproof len {:?}",
-        row_root_multiproof.siblings().len()
-    );*/
-
-    let blob_index: u64 = blob_from_chain.index.unwrap();
-    // calculate the blob_size, measured in "shares".
-    // we do max(1, ...) as per the suggestion of Geometry team
-    // need to double check if that's correct
-    let blob_size: u64 = max(1, blob_from_chain.to_shares().unwrap().len() as u64);
+    let blob_size: u64 = max(1, blob.to_shares()?.len() as u64);
     let first_row_index: u64 = blob_index.div_ceil(eds_size) - 1;
-    let ods_index = blob_from_chain.index.unwrap() - (first_row_index * ods_size);
-
+    let ods_index = blob_index - (first_row_index * ods_size);
     let last_row_index: u64 = (ods_index + blob_size).div_ceil(ods_size) - 1;
 
-    // Use TmSha2Hasher to merklize the row and column roots, then compute a range proof of the row roots spanned by the blob
-    let hasher = TmSha2Hasher {};
     let mut row_root_tree: MerkleTree<MemDb<[u8; 32]>, TmSha2Hasher> =
-        MerkleTree::with_hasher(hasher);
+        MerkleTree::with_hasher(TmSha2Hasher {});
 
     let leaves = eds_row_roots
         .iter()
@@ -165,52 +164,106 @@ async fn main() {
         row_root_tree.push_raw_leaf(root);
     }
 
-    // assert that the row root tree equals the data hash
-    assert_eq!(row_root_tree.root(), data_hash_from_tree.as_bytes());
-    // Get range proof of the row roots spanned by the blob
-    // +1 is so we include the last row root
     let row_root_multiproof =
         row_root_tree.build_range_proof(first_row_index as usize..(last_row_index + 1) as usize);
-    // Sanity check, verify the row root range proof
-    let hasher = TmSha2Hasher {};
-    let leaves_hashed = leaves
-        .iter()
-        .map(|leaf| hasher.hash_leaf(leaf))
-        .collect::<Vec<[u8; 32]>>();
-    row_root_multiproof
-        .verify_range(
-            data_hash_from_tree.as_bytes().try_into().unwrap(),
-            &leaves_hashed[first_row_index as usize..(last_row_index + 1) as usize],
-        )
-        .unwrap();
 
-    // Setup the logger.
-    sp1_sdk::utils::setup_logger();
+    let selected_roots =
+        eds_row_roots[first_row_index as usize..(last_row_index + 1) as usize].to_vec();
 
-    // Setup the prover client.
-    let client = ProverClient::new();
+    Ok((row_root_multiproof, selected_roots))
+}
 
-    // Setup the inputs.
-    let mut stdin = SP1Stdin::new();
-    stdin.write(&input);
-    stdin.write(&namespace);
-    stdin.write(&header.header.hash());
-    stdin.write_vec(data_hash_bytes_from_tree);
-    stdin.write(&data_hash_proof);
-    stdin.write(&row_root_multiproof);
-    stdin.write(&nmt_multiproofs);
-    stdin.write(&eds_row_roots[first_row_index as usize..(last_row_index + 1) as usize].to_vec());
+/// Main prover service that coordinates the entire proving process
+pub struct BlockProver {
+    celestia_client: CelestiaClient,
+    prover_config: ProverConfig,
+}
 
-    // Serialize stdin to file for debugging
-    let stdin_bytes = bincode::serialize(&stdin).expect("Failed to serialize stdin");
-    fs::write("stdin.bin", stdin_bytes).expect("Failed to write stdin to file");
+impl BlockProver {
+    pub fn new(celestia_client: CelestiaClient, prover_config: ProverConfig) -> Self {
+        Self {
+            celestia_client,
+            prover_config,
+        }
+    }
 
-    //let (output, report) = client.execute(BLEVM_ELF, stdin).run().unwrap();
+    pub async fn generate_proof(&self, input: BlockProverInput) -> Result<Vec<u8>, Box<dyn Error>> {
+        // Create blob from L2 block data
+        let block: ClientExecutorInput = bincode::deserialize(&input.l2_block_data)?;
+        let block_bytes = bincode::serialize(&block.current_block)?;
+        let blob = Blob::new(
+            self.celestia_client.namespace.clone(),
+            block_bytes,
+            AppVersion::V3,
+        )?;
 
-    let (pk, vk) = client.setup(&BLEVM_ELF);
+        // Get blob and header from Celestia
+        let (blob_from_chain, header) = self
+            .celestia_client
+            .get_blob_and_header(input.block_height, &blob)
+            .await?;
 
-    let proof = client.prove(&pk, stdin).core().run().unwrap();
+        // Generate all required proofs
+        let (data_hash_bytes, data_hash_proof) = generate_header_proofs(&header)?;
 
-    let proof_bytes = bincode::serialize(&proof).expect("Failed to serialize proof");
-    fs::write("proof.bin", proof_bytes).expect("Failed to write proof to file");
+        let (row_root_multiproof, selected_roots) =
+            generate_row_proofs(&header, &blob_from_chain, blob_from_chain.index.unwrap())?;
+
+        let nmt_multiproofs = self
+            .celestia_client
+            .get_nmt_proofs(input.block_height, &blob)
+            .await?;
+
+        // Prepare stdin for the prover
+        let mut stdin = SP1Stdin::new();
+        stdin.write(&block);
+        stdin.write(&self.celestia_client.namespace);
+        stdin.write(&header.header.hash());
+        stdin.write_vec(data_hash_bytes);
+        stdin.write(&data_hash_proof);
+        stdin.write(&row_root_multiproof);
+        stdin.write(&nmt_multiproofs);
+        stdin.write(&selected_roots);
+
+        // Generate and return the proof
+        let client = ProverClient::new();
+        let (pk, _) = client.setup(self.prover_config.elf_bytes);
+        let proof = client.prove(&pk, stdin).core().run()?;
+
+        bincode::serialize(&proof).map_err(|e| e.into())
+    }
+}
+
+// Example usage
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    // Initialize configurations
+    let celestia_config = CelestiaConfig {
+        node_url: "ws://localhost:26658".to_string(),
+        auth_token: std::env::var("CELESTIA_NODE_AUTH_TOKEN")?,
+    };
+
+    let namespace = Namespace::new_v0(&hex::decode(std::env::var("CELESTIA_NAMESPACE")?)?)?;
+
+    let prover_config = ProverConfig {
+        elf_bytes: include_elf!("blevm"),
+    };
+
+    // Initialize the prover service
+    let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
+    let prover = BlockProver::new(celestia_client, prover_config);
+
+    // Example input (replace with actual L2 block data)
+    let input = BlockProverInput {
+        block_height: 2988873,
+        l2_block_data: fs::read("input/1/18884864.bin")?,
+    };
+
+    // Generate proof
+    let proof = prover.generate_proof(input).await?;
+
+    // Save proof to file
+    fs::write("proof.bin", proof)?;
+
+    Ok(())
 }
