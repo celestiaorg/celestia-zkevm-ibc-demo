@@ -1,17 +1,10 @@
 [package]
 version = "0.1.0"
-name = "blevm-script"
+name = "blevm-prover"
 edition = "2021"
-default-run = "blevm"
-
-[[bin]]
-name = "blevm"
-path = "src/bin/main.rs"
 
 [dependencies]
 sp1-sdk = { workspace=true }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
 hex = "0.4.3"
@@ -25,7 +18,6 @@ bincode = {workspace=true}
 rsp-client-executor = {workspace=true}
 nmt-rs = {workspace=true}
 tokio = { version = "1", features = ["full"] }
-blevm-prover = { path = "../blevm-prover" }
 
 [build-dependencies]
-sp1-helper = { workspace=true } 
+sp1-helper = { workspace=true }
