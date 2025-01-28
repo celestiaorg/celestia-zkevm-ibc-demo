@@ -1,10 +1,14 @@
 use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
 use celestia_types::nmt::Namespace;
-use sp1_sdk::include_elf;
+use sp1_sdk::{include_elf, utils};
 use std::{error::Error, fs};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Setup logging.
+    utils::setup_logger();
+    // Load env variables.
+    dotenv::dotenv().ok();
     // Initialize configurations
     let celestia_config = CelestiaConfig {
         node_url: "ws://localhost:26658".to_string(),
@@ -23,13 +27,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Example input (replace with actual L2 block data)
     let input = BlockProverInput {
+        // Hardcode the height of the block containing the blob
+        // https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w%3D&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8%3D&height=2988873
         block_height: 2988873,
         l2_block_data: fs::read("input/1/18884864.bin")?,
     };
 
     // Generate proof
+    println!("Generating proof...");
     let proof = prover.generate_proof(input).await?;
-
     // Save proof to file
     fs::write("proof.bin", proof)?;
 
