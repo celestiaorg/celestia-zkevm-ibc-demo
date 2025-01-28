@@ -1,4 +1,4 @@
-use blevm_common::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
+use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
 use celestia_types::nmt::Namespace;
 use sp1_sdk::include_elf;
 use std::{error::Error, fs};

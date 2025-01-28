@@ -4,22 +4,5 @@ name = "blevm-common"
 edition = "2021"
 
 [dependencies]
-sp1-sdk = { workspace=true }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-serde = { version = "1.0.200", default-features = false, features = ["derive"] }
-clap = { version = "4.0", features = ["derive", "env"] }
-tracing = "0.1.40"
-hex = "0.4.3"
-alloy-sol-types = { workspace = true }
-celestia-types = {workspace=true}
-celestia-rpc = {workspace=true}
-tendermint-proto = {workspace=true}
-tendermint = {workspace=true}
-reth-primitives = {workspace=true}
-bincode = {workspace=true}
-rsp-client-executor = {workspace=true}
-nmt-rs = {workspace=true}
-tokio = { version = "1", features = ["full"] }
-
-[build-dependencies]
-sp1-helper = { workspace=true }
+serde = { workspace = true }
+bincode = { workspace = true }
