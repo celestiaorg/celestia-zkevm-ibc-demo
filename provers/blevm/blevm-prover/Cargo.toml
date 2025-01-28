@@ -4,7 +4,7 @@ name = "blevm-prover"
 edition = "2021"
 
 [dependencies]
-sp1-sdk = { workspace=true }
+sp1-sdk = { workspace = true }
 clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
 hex = "0.4.3"

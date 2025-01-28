@@ -222,9 +222,9 @@ impl BlockProver {
         stdin.write(&selected_roots);
 
         // Generate and return the proof
-        let client = ProverClient::new();
+        let client = ProverClient::from_env();
         let (pk, _) = client.setup(self.prover_config.elf_bytes);
-        let proof = client.prove(&pk, stdin).core().run()?;
+        let proof = client.prove(&pk, &stdin).core().run()?;
 
         bincode::serialize(&proof).map_err(|e| e.into())
     }
