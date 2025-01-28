@@ -11,13 +11,13 @@ use ibc_eureka_solidity_types::sp1_ics07::{
     ISP1Msgs::SupportedZkAlgorithm,
 };
 use ibc_proto::Protobuf;
-use sp1_sdk::{ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey};
+use sp1_sdk::{ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey, EnvProver};
 
 /// A prover for for [`SP1Program`] programs.
 #[allow(clippy::module_name_repetitions)]
 pub struct SP1ICS07TendermintProver<T: SP1Program> {
     /// [`sp1_sdk::ProverClient`] for generating proofs.
-    pub prover_client: ProverClient,
+    pub prover_client: EnvProver,
     /// The proving key.
     pub pkey: SP1ProvingKey,
     /// The verifying key.
@@ -40,7 +40,7 @@ impl<T: SP1Program> SP1ICS07TendermintProver<T> {
     #[tracing::instrument(skip_all)]
     pub fn new(proof_type: SupportedProofType) -> Self {
         tracing::info!("Initializing SP1 ProverClient...");
-        let prover_client = ProverClient::new();
+        let prover_client = ProverClient::from_env();
         let (pkey, vkey) = prover_client.setup(T::ELF);
         tracing::info!("SP1 ProverClient initialized");
         Self {
@@ -62,7 +62,7 @@ impl<T: SP1Program> SP1ICS07TendermintProver<T> {
         let proof: SP1ProofWithPublicValues = match self.proof_type {
             SupportedProofType::Groth16 => self
                 .prover_client
-                .prove(&self.pkey, stdin)
+                .prove(&self.pkey, &stdin)
                 .groth16()
                 .run()
                 .expect("proving failed"),
