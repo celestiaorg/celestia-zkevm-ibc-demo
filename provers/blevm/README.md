@@ -30,6 +30,8 @@ export TRUSTED_HASH=FFF21255D1CE0EECB8B491173F547A42665C3C7468C9B8855F7BC91E69B1
 celestia light start --core.ip rpc.celestia.pops.one --p2p.network celestia --headers.trusted-hash $TRUSTED_HASH
 # Generate an auth token and export it as an env variable.
 export CELESTIA_NODE_AUTH_TOKEN=$(celestia light auth admin)
+# Export namespace that was used to post an EVM block
+export CELESTIA_NAMESPACE=0f0f0f0f0f0f0f0f0f0f
 
 # Change to the correct directory
 cd celestia-zkevm-ibc-demo/provers/blevm/script

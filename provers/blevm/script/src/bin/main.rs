@@ -1,10 +1,13 @@
 use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
 use celestia_types::nmt::Namespace;
-use sp1_sdk::include_elf;
+use sp1_sdk::{include_elf, utils};
 use std::{error::Error, fs};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Setup logging.
+    utils::setup_logger();
+    // Load env variables.
     dotenv::dotenv().ok();
     // Initialize configurations
     let celestia_config = CelestiaConfig {
@@ -31,8 +34,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // Generate proof
+    println!("Generating proof...");
     let proof = prover.generate_proof(input).await?;
-
     // Save proof to file
     fs::write("proof.bin", proof)?;
 
