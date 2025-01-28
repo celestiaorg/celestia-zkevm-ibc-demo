@@ -32,7 +32,7 @@ services:
       --chain /testapp_files/eth-genesis.json
       --http
       --http.addr 0.0.0.0
-      --http.api eth,net
+      --http.api eth,net,debug
       --authrpc.addr 0.0.0.0
       --authrpc.jwtsecret /testapp_files/jwt.hex
       --datadir /.tmp/eth-home

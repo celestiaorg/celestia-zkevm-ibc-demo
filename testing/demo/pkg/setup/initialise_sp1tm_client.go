@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"encoding/json"
 	"fmt"
 
 	"math/big"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
@@ -30,16 +28,6 @@ const (
 
 var TendermintLightClientID string
 
-type ContractAddresses struct {
-	ERC20           string `json:"erc20"`
-	Escrow          string `json:"escrow"`
-	IBCStore        string `json:"ibcstore"`
-	ICS07Tendermint string `json:"ics07Tendermint"`
-	ICS20Transfer   string `json:"ics20Transfer"`
-	ICS26Router     string `json:"ics26Router"`
-	ICSCore         string `json:"icsCore"`
-}
-
 func InitializeSp1TendermintLightClientOnReth() error {
 	fmt.Println("Deploying IBC smart contracts on the reth node...")
 
@@ -47,7 +35,7 @@ func InitializeSp1TendermintLightClientOnReth() error {
 		return err
 	}
 
-	addresses, err := extractDeployedContractAddresses()
+	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
 	}
@@ -72,6 +60,7 @@ func InitializeSp1TendermintLightClientOnReth() error {
 
 }
 
+// runDeploymentCommand deploys the SP1 ICS07 Tendermint light client contract on the EVM roll-up.
 func runDeploymentCommand() error {
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
 	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
@@ -86,44 +75,7 @@ func runDeploymentCommand() error {
 	return nil
 }
 
-func extractDeployedContractAddresses() (ContractAddresses, error) {
-	filePath := "./solidity-ibc-eureka/broadcast/E2ETestDeploy.s.sol/80087/run-latest.json"
-	file, err := os.ReadFile(filePath)
-	if err != nil {
-		return ContractAddresses{}, fmt.Errorf("error reading file: %v", err)
-	}
-
-	var runLatest map[string]interface{}
-	if err := json.Unmarshal(file, &runLatest); err != nil {
-		return ContractAddresses{}, fmt.Errorf("error unmarshalling JSON: %v", err)
-	}
-
-	returns, ok := runLatest["returns"].(map[string]interface{})
-	if !ok {
-		return ContractAddresses{}, fmt.Errorf("no valid returns found")
-	}
-
-	returnValue, ok := returns["0"].(map[string]interface{})
-	if !ok {
-		return ContractAddresses{}, fmt.Errorf("no valid return value found")
-	}
-
-	value, ok := returnValue["value"].(string)
-	if !ok {
-		return ContractAddresses{}, fmt.Errorf("no valid value found")
-	}
-
-	unescapedValue := strings.ReplaceAll(value, "\\\"", "\"")
-
-	var addresses ContractAddresses
-	if err := json.Unmarshal([]byte(unescapedValue), &addresses); err != nil {
-		return ContractAddresses{}, fmt.Errorf("error unmarshalling contract addresses: %v", err)
-	}
-
-	return addresses, nil
-}
-
-func createChannelAndCounterpartyOnReth(addresses ContractAddresses, ethClient *ethclient.Client) error {
+func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
 	ethChainId := big.NewInt(80087)
 	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 

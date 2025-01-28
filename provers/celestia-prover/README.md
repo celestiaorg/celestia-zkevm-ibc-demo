@@ -30,7 +30,13 @@ After the one-time setup, the following minimum steps are necessary each time yo
     make setup
     ```
 
-1. Copy the EVM address labeled with `ics07Tendermint` from terminal output which will be used as a `client_id` when querying state transition proofs:
+1. Verify it's running by querying an endpoint.
+
+    ```shell
+    grpcurl -plaintext localhost:50051 celestia.prover.v1.Prover/Info
+    ```
+
+1. [Optional] Request a proof. Copy the EVM address labeled with `ics07Tendermint` from terminal output which will be used as a `client_id` when querying state transition proofs:
 
     ```shell
     grpcurl -plaintext -d '{"client_id": ""}' localhost:50051 celestia.prover.v1.Prover/ProveStateTransition

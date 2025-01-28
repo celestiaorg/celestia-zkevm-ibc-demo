@@ -20,7 +20,7 @@ BUILD_FLAGS := -tags "ledger" -ldflags '$(ldflags)'
 ## help: Get more info on make commands.
 help: Makefile
 	@echo " Choose a command run in "$(PROJECT_NAME)":"
-	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
+	@sed -n 's/^##//p' $< | sort | column -t -s ':' | sed -e 's/^/ /'
 .PHONY: help
 
 ## install-dependencies: Install all dependencies needed for the demo.
@@ -72,8 +72,8 @@ check-dependencies:
 .PHONY: check-dependencies
 
 ## start: Start all processes needed for the demo.
-start: stop
-	@docker compose up -d
+start:
+	@docker compose up --detach
 .PHONY: start
 
 ## setup: Set up the IBC clients and channels.
@@ -89,6 +89,13 @@ transfer:
 	@echo "--> Transferring tokens from simapp to the EVM roll-up"
 	@go run ./testing/demo/pkg/transfer/
 .PHONY: transfer
+
+## relay: Relay the token transfer from simapp to the EVM roll-up.
+relay:
+# Note: this is split out from transfer to speed up local development. This
+# command can be merged into transfer to make the demo fewer steps to run.
+	go run testing/demo/pkg/relay/main.go
+.PHONY: relay
 
 ## stop: Stop all processes and remove the tmp directory.
 stop:
@@ -106,7 +113,7 @@ build-simapp: mod
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
 .PHONY: build-simapp
 
-## build: Build the simapp binary.
+## build: Build the simapp the binaries into the ./build directory.
 build: build-simapp
 .PHONY: build
 
@@ -115,6 +122,10 @@ install-simapp:
 	@echo "--> Installing simd"
 	@go install $(BUILD_FLAGS) ./simapp/simd/
 .PHONY: install-simapp
+
+## install: Install the simapp binary into the $GOPATH/bin directory.
+install: install-simapp
+.PHONY: install
 
 ## mod: Update all go.mod files.
 mod:
@@ -221,4 +232,5 @@ demo:
 	@make start
 	@make setup
 	@make transfer
+	@make relay
 .PHONY: demo
