@@ -18,7 +18,7 @@ require (
 	cosmossdk.io/x/upgrade v0.1.4
 	github.com/cometbft/cometbft v0.38.15
 	github.com/cosmos/cosmos-db v1.1.0
-	github.com/cosmos/cosmos-sdk v0.50.10
+	github.com/cosmos/cosmos-sdk v0.53.0
 	github.com/cosmos/gogoproto v1.7.0
 	github.com/cosmos/ibc-go/v9 v9.0.1
 	github.com/spf13/cast v1.7.0
@@ -261,15 +261,45 @@ require (
 
 // Replaces directives copied from solidity-ibc-eureka.
 replace (
+	cosmossdk.io/api => cosmossdk.io/api v0.8.0-rc.2.0.20241213081318-957e24171608
+	cosmossdk.io/client/v2 => cosmossdk.io/client/v2 v2.0.0-20241213081318-957e24171608
+	cosmossdk.io/core => cosmossdk.io/core v1.0.0-alpha.6.0.20241213081318-957e24171608
+	cosmossdk.io/store => cosmossdk.io/store v1.0.0-rc.0.0.20241213081318-957e24171608
+	cosmossdk.io/x/accounts => cosmossdk.io/x/accounts v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/accounts/defaults/lockup => cosmossdk.io/x/accounts/defaults/lockup v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/accounts/defaults/multisig => cosmossdk.io/x/accounts/defaults/multisig v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/authz => cosmossdk.io/x/authz v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/bank => cosmossdk.io/x/bank v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/circuit => cosmossdk.io/x/circuit v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/consensus => cosmossdk.io/x/consensus v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/distribution => cosmossdk.io/x/distribution v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/epochs => cosmossdk.io/x/epochs v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/evidence => cosmossdk.io/x/evidence v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/feegrant => cosmossdk.io/x/feegrant v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/gov => cosmossdk.io/x/gov v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/group => cosmossdk.io/x/group v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/mint => cosmossdk.io/x/mint v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/nft => cosmossdk.io/x/nft v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/params => cosmossdk.io/x/params v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/protocolpool => cosmossdk.io/x/protocolpool v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/slashing => cosmossdk.io/x/slashing v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/staking => cosmossdk.io/x/staking v0.0.0-20241213081318-957e24171608
+	cosmossdk.io/x/tx => cosmossdk.io/x/tx v1.0.0-alpha.1.0.20241212002302-a6d28e384938
+	cosmossdk.io/x/upgrade => cosmossdk.io/x/upgrade v0.0.0-20241213081318-957e24171608
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/ChainSafe/go-schnorrkel/1 => github.com/ChainSafe/go-schnorrkel v1.0.0
-	github.com/cosmos/ibc-go/modules/light-clients/08-wasm => github.com/cosmos/ibc-go/modules/light-clients/08-wasm v0.0.0-20241123151201-3d84b47307b9
-	github.com/cosmos/ibc-go/v9 => github.com/cosmos/ibc-go/v9 v9.0.0-20241123151201-3d84b47307b9
+	github.com/cometbft/cometbft => github.com/cometbft/cometbft v1.0.0-rc1.0.20240908111210-ab0be101882f
+	github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.52.0-beta.2.0.20241213155709-f1e881e81b1b
+	github.com/cosmos/ibc-go/modules/light-clients/08-wasm => github.com/cosmos/ibc-go/modules/light-clients/08-wasm v0.0.0-20250107231226-6bc666c1c028
+	github.com/cosmos/ibc-go/v9 => github.com/cosmos/ibc-go/v9 v9.0.0-20250107231226-6bc666c1c028
 	github.com/cosmos/solidity-ibc-eureka/abigen => ./solidity-ibc-eureka/abigen
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/misko9/go-substrate-rpc-client/v4 => github.com/DimitrisJim/go-substrate-rpc-client/v4 v4.0.0-20240717100841-406da076c1d5
+	github.com/misko9/go-substrate-rpc-client/v4 => github.com/DimitrisJim/go-substrate-rpc-client/v4 v4.0.0-20240717100841-406da076c1d5
 	github.com/srdtrk/solidity-ibc-eureka/e2e/v8 => ./solidity-ibc-eureka/e2e/interchaintestv8
-	github.com/strangelove-ventures/interchaintest/v8 => github.com/DimitrisJim/interchaintest/v8 v8.0.0-20240717102845-beba523a47ff
+	github.com/strangelove-ventures/interchaintest/v9 => github.com/DimitrisJim/interchaintest/v9 v9.0.0-20241127135837-285cf3b21950
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7
 )
