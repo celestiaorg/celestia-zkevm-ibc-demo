@@ -25,8 +25,8 @@ bincode = {workspace=true}
 rsp-client-executor = {workspace=true}
 nmt-rs = {workspace=true}
 tokio = { version = "1", features = ["full"] }
+blevm-common = { path = "../common" }
 dotenv = "0.15.0"
 
 [build-dependencies]
 sp1-helper = { workspace=true }
-blevm-common = { path = "../common" }
