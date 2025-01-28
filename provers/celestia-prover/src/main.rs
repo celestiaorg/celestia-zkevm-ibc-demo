@@ -1,3 +1,4 @@
+use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
 use tonic::{transport::Server, Request, Response, Status};
@@ -52,10 +53,8 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
-        let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey)
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey)
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let state_transition_verifier_key = self.tendermint_prover.vkey.bytes32();
+        let state_membership_verifier_key = self.membership_prover.vkey.bytes32();
         let response = InfoResponse {
             state_transition_verifier_key,
             state_membership_verifier_key,
@@ -159,7 +158,7 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let proof = self.membership_prover.generate_proof(
-            &trusted_block.signed_header.header.app_hash.as_bytes(),
+            trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
         );
 

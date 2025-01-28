@@ -33,6 +33,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     libssl3 \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder

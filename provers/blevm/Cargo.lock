@@ -982,23 +982,8 @@ dependencies = [
 name = "blevm-common"
 version = "0.1.0"
 dependencies = [
- "alloy-sol-types 0.7.7",
  "bincode",
- "celestia-rpc",
- "celestia-types",
- "clap",
- "hex",
- "nmt-rs",
- "reth-primitives",
- "rsp-client-executor",
  "serde",
- "serde_json",
- "sp1-helper",
- "sp1-sdk",
- "tendermint",
- "tendermint-proto",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -1010,12 +995,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "blevm-prover"
+version = "0.1.0"
+dependencies = [
+ "alloy-sol-types 0.7.7",
+ "bincode",
+ "celestia-rpc",
+ "celestia-types",
+ "clap",
+ "hex",
+ "nmt-rs",
+ "reth-primitives",
+ "rsp-client-executor",
+ "sp1-helper",
+ "sp1-sdk",
+ "tendermint",
+ "tendermint-proto",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "blevm-script"
 version = "0.1.0"
 dependencies = [
  "alloy-sol-types 0.7.7",
  "bincode",
- "blevm-common",
+ "blevm-prover",
  "celestia-rpc",
  "celestia-types",
  "clap",
