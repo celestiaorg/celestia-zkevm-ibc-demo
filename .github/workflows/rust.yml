@@ -54,3 +54,24 @@ jobs:
         with:
           command: build
           args: --bin blevm --release --locked
+
+  build-celestia-prover:
+    name: build-celestia-prover
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: "Set up environment"
+        uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v3.4.0/sp1up/install | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --bin celestia-prover --release --locked
