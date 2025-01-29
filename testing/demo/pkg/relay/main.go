@@ -81,7 +81,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get celestia prover info %w", err)
 	}
-	fmt.Printf("Got celestia prover info. StateTransitionVerifierKey: %v", info.StateTransitionVerifierKey)
+	fmt.Printf("Got celestia prover info. StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
 	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
