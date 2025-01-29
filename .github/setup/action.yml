@@ -11,3 +11,5 @@ runs:
         profile: minimal
         toolchain: nightly
         components: rustfmt, clippy
+    - name: Setup Protoc
+      uses: taiki-e/install-action@protoc
