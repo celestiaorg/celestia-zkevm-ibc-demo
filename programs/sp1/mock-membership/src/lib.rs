@@ -11,11 +11,9 @@ pub fn membership(
     request_iter: impl Iterator<Item = (Vec<Vec<u8>>, Vec<u8>)>,
 ) -> MembershipOutput {
     let kv_pairs = request_iter
-        .map(|(path, value)| {
-            KVPair {
-                path: path.into_iter().map(Into::into).collect(),
-                value: value.into(),
-            }
+        .map(|(path, value)| KVPair {
+            path: path.into_iter().map(Into::into).collect(),
+            value: value.into(),
         })
         .collect();
 
