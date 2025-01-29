@@ -1,0 +1,8 @@
+[package]
+version = "0.1.0"
+name = "blevm-mock"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = { workspace = true }
+blevm-common = { path = "../common" }
