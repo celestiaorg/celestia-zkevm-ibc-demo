@@ -1,3 +1,5 @@
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint::clientStateReturn;
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint::getClientStateReturn;
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
@@ -73,59 +75,69 @@ impl Prover for ProverService {
         let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
             Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
         })?;
+        println!("Client ID: {:?}", client_id);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_http(self.evm_rpc_url.clone());
+        println!("Provider: {:?}", provider);
         let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("Contract: {:?}", contract);
 
-        let client_state: ClientState = contract
-            .clientState()
+        // Fetch the client state as Bytes
+        let client_state_bytes = contract
+            .getClientState()
             .call()
             .await
             .map_err(|e| Status::internal(e.to_string()))?
-            .into();
+            ._0;
+        println!("Got client state bytes {:?}", client_state_bytes);
 
-        // fetch the light block at the latest height of the client state
-        let trusted_light_block = self
-            .tendermint_rpc_client
-            .get_light_block(Some(client_state.latestHeight.revisionHeight))
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        // fetch the latest light block
-        let target_light_block = self
-            .tendermint_rpc_client
-            .get_light_block(None)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let trusted_consensus_state: ConsensusState =
-            trusted_light_block.to_consensus_state().into();
-        let proposed_header = target_light_block.into_header(&trusted_light_block);
+        // // fetch the light block at the latest height of the client state
+        // let trusted_light_block = self
+        //     .tendermint_rpc_client
+        //     .get_light_block(Some(client_state.latestHeight.revisionHeight))
+        //     .await
+        //     .map_err(|e| Status::internal(e.to_string()))?;
+        // println!("Fetched trusted light block: {:?}", trusted_light_block);
 
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|e| Status::internal(e.to_string()))?
-            .as_secs();
+        // // fetch the latest light block
+        // let target_light_block = self
+        //     .tendermint_rpc_client
+        //     .get_light_block(None)
+        //     .await
+        //     .map_err(|e| Status::internal(e.to_string()))?;
+        // println!("Fetched target light block: {:?}", target_light_block);
 
-        println!(
-            "proving from height {:?} to height {:?}",
-            &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height
-        );
+        // let trusted_consensus_state: ConsensusState =
+        //     trusted_light_block.to_consensus_state().into();
+        // let proposed_header = target_light_block.into_header(&trusted_light_block);
 
-        let proof = self.tendermint_prover.generate_proof(
-            &client_state,
-            &trusted_consensus_state,
-            &proposed_header,
-            now,
-        );
+        // let now = std::time::SystemTime::now()
+        //     .duration_since(std::time::UNIX_EPOCH)
+        //     .map_err(|e| Status::internal(e.to_string()))?
+        //     .as_secs();
 
-        let response = ProveStateTransitionResponse {
-            proof: proof.bytes().to_vec(),
-            public_values: proof.public_values.to_vec(),
-        };
+        // println!(
+        //     "proving from height {:?} to height {:?}",
+        //     &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height
+        // );
 
-        Ok(Response::new(response))
+        // let proof = self.tendermint_prover.generate_proof(
+        //     &client_state,
+        //     &trusted_consensus_state,
+        //     &proposed_header,
+        //     now,
+        // );
+
+        // let response = ProveStateTransitionResponse {
+        //     proof: proof.bytes().to_vec(),
+        //     public_values: proof.public_values.to_vec(),
+        // };
+
+        // Ok(Response::new(response))
+        Err(Status::internal("error"))
     }
 
     async fn prove_state_membership(
