@@ -2,6 +2,7 @@
 members = [
     "provers/celestia-prover",
     "provers/blevm/blevm",
+    "provers/blevm/script",
     "programs/sp1/mock-update-client",
     "programs/sp1/mock-membership",
 ]
@@ -30,6 +31,7 @@ tendermint-proto = "*"
 tendermint-rpc = "0.40"
 ibc-client-tendermint-types = "0.56"
 ibc-core-commitment-types   = "0.56"
+nmt-rs = "*"
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 tracing            = { version = "0.1", default-features = false }
 bincode = "1.3.3"

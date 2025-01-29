@@ -2,10 +2,10 @@
 version = "0.1.0"
 name = "blevm-script"
 edition = "2021"
-default-run = "blevm"
+default-run = "blevm-script"
 
 [[bin]]
-name = "blevm"
+name = "blevm-script"
 path = "src/bin/main.rs"
 
 [dependencies]
