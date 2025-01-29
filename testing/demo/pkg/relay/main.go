@@ -12,7 +12,7 @@ import (
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -55,7 +55,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	icsCore, err := icscore.NewContract(ethcommon.HexToAddress(addresses.ICSCore), ethClient)
+	ics26router, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
 		return err
 	}
@@ -122,8 +122,8 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("error packing msg %w", err)
 	}
 
-	fmt.Printf("Invoking icsCore.UpdateClient...\n")
-	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
+	fmt.Printf("Invoking ics26router.UpdateClient...\n")
+	tx, err := ics26router.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
 	if err != nil {
 		return err
 	}

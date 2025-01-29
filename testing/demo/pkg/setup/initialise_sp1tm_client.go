@@ -13,7 +13,7 @@ import (
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -79,12 +79,12 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 	ethChainId := big.NewInt(80087)
 	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 
-	icsCoreContract, err := icscore.NewContract(ethcommon.HexToAddress(addresses.ICSCore), ethClient)
+	ics26routerContract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
 	}
 
-	channel := icscore.IICS04ChannelMsgsChannel{
+	channel := ics26router.IICS04ChannelMsgsChannel{
 		CounterpartyId: channelId,
 		MerklePrefix:   [][]byte{[]byte("ibc"), []byte("")},
 	}
@@ -96,14 +96,14 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 		return fmt.Errorf("failed to convert private key: %v", err)
 	}
 
-	tx, err := icsCoreContract.AddChannel(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, channel, tmLightClientAddress)
+	tx, err := ics26routerContract.AddChannel(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, channel, tmLightClientAddress)
 	if err != nil {
 		return fmt.Errorf("failed to add channel: %v", err)
 	}
 
 	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
 
-	event, err := GetEvmEvent(receipt, icsCoreContract.ParseICS04ChannelAdded)
+	event, err := GetEvmEvent(receipt, ics26routerContract.ParseICS04ChannelAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}

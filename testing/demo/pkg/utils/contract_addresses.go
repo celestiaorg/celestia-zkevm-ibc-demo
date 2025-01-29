@@ -14,7 +14,6 @@ type ContractAddresses struct {
 	ICS07Tendermint string `json:"ics07Tendermint"`
 	ICS20Transfer   string `json:"ics20Transfer"`
 	ICS26Router     string `json:"ics26Router"`
-	ICSCore         string `json:"icsCore"`
 }
 
 func ExtractDeployedContractAddresses() (ContractAddresses, error) {
