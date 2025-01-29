@@ -25,12 +25,35 @@ import (
 	"cosmossdk.io/x/consensus"
 	consensusparamkeeper "cosmossdk.io/x/consensus/keeper"
 	consensusparamtypes "cosmossdk.io/x/consensus/types"
+	distr "cosmossdk.io/x/distribution"
+	distrkeeper "cosmossdk.io/x/distribution/keeper"
+	distrtypes "cosmossdk.io/x/distribution/types"
 	"cosmossdk.io/x/evidence"
 	evidencekeeper "cosmossdk.io/x/evidence/keeper"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
 	feegrantkeeper "cosmossdk.io/x/feegrant/keeper"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
+	"cosmossdk.io/x/gov"
+	govclient "cosmossdk.io/x/gov/client"
+	govkeeper "cosmossdk.io/x/gov/keeper"
+	govtypes "cosmossdk.io/x/gov/types"
+	"cosmossdk.io/x/group"
+	groupkeeper "cosmossdk.io/x/group/keeper"
+	groupmodule "cosmossdk.io/x/group/module"
+	"cosmossdk.io/x/mint"
+	mintkeeper "cosmossdk.io/x/mint/keeper"
+	minttypes "cosmossdk.io/x/mint/types"
+	"cosmossdk.io/x/params"
+	paramsclient "cosmossdk.io/x/params/client"
+	paramskeeper "cosmossdk.io/x/params/keeper"
+	paramstypes "cosmossdk.io/x/params/types"
+	"cosmossdk.io/x/slashing"
+	slashingkeeper "cosmossdk.io/x/slashing/keeper"
+	slashingtypes "cosmossdk.io/x/slashing/types"
+	"cosmossdk.io/x/staking"
+	stakingkeeper "cosmossdk.io/x/staking/keeper"
+	stakingtypes "cosmossdk.io/x/staking/types"
 	"cosmossdk.io/x/tx/signing"
 	"cosmossdk.io/x/upgrade"
 	upgradekeeper "cosmossdk.io/x/upgrade/keeper"
@@ -68,34 +91,8 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
-	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	"github.com/cosmos/cosmos-sdk/x/gov"
-	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
-	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/cosmos/cosmos-sdk/x/group"
-	groupkeeper "github.com/cosmos/cosmos-sdk/x/group/keeper"
-	groupmodule "github.com/cosmos/cosmos-sdk/x/group/module"
-	"github.com/cosmos/cosmos-sdk/x/mint"
-	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
-	"github.com/cosmos/cosmos-sdk/x/params"
-	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
-	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/cosmos/cosmos-sdk/x/slashing"
-	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	"github.com/cosmos/cosmos-sdk/x/staking"
-	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/cosmos/gogoproto/proto"
 	ica "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts"
 	icacontroller "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/controller"
@@ -171,7 +168,6 @@ type SimApp struct {
 	MintKeeper            mintkeeper.Keeper
 	DistrKeeper           distrkeeper.Keeper
 	GovKeeper             govkeeper.Keeper
-	CrisisKeeper          *crisiskeeper.Keeper
 	UpgradeKeeper         *upgradekeeper.Keeper
 	ParamsKeeper          paramskeeper.Keeper
 	AuthzKeeper           authzkeeper.Keeper
@@ -270,7 +266,7 @@ func NewSimApp(
 	bApp.SetTxEncoder(txConfig.TxEncoder())
 
 	keys := storetypes.NewKVStoreKeys(
-		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey, crisistypes.StoreKey,
+		authtypes.StoreKey, banktypes.StoreKey, stakingtypes.StoreKey,
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, group.StoreKey, paramstypes.StoreKey, ibcexported.StoreKey, upgradetypes.StoreKey, feegrant.StoreKey,
 		evidencetypes.StoreKey, ibctransfertypes.StoreKey, icacontrollertypes.StoreKey, icahosttypes.StoreKey,
@@ -323,10 +319,6 @@ func NewSimApp(
 	app.SlashingKeeper = slashingkeeper.NewKeeper(
 		appCodec, legacyAmino, runtime.NewKVStoreService(keys[slashingtypes.StoreKey]), app.StakingKeeper, authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
-
-	invCheckPeriod := cast.ToUint(appOpts.Get(server.FlagInvCheckPeriod))
-	app.CrisisKeeper = crisiskeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[crisistypes.StoreKey]), invCheckPeriod,
-		app.BankKeeper, authtypes.FeeCollectorName, authtypes.NewModuleAddress(govtypes.ModuleName).String(), app.AccountKeeper.AddressCodec())
 
 	app.FeeGrantKeeper = feegrantkeeper.NewKeeper(appCodec, runtime.NewKVStoreService(keys[feegrant.StoreKey]), app.AccountKeeper)
 
@@ -489,7 +481,6 @@ func NewSimApp(
 
 	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment
 	// we prefer to be more strict in what arguments the modules expect.
-	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
 
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
@@ -501,7 +492,6 @@ func NewSimApp(
 		auth.NewAppModule(appCodec, app.AccountKeeper, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
 		vesting.NewAppModule(app.AccountKeeper, app.BankKeeper),
 		bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName)),
-		crisis.NewAppModule(app.CrisisKeeper, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)),
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, app.GetSubspace(govtypes.ModuleName)),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, nil, app.GetSubspace(minttypes.ModuleName)),
@@ -569,7 +559,6 @@ func NewSimApp(
 		ibcfeetypes.ModuleName,
 	)
 	app.ModuleManager.SetOrderEndBlockers(
-		crisistypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		ibcexported.ModuleName,
@@ -587,7 +576,7 @@ func NewSimApp(
 	genesisModuleOrder := []string{
 		authtypes.ModuleName,
 		banktypes.ModuleName, distrtypes.ModuleName, stakingtypes.ModuleName,
-		slashingtypes.ModuleName, govtypes.ModuleName, minttypes.ModuleName, crisistypes.ModuleName,
+		slashingtypes.ModuleName, govtypes.ModuleName, minttypes.ModuleName,
 		ibcexported.ModuleName, genutiltypes.ModuleName, evidencetypes.ModuleName, authz.ModuleName, ibctransfertypes.ModuleName,
 		icatypes.ModuleName, ibcfeetypes.ModuleName, feegrant.ModuleName, paramstypes.ModuleName, upgradetypes.ModuleName,
 		vestingtypes.ModuleName, group.ModuleName, consensusparamtypes.ModuleName, circuittypes.ModuleName, /* header.ModuleName, */
@@ -598,7 +587,6 @@ func NewSimApp(
 	// Uncomment if you want to set a custom migration order here.
 	// app.ModuleManager.SetOrderMigrations(custom order)
 
-	app.ModuleManager.RegisterInvariants(app.CrisisKeeper)
 	app.configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	err := app.ModuleManager.RegisterServices(app.configurator)
 	if err != nil {

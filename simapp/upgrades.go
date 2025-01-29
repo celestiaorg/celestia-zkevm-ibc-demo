@@ -5,8 +5,7 @@ import (
 	circuittypes "cosmossdk.io/x/circuit/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
-	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	consensusparamtypes "cosmossdk.io/x/consensus/types"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/simapp/upgrades"
 )
@@ -63,7 +62,6 @@ func (app *SimApp) registerUpgradeHandlers() {
 		storeUpgrades := storetypes.StoreUpgrades{
 			Added: []string{
 				consensusparamtypes.StoreKey,
-				crisistypes.StoreKey,
 			},
 		}
 

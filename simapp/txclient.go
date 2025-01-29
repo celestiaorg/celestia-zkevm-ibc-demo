@@ -20,7 +20,7 @@ package simapp
 // 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 // 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 // 	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
-// 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+// 	paramtypes "cosmossdk.io/x/params/types/proposal"
 // 	abci "github.com/tendermint/tendermint/abci/types"
 // 	"google.golang.org/grpc"
 
