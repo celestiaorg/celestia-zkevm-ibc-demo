@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	"cosmossdk.io/core/appmodule"
 	clientkeeper "github.com/cosmos/ibc-go/v9/modules/core/02-client/keeper"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
 	ibctmmigrations "github.com/cosmos/ibc-go/v9/modules/light-clients/07-tendermint/migrations"
@@ -37,7 +38,7 @@ func CreateDefaultUpgradeHandler(
 	mm *module.Manager,
 	configurator module.Configurator,
 ) upgradetypes.UpgradeHandler {
-	return func(ctx context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+	return func(ctx context.Context, _ upgradetypes.Plan, vm appmodule.VersionMap) (appmodule.VersionMap, error) {
 		return mm.RunMigrations(ctx, configurator, vm)
 	}
 }
@@ -51,7 +52,7 @@ func CreateV7UpgradeHandler(
 	consensusParamsKeeper consensusparamskeeper.Keeper,
 	paramsKeeper paramskeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
-	return func(ctx context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+	return func(ctx context.Context, _ upgradetypes.Plan, vm appmodule.VersionMap) (appmodule.VersionMap, error) {
 		sdkCtx := sdk.UnwrapSDKContext(ctx)
 		// OPTIONAL: prune expired tendermint consensus states to save storage space
 		if _, err := ibctmmigrations.PruneExpiredConsensusStates(sdkCtx, cdc, &clientKeeper); err != nil {
@@ -74,7 +75,7 @@ func CreateV7LocalhostUpgradeHandler(
 	configurator module.Configurator,
 	clientKeeper clientkeeper.Keeper,
 ) upgradetypes.UpgradeHandler {
-	return func(ctx context.Context, _ upgradetypes.Plan, vm module.VersionMap) (module.VersionMap, error) {
+	return func(ctx context.Context, _ upgradetypes.Plan, vm appmodule.VersionMap) (appmodule.VersionMap, error) {
 		sdkCtx := sdk.UnwrapSDKContext(ctx)
 		// explicitly update the IBC 02-client params, adding the localhost client type
 		params := clientKeeper.GetParams(sdkCtx)
