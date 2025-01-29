@@ -104,7 +104,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 
 ### Run a demo with Sov SDK Rollup using Celestia DA
 
-1. Clone the repo where dockerized Sov SDK rollup:
+1. Clone the repo with dockerized Sov SDK rollup:
 
 ```shell
 git clone https://github.com/ninabarbakadze/sovereign-sdk-wip
