@@ -104,7 +104,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 
 ### Run a demo with Sov SDK Rollup using Celestia DA
 
-1. Clone the repo where dockerized Sov SDK rollup is:
+1. Clone the repo where dockerized Sov SDK rollup:
 
 ```shell
 git clone https://github.com/ninabarbakadze/sovereign-sdk-wip
@@ -116,7 +116,7 @@ git clone https://github.com/ninabarbakadze/sovereign-sdk-wip
 docker build -t sovrollup -f docker/sov-demo-rollup/Dockerfile .
 ```
 
-1. Run the docker compose script to spin up the local dev environment and see that sovereign is producing blocks:
+1. Run the docker compose script to spin up a local dev environment and see that sovereign is producing blocks:
 
 ```shell
 docker compose -f docker-compose.sov.yml up -d
