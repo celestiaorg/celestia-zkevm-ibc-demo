@@ -1,4 +1,3 @@
-use bincode;
 use celestia_rpc::{BlobClient, Client, HeaderClient};
 use celestia_types::nmt::NamespacedHash;
 use celestia_types::AppVersion;
@@ -59,7 +58,7 @@ impl CelestiaClient {
     ) -> Result<(Blob, ExtendedHeader), Box<dyn Error>> {
         let blob_from_chain = self
             .client
-            .blob_get(height, self.namespace, blob.commitment.clone())
+            .blob_get(height, self.namespace, blob.commitment)
             .await
             .map_err(|e| format!("Failed getting blob: {}", e))?;
 
@@ -79,7 +78,7 @@ impl CelestiaClient {
     ) -> Result<Vec<NamespaceProof>, Box<dyn Error>> {
         Ok(self
             .client
-            .blob_get_proof(height, self.namespace, blob.commitment.clone())
+            .blob_get_proof(height, self.namespace, blob.commitment)
             .await
             .map_err(|e| format!("Failed getting NMT proofs: {}", e))?)
     }
@@ -107,7 +106,7 @@ pub fn generate_header_proofs(
 
 pub fn prepare_header_fields(header: &ExtendedHeader) -> Vec<Vec<u8>> {
     vec![
-        Protobuf::<RawConsensusVersion>::encode_vec(header.header.version.clone()),
+        Protobuf::<RawConsensusVersion>::encode_vec(header.header.version),
         header.header.chain_id.clone().encode_vec(),
         header.header.height.encode_vec(),
         header.header.time.encode_vec(),
@@ -188,7 +187,7 @@ impl BlockProver {
         let block: ClientExecutorInput = bincode::deserialize(&input.l2_block_data)?;
         let block_bytes = bincode::serialize(&block.current_block)?;
         let blob = Blob::new(
-            self.celestia_client.namespace.clone(),
+            self.celestia_client.namespace,
             block_bytes,
             AppVersion::V3,
         )?;

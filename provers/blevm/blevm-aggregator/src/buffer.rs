@@ -1,4 +1,3 @@
-use bincode;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// A buffer of serializable/deserializable objects.
