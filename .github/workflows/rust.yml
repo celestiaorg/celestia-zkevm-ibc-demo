@@ -86,24 +86,24 @@ jobs:
         run: cargo build --release --locked
         working-directory: ./provers/blevm/script/
 
-  # build-celestia-prover:
-  # this job fails on linux due to sp1, see: https://docs.succinct.xyz/docs/developers/common-issues#failed-to-run-llvm-passes-unknown-pass-name-loweratomic
-  # upgrading sp1-helper to v4.0.1 in sp1-ics07-tendermint-prover fixes this
-  # it can be restored once the dependency is updated
-  #   name: build-celestia-prover
-  #   runs-on: ubuntu-latest
-  #   continue-on-error: true
-  #   steps:
-  #     - name: Checkout sources
-  #       uses: actions/checkout@v4
-  #     - name: "Set up environment"
-  #       uses: ./.github/setup
-  #     - name: Install SP1 toolchain
-  #       shell: bash
-  #       run: |
-  #         curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
-  #         ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
-  #         ~/.sp1/bin/cargo-prove prove --version
-  #     - name: Build
-  #       run: cargo build --release --locked
-  #       working-directory: ./provers/celestia-prover/
+# this job fails on linux due to sp1, see: https://docs.succinct.xyz/docs/developers/common-issues#failed-to-run-llvm-passes-unknown-pass-name-loweratomic
+# upgrading sp1-helper to v4.0.1 in sp1-ics07-tendermint-prover fixes this
+  build-celestia-prover:
+    name: build-celestia-prover
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: "Set up environment"
+        uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+      - name: Build
+        run: cargo build --release --locked
+        working-directory: ./provers/celestia-prover/
+        continue-on-error: true
