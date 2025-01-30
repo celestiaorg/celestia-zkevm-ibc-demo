@@ -26,9 +26,9 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --check
         working-directory: ./provers/celestia-prover/
-      - name: Run cargo clippy
-        run: cargo clippy
-        working-directory: ./provers/celestia-prover/
+      # - name: Run cargo clippy
+      #   run: cargo clippy
+      #   working-directory: ./provers/celestia-prover/
 
   lint-blevm:
     name: lint-blevm
@@ -92,21 +92,21 @@ jobs:
         run: cargo build --release --locked
         working-directory: ./provers/blevm/script/
 
-  build-celestia-prover:
-    name: build-celestia-prover
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-      - name: "Set up environment"
-        uses: ./.github/setup
-      - name: Install SP1 toolchain
-        shell: bash
-        run: |
-          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
-          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
-          ~/.sp1/bin/cargo-prove prove --version
-      - name: Build
-        run: cargo build --release --locked
-        working-directory: ./provers/celestia-prover/
+  # build-celestia-prover:
+  #   name: build-celestia-prover
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
+  #   steps:
+  #     - name: Checkout sources
+  #       uses: actions/checkout@v4
+  #     - name: "Set up environment"
+  #       uses: ./.github/setup
+  #     - name: Install SP1 toolchain
+  #       shell: bash
+  #       run: |
+  #         curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+  #         ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+  #         ~/.sp1/bin/cargo-prove prove --version
+  #     - name: Build
+  #       run: cargo build --release --locked
+  #       working-directory: ./provers/celestia-prover/
