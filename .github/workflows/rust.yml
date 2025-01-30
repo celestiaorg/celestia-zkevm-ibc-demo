@@ -33,6 +33,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
+          args: --workspace --exclude blevm-script --exclude celestia-prover
 
   build-blevm:
     name: build-blevm
