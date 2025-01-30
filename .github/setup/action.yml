@@ -7,6 +7,6 @@ runs:
       uses: "actions/checkout@v4"
     - name: Install nightly toolchain
       shell: bash
-      run: rustup update nightly && rustup default nightly
+      run: rustup update nightly && rustup default nightly && rustup component add rustfmt
     - name: Setup Protoc
       uses: taiki-e/install-action@protoc
