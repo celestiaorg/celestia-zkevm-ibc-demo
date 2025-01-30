@@ -1,0 +1,111 @@
+name: rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-celestia-prover:
+    name: lint-celestia-prover
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: "Set up environment"
+        uses: ./.github/setup
+
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --version 3.4.0 --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
+
+      - name: Run cargo fmt
+        run: cargo fmt --check
+        working-directory: ./provers/celestia-prover/
+
+  lint-blevm:
+    name: lint-blevm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: "Set up environment"
+        uses: ./.github/setup
+
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
+
+      - name: Run cargo fmt
+        run: cargo fmt --check
+        working-directory: ./provers/blevm/
+
+  build-blevm:
+    name: build-blevm
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: "Set up environment"
+        uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
+      - name: Build
+        run: cargo build --release --locked
+        working-directory: ./provers/blevm/blevm/
+
+  build-blevm-script:
+    name: build-blevm-script
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: "Set up environment"
+        uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
+      - name: Build
+        run: cargo build --release --locked
+        working-directory: ./provers/blevm/script/
+
+  build-celestia-prover:
+    name: build-celestia-prover
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: "Set up environment"
+        uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --version 3.4.0 --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
+      - name: Build
+        run: cargo build --release --locked
+        working-directory: ./provers/celestia-prover/

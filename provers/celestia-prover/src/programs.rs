@@ -10,13 +10,10 @@ pub struct UpdateClientProgram;
 /// SP1 ICS07 Tendermint verify (non)membership program.
 pub struct MembershipProgram;
 
-
 impl SP1Program for UpdateClientProgram {
-    const ELF: &'static [u8] =
-        include_bytes!("../../../elf/mock-update-client-elf");
+    const ELF: &'static [u8] = include_bytes!("../../../elf/mock-update-client-elf");
 }
 
 impl SP1Program for MembershipProgram {
-    const ELF: &'static [u8] =
-        include_bytes!("../../../elf/mock-membership-elf");
+    const ELF: &'static [u8] = include_bytes!("../../../elf/mock-membership-elf");
 }

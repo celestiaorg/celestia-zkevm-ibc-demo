@@ -8,11 +8,9 @@
 sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolValue;
-use ibc_client_tendermint_types::{Header, ConsensusState};
+use ibc_client_tendermint_types::{ConsensusState, Header};
 use ibc_eureka_solidity_types::sp1_ics07::{
-    IICS07TendermintMsgs::{
-        ClientState as SolClientState, ConsensusState as SolConsensusState,
-    },
+    IICS07TendermintMsgs::{ClientState as SolClientState, ConsensusState as SolConsensusState},
     IUpdateClientMsgs::UpdateClientOutput,
 };
 
@@ -29,9 +27,10 @@ pub fn main() {
     // input 1: the client state
     let client_state = bincode::deserialize::<SolClientState>(&encoded_1).unwrap();
     // input 2: the trusted consensus state
-    let trusted_consensus_state: ConsensusState = bincode::deserialize::<SolConsensusState>(&encoded_2)
-        .unwrap()
-        .into();
+    let trusted_consensus_state: ConsensusState =
+        bincode::deserialize::<SolConsensusState>(&encoded_2)
+            .unwrap()
+            .into();
     // input 3: the proposed header
     let proposed_header = serde_cbor::from_slice::<Header>(&encoded_3).unwrap();
     // input 4: time
