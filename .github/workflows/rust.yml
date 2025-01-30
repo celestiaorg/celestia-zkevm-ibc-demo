@@ -22,6 +22,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v3.4.0/sp1up/install | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
 
       - name: Run cargo fmt
         run: cargo fmt --check
@@ -43,6 +44,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
 
       - name: Run cargo fmt
         run: cargo fmt --check
@@ -63,6 +65,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
       - name: Build
         run: cargo build --release --locked
         working-directory: ./provers/blevm/blevm/
@@ -82,6 +85,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
       - name: Build
         run: cargo build --release --locked
         working-directory: ./provers/blevm/script/
@@ -101,6 +105,7 @@ jobs:
           curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v3.4.0/sp1up/install | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
+          rustc +succinct --version
       - name: Build
         run: cargo build --release --locked
         working-directory: ./provers/celestia-prover/
