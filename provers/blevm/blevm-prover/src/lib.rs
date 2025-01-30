@@ -186,11 +186,7 @@ impl BlockProver {
         // Create blob from L2 block data
         let block: ClientExecutorInput = bincode::deserialize(&input.l2_block_data)?;
         let block_bytes = bincode::serialize(&block.current_block)?;
-        let blob = Blob::new(
-            self.celestia_client.namespace,
-            block_bytes,
-            AppVersion::V3,
-        )?;
+        let blob = Blob::new(self.celestia_client.namespace, block_bytes, AppVersion::V3)?;
 
         // Get blob and header from Celestia
         let (blob_from_chain, header) = self
