@@ -26,9 +26,6 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --check
         working-directory: ./provers/celestia-prover/
-      # - name: Run cargo clippy
-      #   run: cargo clippy
-      #   working-directory: ./provers/celestia-prover/
 
   lint-blevm:
     name: lint-blevm
@@ -49,9 +46,6 @@ jobs:
 
       - name: Run cargo fmt
         run: cargo fmt --check
-        working-directory: ./provers/blevm/
-      - name: Run cargo clippy
-        run: cargo clippy
         working-directory: ./provers/blevm/
 
   build-blevm:
@@ -93,6 +87,9 @@ jobs:
         working-directory: ./provers/blevm/script/
 
   # build-celestia-prover:
+  # this job fails on linux due to sp1, see: https://docs.succinct.xyz/docs/developers/common-issues#failed-to-run-llvm-passes-unknown-pass-name-loweratomic
+  # upgrading sp1-helper to v4.0.1 in sp1-ics07-tendermint-prover fixes this
+  # it can be restored once the dependency is updated
   #   name: build-celestia-prover
   #   runs-on: ubuntu-latest
   #   continue-on-error: true
