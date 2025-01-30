@@ -15,7 +15,7 @@ services:
       reth:
         condition: service_started
     networks:
-      - zk-network
+      - rollkit-network
 
   reth:
     image: ghcr.io/paradigmxyz/reth # Use the official Reth image
@@ -38,7 +38,7 @@ services:
       --datadir /.tmp/eth-home
       --ipcpath /.tmp/eth-home/eth-engine.ipc
     networks:
-      - zk-network
+      - rollkit-network
 
   celestia-network-validator:
     image: ghcr.io/celestiaorg/celestia-app:v3.0.0-mocha
@@ -62,7 +62,7 @@ services:
       retries: 10
       start_period: 5s
     networks:
-      - zk-network
+      - rollkit-network
 
   celestia-network-bridge:
     image: ghcr.io/celestiaorg/celestia-node:v0.20.1-mocha
@@ -92,7 +92,7 @@ services:
       retries: 10
       start_period: 5s
     networks:
-      - zk-network
+      - rollkit-network
 
   simapp-validator:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp:latest
@@ -105,7 +105,7 @@ services:
       - "9190:9090"
       - "5123:26657"
     networks:
-      - zk-network
+      - rollkit-network
 
   celestia-prover:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
@@ -122,10 +122,10 @@ services:
       beacond:
         condition: service_started
     networks:
-      - zk-network
+      - rollkit-network
 
 networks:
-  zk-network:
+  rollkit-network:
     driver: bridge
     ipam:
       config:

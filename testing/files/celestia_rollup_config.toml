@@ -22,11 +22,11 @@ da_polling_interval_ms = 200
 
 [runner.rpc_config]
 # the host and port to bind the rpc server for
-bind_host = "127.0.0.0"
-bind_port = 12345
+bind_host = "0.0.0.0"
+bind_port = 8545
 [runner.axum_config]
-bind_host = "127.0.0.0"
-bind_port = 12346
+bind_host = "0.0.0.0"
+bind_port = 8546
 # In case the rollup is running behind a proxy
 # public_address = "http://rollup.sovereign.xyz"
 

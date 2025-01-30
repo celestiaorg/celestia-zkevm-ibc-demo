@@ -4,8 +4,7 @@ services:
     container_name: sovereign
     volumes:
       - ./testing/files/celestia_rollup_config.toml:/app/config/mock_rollup_config.toml
-    environment:
-      - CELESTIA_CONFIG_PATH=/app/config/mock_rollup_config.toml
+      - ./testing/files/sovereign-genesis/celestia:/app/examples/test-data/genesis/celestia
     depends_on:
       celestia-network-validator:
         condition: service_healthy
@@ -13,8 +12,9 @@ services:
         condition: service_healthy
     ports:
       - "8545:8545"
+      - "8546:8546"
     networks:
-      - zk-network
+      - sov-network
 
   celestia-network-validator:
     image: ghcr.io/celestiaorg/celestia-app:v3.0.0-mocha
@@ -38,7 +38,7 @@ services:
       retries: 10
       start_period: 5s
     networks:
-      - zk-network
+      - sov-network
 
   celestia-network-bridge:
     image: ghcr.io/celestiaorg/celestia-node:v0.20.1-mocha
@@ -68,7 +68,7 @@ services:
       retries: 10
       start_period: 5s
     networks:
-      - zk-network
+      - sov-network
 
   simapp-validator:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp:latest
@@ -81,7 +81,7 @@ services:
       - "9190:9090"
       - "5123:26657"
     networks:
-      - zk-network
+      - sov-network
 
   celestia-prover:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
@@ -97,10 +97,10 @@ services:
       sovereign:
         condition: service_started
     networks:
-      - zk-network
+      - sov-network
 
 networks:
-  zk-network:
+  sov-network:
     driver: bridge
     ipam:
       config:
