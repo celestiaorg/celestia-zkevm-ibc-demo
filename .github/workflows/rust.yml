@@ -54,7 +54,8 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --bin blevm --release --locked
+          args: --release --locked
+          working-directory: ./provers/blevm/blevm/
 
   build-blevm-script:
     name: build-blevm-script
@@ -75,7 +76,8 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --bin blevm-script --release --locked
+          args: --release --locked
+          working-directory: ./provers/blevm/script/
 
   build-celestia-prover:
     name: build-celestia-prover
