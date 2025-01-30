@@ -19,8 +19,8 @@ jobs:
       - name: Install SP1 toolchain
         shell: bash
         run: |
-          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v3.4.0/sp1up/install | bash
-          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --version 3.4.0 --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
 
@@ -41,7 +41,7 @@ jobs:
       - name: Install SP1 toolchain
         shell: bash
         run: |
-          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          curl -L https://sp1.succinct.xyz | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
@@ -62,7 +62,7 @@ jobs:
       - name: Install SP1 toolchain
         shell: bash
         run: |
-          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          curl -L https://sp1.succinct.xyz | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
@@ -82,7 +82,7 @@ jobs:
       - name: Install SP1 toolchain
         shell: bash
         run: |
-          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          curl -L https://sp1.succinct.xyz | bash
           ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
@@ -102,8 +102,8 @@ jobs:
       - name: Install SP1 toolchain
         shell: bash
         run: |
-          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v3.4.0/sp1up/install | bash
-          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          curl -L https://sp1.succinct.xyz | bash
+          ~/.sp1/bin/sp1up --version 3.4.0 --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
       - name: Build
