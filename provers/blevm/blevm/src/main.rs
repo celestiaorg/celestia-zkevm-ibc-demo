@@ -1,15 +1,13 @@
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 
-use celestia_types::{nmt::Namespace, AppVersion, Blob};
 use celestia_types::nmt::{NamespaceProof, NamespacedHashExt};
+use celestia_types::{nmt::Namespace, AppVersion, Blob};
 use nmt_rs::simple_merkle::tree::MerkleHash;
 //use nmt_rs::{simple_merkle::proof::Proof, TmSha2Hasher};
 use blevm_common::BlevmOutput;
 use nmt_rs::{simple_merkle::proof::Proof, NamespacedHash, TmSha2Hasher};
-use rsp_client_executor::{
-    io::ClientExecutorInput, ClientExecutor, EthereumVariant,
-};
+use rsp_client_executor::{io::ClientExecutorInput, ClientExecutor, EthereumVariant};
 use tendermint::Hash as TmHash;
 use tendermint_proto::Protobuf;
 
