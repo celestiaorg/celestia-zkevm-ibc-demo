@@ -10,10 +10,3 @@ runs:
       run: rustup update nightly && rustup default nightly
     - name: Setup Protoc
       uses: taiki-e/install-action@protoc
-    - name: Install SP1 toolchain
-      shell: bash
-      run: |
-        curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
-        ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
-        ~/.sp1/bin/cargo-prove prove --version
-

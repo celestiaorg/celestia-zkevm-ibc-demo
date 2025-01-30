@@ -16,6 +16,13 @@ jobs:
       - name: "Set up environment"
         uses: ./.github/setup
 
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
+
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Run cargo clippy
@@ -30,6 +37,12 @@ jobs:
         uses: actions/checkout@v4
       - name: "Set up environment"
         uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
       - name: Build
         run: cargo build --release --locked
         working-directory: ./provers/blevm/blevm/
@@ -43,6 +56,12 @@ jobs:
         uses: actions/checkout@v4
       - name: "Set up environment"
         uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
       - name: Build
         run: cargo build --release --locked
         working-directory: ./provers/blevm/script/
@@ -56,5 +75,11 @@ jobs:
         uses: actions/checkout@v4
       - name: "Set up environment"
         uses: ./.github/setup
+      - name: Install SP1 toolchain
+        shell: bash
+        run: |
+          curl -L https://raw.githubusercontent.com/succinctlabs/sp1/v4.0.1/sp1up/install | bash
+          ~/.sp1/bin/sp1up --token ${{ secrets.GITHUB_TOKEN }}
+          ~/.sp1/bin/cargo-prove prove --version
       - name: Build
         run: cargo build --bin celestia-prover --release --locked
