@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/gnark/backend/witness"
 )
 
+// PublicWitness should match the public outputs of the SP1 program.
 type PublicWitness struct {
 	TrustedHeight             int64  // Provided by the relayer/user
 	TrustedCelestiaHeaderHash []byte // Provided by the ZK IBC Client
