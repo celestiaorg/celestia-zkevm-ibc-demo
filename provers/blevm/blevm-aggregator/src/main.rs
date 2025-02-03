@@ -1,3 +1,9 @@
+//! A SP1 program that takes as input public values from two blevm mock proofs. It then verifies
+//! those mock proofs. Lastly, it verifies that the second proof is for an EVM block immediately
+//! following the EVM block in proof one. It commits to the EVM header hashes from those two blocks.
+#![no_main]
+sp1_zkvm::entrypoint!(main);
+
 mod buffer;
 use buffer::Buffer;
 

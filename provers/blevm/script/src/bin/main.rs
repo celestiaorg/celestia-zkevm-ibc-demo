@@ -9,16 +9,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
     utils::setup_logger();
     // Load env variables.
     dotenv::dotenv().ok();
-    // Initialize configurations
+    // Throw errors if env variables are not set.
+    let auth_token =
+        std::env::var("CELESTIA_NODE_AUTH_TOKEN").expect("CELESTIA_NODE_AUTH_TOKEN must be set");
+    let namespace_hex =
+        std::env::var("CELESTIA_NAMESPACE").expect("CELESTIA_NAMESPACE must be set");
+    let node_url = std::env::var("CELESTIA_NODE_URL").expect("CELESTIA_NODE_URL must be set");
+
     let celestia_config = CelestiaConfig {
-        node_url: "ws://localhost:26658".to_string(),
-        auth_token: std::env::var("CELESTIA_NODE_AUTH_TOKEN")?,
+        node_url,
+        auth_token,
     };
 
-    let namespace = Namespace::new_v0(&hex::decode(std::env::var("CELESTIA_NAMESPACE")?)?)?;
+    let namespace = Namespace::new_v0(&hex::decode(namespace_hex)?)?;
 
     let prover_config = ProverConfig {
         elf_bytes: include_elf!("blevm"),
+        // Uncomment the next line to generate a mock proof.
+        // elf_bytes: include_elf!("blevm-mock"),
     };
 
     // Initialize the prover service
