@@ -1,17 +1,16 @@
 //! Prover for SP1 ICS07 Tendermint programs.
 
-use crate::programs::{
-    MembershipProgram, SP1Program,
-    UpdateClientProgram,
-};
+use crate::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
+use alloy_sol_types::SolValue;
 use ibc_client_tendermint_types::Header;
 use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::sp1_ics07::{
-    IICS07TendermintMsgs::{ClientState as SolClientState, ConsensusState as SolConsensusState},
-    ISP1Msgs::SupportedZkAlgorithm,
+use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::{
+    ClientState as SolClientState, ConsensusState as SolConsensusState,
 };
 use ibc_proto::Protobuf;
-use sp1_sdk::{ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey, EnvProver};
+use sp1_sdk::{
+    EnvProver, ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
+};
 
 /// A prover for for [`SP1Program`] programs.
 #[allow(clippy::module_name_repetitions)]
@@ -56,13 +55,13 @@ impl<T: SP1Program> SP1ICS07TendermintProver<T> {
     /// # Panics
     /// If the proof cannot be generated or validated.
     #[must_use]
-    pub fn prove(&self, stdin: SP1Stdin) -> SP1ProofWithPublicValues {
+    pub fn prove(&self, stdin: &SP1Stdin) -> SP1ProofWithPublicValues {
         // Generate the proof. Depending on SP1_PROVER env variable, this may be a mock, local or
         // network proof.
         let proof: SP1ProofWithPublicValues = match self.proof_type {
             SupportedProofType::Groth16 => self
                 .prover_client
-                .prove(&self.pkey, &stdin)
+                .prove(&self.pkey, stdin)
                 .groth16()
                 .run()
                 .expect("proving failed"),
@@ -91,8 +90,8 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
         time: u64,
     ) -> SP1ProofWithPublicValues {
         // Encode the inputs into our program.
-        let encoded_1 = bincode::serialize(client_state).unwrap();
-        let encoded_2 = bincode::serialize(&trusted_consensus_state).unwrap();
+        let encoded_1 = client_state.abi_encode();
+        let encoded_2 = trusted_consensus_state.abi_encode();
         let encoded_3 = serde_cbor::to_vec(proposed_header).unwrap();
         let encoded_4 = time.to_le_bytes().into();
         // TODO: find an encoding that works for all the structs above.
@@ -104,7 +103,7 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
         stdin.write_vec(encoded_3);
         stdin.write_vec(encoded_4);
 
-        self.prove(stdin)
+        self.prove(&stdin)
     }
 }
 
@@ -131,17 +130,17 @@ impl SP1ICS07TendermintProver<MembershipProgram> {
             stdin.write_vec(proof.encode_vec());
         }
 
-        self.prove(stdin)
+        self.prove(&stdin)
     }
 }
 
-impl From<SupportedProofType> for SupportedZkAlgorithm {
-    fn from(proof_type: SupportedProofType) -> Self {
-        match proof_type {
-            SupportedProofType::Groth16 => Self::from(0),
-        }
-    }
-}
+// impl From<SupportedProofType> for SupportedZkAlgorithm {
+//     fn from(proof_type: SupportedProofType) -> Self {
+//         match proof_type {
+//             SupportedProofType::Groth16 => Self::from(0),
+//         }
+//     }
+// }
 
 impl TryFrom<u8> for SupportedProofType {
     type Error = String;
