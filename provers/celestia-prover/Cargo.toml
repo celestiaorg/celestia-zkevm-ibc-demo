@@ -26,6 +26,7 @@ sp1-sdk = { workspace = true, features = ["network"] }
 ibc-proto = { workspace = true }
 tracing = { workspace = true }
 serde_cbor = "0.11.2"
+alloy-sol-types.workspace = true
 
 [build-dependencies]
 tonic-build = { workspace = true }

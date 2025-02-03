@@ -24,7 +24,7 @@ See <https://docs.succinct.xyz/docs/introduction>
 
     ```shell
     cp .env.example .env
-    # Modify the .env file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+    # Modify the .env file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
     ```
 
 ### Usage

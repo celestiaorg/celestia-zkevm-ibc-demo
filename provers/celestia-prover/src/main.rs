@@ -1,3 +1,4 @@
+use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ClientState;
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
@@ -22,9 +23,8 @@ use celestia_prover::{
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
 use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::sp1_ics07::{
-    sp1_ics07_tendermint, IICS07TendermintMsgs::ConsensusState,
-};
+use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ConsensusState;
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
@@ -79,12 +79,12 @@ impl Prover for ProverService {
             .on_http(self.evm_rpc_url.clone());
         let contract = sp1_ics07_tendermint::new(client_id, provider);
 
-        let client_state = contract
-            .getClientState()
+        let client_state: ClientState = contract
+            .clientState()
             .call()
             .await
             .map_err(|e| Status::internal(e.to_string()))?
-            ._0;
+            .into();
         // fetch the light block at the latest height of the client state
         let trusted_light_block = self
             .tendermint_rpc_client
