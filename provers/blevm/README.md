@@ -4,6 +4,8 @@ blevm is a service that creates zero-knowledge proofs of EVM state transitions.
 
 ## Contributing
 
+See <https://docs.succinct.xyz/docs/introduction>
+
 ### Prerequisites
 
 1. Install Rust > 1.81.0

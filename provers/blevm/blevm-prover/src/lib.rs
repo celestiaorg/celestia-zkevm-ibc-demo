@@ -84,6 +84,8 @@ impl CelestiaClient {
     }
 }
 
+/// generate_header_proofs takes an extender header and creates a Merkle tree from its fields. Then
+/// it generates a Merkle proof for the DataHash in that extended header.
 pub fn generate_header_proofs(
     header: &ExtendedHeader,
 ) -> Result<(Vec<u8>, Proof<TmSha2Hasher>), Box<dyn Error>> {
@@ -96,6 +98,7 @@ pub fn generate_header_proofs(
         header_field_tree.push_raw_leaf(&leaf);
     }
 
+    // The data_hash is the leaf at index 6 in the tree.
     let (data_hash_bytes, data_hash_proof) = header_field_tree.get_index_with_proof(6);
 
     // Verify the computed root matches the header hash
@@ -104,6 +107,8 @@ pub fn generate_header_proofs(
     Ok((data_hash_bytes, data_hash_proof))
 }
 
+/// prepare_header_fields returns a vector with all the fields in a Tendermint header.
+/// See https://github.com/cometbft/cometbft/blob/972fa8038b57cc2152cb67144869ccd604526550/spec/core/data_structures.md?plain=1#L130-L143
 pub fn prepare_header_fields(header: &ExtendedHeader) -> Vec<Vec<u8>> {
     vec![
         Protobuf::<RawConsensusVersion>::encode_vec(header.header.version),
