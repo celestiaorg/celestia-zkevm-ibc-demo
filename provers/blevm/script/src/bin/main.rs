@@ -9,6 +9,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     utils::setup_logger();
     // Load env variables.
     dotenv::dotenv().ok();
+    // Throw errors if env variables are not set.
+    std::env::var("CELESTIA_NODE_AUTH_TOKEN").expect("CELESTIA_NODE_AUTH_TOKEN must be set");
+    std::env::var("CELESTIA_NAMESPACE").expect("CELESTIA_NAMESPACE must be set");
+
     // Initialize configurations
     let celestia_config = CelestiaConfig {
         node_url: "ws://localhost:26658".to_string(),
