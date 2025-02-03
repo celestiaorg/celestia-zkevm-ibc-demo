@@ -23,6 +23,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let prover_config = ProverConfig {
         elf_bytes: include_elf!("blevm"),
+        // Uncomment the next line to generate a mock proof.
+        // elf_bytes: include_elf!("blevm-mock"),
     };
 
     // Initialize the prover service

@@ -2,6 +2,17 @@
 
 blevm is a service that creates zero-knowledge proofs of EVM state transitions.
 
+## Project layout
+
+This workspace contains multiple crates:
+
+- `blevm`: SP1 program that verifies an EVM block was included in a Celestia data square.
+- `blevm-mock`: SP1 program that acts as a mock version of `blevm`. It should execute faster than `blevm` because it skips verifying any inputs or outputs.
+- `blevm-aggregator`: SP1 program that takes as input the public values from two `blevm` proofs. It verifies the proofs and ensures they are for monotonically increasing EVM blocks.
+- `blevm-prover`: library that exposes a `BlockProver` which can generate proofs. The proofs can either be `blevm` proofs or `blevm-mock` proofs depending on the `elf_bytes` used.
+- `common`: library with common struct definitions
+- `script`: binary that generates a blevm proof for an EVM roll-up block that was posted to Celestia mainnet.
+
 ## Contributing
 
 See <https://docs.succinct.xyz/docs/introduction>
@@ -17,6 +28,8 @@ See <https://docs.succinct.xyz/docs/introduction>
     ```
 
 ### Usage
+
+The `script` binary will generate an SP1 proof but it depends on a DA light node. As a prerequisite, you should run a light node and export the expected environment variables:
 
 ```shell
 # Initialize a Celestia light node
@@ -34,9 +47,22 @@ celestia light start --core.ip rpc.celestia.pops.one --p2p.network celestia --he
 export CELESTIA_NODE_AUTH_TOKEN=$(celestia light auth admin)
 # Export namespace that was used to post an EVM block
 export CELESTIA_NAMESPACE=0f0f0f0f0f0f0f0f0f0f
+```
 
+Generate a proof:
+
+```shell
 # Change to the correct directory
-cd celestia-zkevm-ibc-demo/provers/blevm/script
+cd celestia-zkevm-ibc-demo/provers/blevm
 # Run the script
 cargo run
+```
+
+To generate a `blevm-mock` proof, modify `script/src/bin/main.rs` with the diff below then run the script again.
+
+```diff
+let prover_config = ProverConfig {
+-   elf_bytes: include_elf!("blevm"),
++   elf_bytes: include_elf!("blevm-mock"),
+};
 ```
