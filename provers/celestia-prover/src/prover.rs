@@ -134,14 +134,6 @@ impl SP1ICS07TendermintProver<MembershipProgram> {
     }
 }
 
-// impl From<SupportedProofType> for SupportedZkAlgorithm {
-//     fn from(proof_type: SupportedProofType) -> Self {
-//         match proof_type {
-//             SupportedProofType::Groth16 => Self::from(0),
-//         }
-//     }
-// }
-
 impl TryFrom<u8> for SupportedProofType {
     type Error = String;
 
