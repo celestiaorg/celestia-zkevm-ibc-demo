@@ -1,0 +1,12 @@
+name: setup
+
+runs:
+  using: composite
+  steps:
+    - name: "Check out the repo"
+      uses: "actions/checkout@v4"
+    - name: Install nightly toolchain
+      shell: bash
+      run: rustup update 1.81 && rustup default 1.81 && rustup component add rustfmt && rustup component add clippy
+    - name: Setup Protoc
+      uses: taiki-e/install-action@protoc
