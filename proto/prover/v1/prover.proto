@@ -15,8 +15,10 @@ message InfoRequest {
 
 message InfoResponse {
   // TODO: add more info here as is relevant such as the circuit and state machine types
-  bytes state_transition_verifier_key = 1;
-  bytes state_membership_verifier_key = 2;
+  // hex-encoded state transition verifier key
+  string state_transition_verifier_key = 1;
+  // hex-encoded state membership verifier key
+  string state_membership_verifier_key = 2;
 }
 
 message ProveStateTransitionRequest {

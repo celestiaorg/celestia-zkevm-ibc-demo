@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 alloy-sol-types = { workspace = true }
-sp1-zkvm = "3.0.0-rc4"
+sp1-zkvm = { workspace = true }
 rsp-client-executor = {workspace=true}
 celestia-types = {workspace=true}
 nmt-rs = "*"

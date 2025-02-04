@@ -1,5 +1,4 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use bincode;
 
 /// A buffer of serializable/deserializable objects.
 #[derive(Debug, Clone, Serialize, Deserialize)]

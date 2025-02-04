@@ -30,11 +30,39 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
+1. Apply this diff to the `solidity-ibc-eureka/justfile`:
+
+    ```diff
+    genesis-sp1-ics07: build-sp1-programs
+    @echo "Generating the genesis file..."
+    -  RUST_LOG=info cargo run --bin operator --release -- genesis -o scripts/genesis.json
+    +  RUST_LOG=info cargo run --bin operator --release -- genesis --proof-type groth16 -o scripts/genesis.json
+    +  @echo "--> Setting the verifier key in scripts/genesis.json"
+    +  @sed -i '' 's|"updateClientVkey": "0x00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3"|"updateClientVkey": "0x0081282e1279b92586a3330c1cd83a3f0910299bdc7be90ac1a24b2a0826523b"|' scripts/genesis.json
+    +  @echo "--> Set the verifier key to 0x0081282e1279b92586a3330c1cd83a3f0910299bdc7be90ac1a24b2a0826523b."
+    ```
+
 1. Create and populate the `.env` file
 
     ```shell
     cp .env.example .env
-    # Modify the .env file and set `SP1_PROVER=network` and `SP1_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+    # Modify the .env file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+    ```
+
+1. Modify the `docker-compose.yml` file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+
+    ```diff
+    celestia-prover:
+        image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
+        container_name: celestia-prover
+        environment:
+        # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
+        # for Celestia (with IBC Eurekea enabled).
+        - TENDERMINT_RPC_URL=http://simapp-validator:26657
+        - RPC_URL=http://reth:8545
+        - PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+    +      - SP1_PROVER=network
+    +      - NETWORK_PRIVATE_KEY=PRIVATE_KEY
     ```
 
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
@@ -63,15 +91,14 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make setup
     ```
 
-1. Transfer tokens from SimApp to the EVM roll-up.
+1. Run the demo
 
     ```shell
+    # Transfer tokens from SimApp to the EVM roll-up.
     make transfer
-    ```
-
-1. To stop and teardown the test environment (when you're finished)
-
-    ```shell
+    # Relay the token transfer
+    make relay
+    # To stop and teardown the test environment (when you're finished)
     make stop
     ```
 

@@ -1,3 +1,5 @@
+use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ClientState;
+use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
 use tonic::{transport::Server, Request, Response, Status};
@@ -21,9 +23,8 @@ use celestia_prover::{
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
 use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::sp1_ics07::{
-    sp1_ics07_tendermint, IICS07TendermintMsgs::ConsensusState,
-};
+use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ConsensusState;
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
@@ -52,10 +53,8 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
-        let state_transition_verifier_key = bincode::serialize(&self.tendermint_prover.vkey)
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let state_membership_verifier_key = bincode::serialize(&self.membership_prover.vkey)
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let state_transition_verifier_key = self.tendermint_prover.vkey.bytes32();
+        let state_membership_verifier_key = self.membership_prover.vkey.bytes32();
         let response = InfoResponse {
             state_transition_verifier_key,
             state_membership_verifier_key,
@@ -80,12 +79,12 @@ impl Prover for ProverService {
             .on_http(self.evm_rpc_url.clone());
         let contract = sp1_ics07_tendermint::new(client_id, provider);
 
-        let client_state = contract
-            .getClientState()
+        let client_state: ClientState = contract
+            .clientState()
             .call()
             .await
             .map_err(|e| Status::internal(e.to_string()))?
-            ._0;
+            .into();
         // fetch the light block at the latest height of the client state
         let trusted_light_block = self
             .tendermint_rpc_client
@@ -159,7 +158,7 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let proof = self.membership_prover.generate_proof(
-            &trusted_block.signed_header.header.app_hash.as_bytes(),
+            trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
         );
 
