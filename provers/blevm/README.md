@@ -90,6 +90,7 @@ cargo prove build
 
 How long does it take to generate a proof?
 
-| Proof | Time      | SP1_PROVER |
-|-------|-----------|------------|
-| blevm | 6 minutes | network    |
+| SP1_PROVER | Program    | Time       |
+|------------|------------|------------|
+| network    | blevm-mock | 30 seconds |
+| network    | blevm      | 6 minutes  |
