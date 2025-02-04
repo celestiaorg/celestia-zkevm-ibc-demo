@@ -36,7 +36,7 @@
       "nonce": 0
     }
   ],
-  "chain_id": 4321,
+  "chain_id": 80087,
   "limit_contract_code_size": null,
   "spec": {
     "0": "SHANGHAI"
