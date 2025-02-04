@@ -72,7 +72,7 @@ check-dependencies:
 .PHONY: check-dependencies
 
 ## start: Start all processes needed for the demo.
-start: stop
+start: 
 	@docker compose -f docker-compose.rollkit.yml up --detach
 .PHONY: start
 
