@@ -77,6 +77,17 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     };
     ```
 
+### Development
+
+While developing SP1 programs (i.e. `blevm`, `blevm-mock`, `blevm-aggregate`) it is helpful to generate [development builds](https://docs.succinct.xyz/docs/writing-programs/compiling#development-builds):
+
+```shell
+# Change to an SP1 program crate
+cd blevm-mock
+# Build for development
+cargo prove build
+```
+
 ## FAQ
 
 How long does it take to generate a proof?
