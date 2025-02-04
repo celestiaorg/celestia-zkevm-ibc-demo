@@ -12,7 +12,7 @@ use nmt_rs::{
     TmSha2Hasher,
 };
 use rsp_client_executor::io::ClientExecutorInput;
-use sp1_sdk::{ProverClient, SP1Stdin};
+use sp1_sdk::{ExecutionReport, ProverClient, SP1PublicValues, SP1Stdin};
 use std::error::Error;
 use tendermint_proto::{
     v0_37::{types::BlockId as RawBlockId, version::Consensus as RawConsensusVersion},
@@ -187,7 +187,7 @@ impl BlockProver {
         }
     }
 
-    pub async fn generate_proof(&self, input: BlockProverInput) -> Result<Vec<u8>, Box<dyn Error>> {
+    async fn get_stdin(&self, input: BlockProverInput) -> Result<SP1Stdin, Box<dyn Error>> {
         // Create blob from L2 block data
         let block: ClientExecutorInput = bincode::deserialize(&input.l2_block_data)?;
         let block_bytes = bincode::serialize(&block.current_block)?;
@@ -220,10 +220,28 @@ impl BlockProver {
         stdin.write(&row_root_multiproof);
         stdin.write(&nmt_multiproofs);
         stdin.write(&selected_roots);
+        Ok(stdin)
+    }
 
+    pub async fn execute(
+        &self,
+        input: BlockProverInput,
+    ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
+        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        let stdin = self.get_stdin(input).await?;
+        let (public_values, execution_report) = client
+            .execute(self.prover_config.elf_bytes, &stdin)
+            .run()
+            .unwrap();
+
+        Ok((public_values, execution_report))
+    }
+
+    pub async fn generate_proof(&self, input: BlockProverInput) -> Result<Vec<u8>, Box<dyn Error>> {
         // Generate and return the proof
-        let client = ProverClient::from_env();
+        let client: sp1_sdk::EnvProver = ProverClient::from_env();
         let (pk, _) = client.setup(self.prover_config.elf_bytes);
+        let stdin = self.get_stdin(input).await?;
         let proof = client.prove(&pk, &stdin).groth16().run()?;
 
         bincode::serialize(&proof).map_err(|e| e.into())
