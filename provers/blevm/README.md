@@ -76,3 +76,11 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     +   elf_bytes: include_elf!("blevm-mock"),
     };
     ```
+
+## FAQ
+
+How long does it take to generate a proof?
+
+| Proof | Time      | SP1_PROVER |
+|-------|-----------|------------|
+| blevm | 6 minutes | network    |
