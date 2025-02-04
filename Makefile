@@ -72,8 +72,8 @@ check-dependencies:
 .PHONY: check-dependencies
 
 ## start: Start all processes needed for the demo.
-start:
-	@docker compose up --detach
+start: 
+	@docker compose -f docker-compose.rollkit.yml up --detach
 .PHONY: start
 
 ## setup: Set up the IBC clients and channels.
@@ -100,8 +100,8 @@ relay:
 ## stop: Stop all processes and remove the tmp directory.
 stop:
 	@echo "--> Stopping all processes"
-	@docker compose down
-	@docker compose rm
+	@docker compose -f docker-compose.rollkit.yml down
+	@docker compose -f docker-compose.rollkit.yml rm
 	@echo "--> Removing the tmp directory"
 	@rm -rf .tmp
 .PHONY: stop
