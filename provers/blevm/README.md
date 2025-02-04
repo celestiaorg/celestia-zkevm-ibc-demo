@@ -64,17 +64,15 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     ```shell
     # Change to the correct directory
     cd celestia-zkevm-ibc-demo/provers/blevm/script
-    # Run the script
-    cargo run
-    ```
 
-4. [Optional] To generate a `blevm-mock` proof, modify `script/src/bin/main.rs` with the diff below then run the script again.
-
-    ```diff
-    let prover_config = ProverConfig {
-    -   elf_bytes: include_elf!("blevm"),
-    +   elf_bytes: include_elf!("blevm-mock"),
-    };
+    # Execute blevm mock
+    RUST_LOG=info cargo run --release -- --execute --mock
+    # Execute blevm
+    RUST_LOG=info cargo run --release -- --execute
+    # Generate a mock proof
+    RUST_LOG=info cargo run --release -- --prove --mock
+    # Generate a real proof
+    RUST_LOG=info cargo run --release -- --prove
     ```
 
 ### Development
