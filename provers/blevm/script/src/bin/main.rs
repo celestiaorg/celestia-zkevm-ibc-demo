@@ -2,6 +2,7 @@ use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig
 use celestia_types::nmt::Namespace;
 use sp1_sdk::{include_elf, utils};
 use std::{error::Error, fs};
+use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -41,11 +42,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
         l2_block_data: fs::read("input/1/18884864.bin")?,
     };
 
-    // Generate proof
     println!("Generating proof...");
+    let start = Instant::now();
     let proof = prover.generate_proof(input).await?;
+    let duration = start.elapsed();
+    println!("Generated proof in {:?}.", duration);
+
     // Save proof to file
+    println!("Saving proof to proof.bin");
     fs::write("proof.bin", proof)?;
+    println!("Saved proof.");
 
     Ok(())
 }
