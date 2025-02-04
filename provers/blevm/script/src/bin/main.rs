@@ -1,8 +1,8 @@
 use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
 use celestia_types::nmt::Namespace;
 use sp1_sdk::{include_elf, utils};
-use std::{error::Error, fs};
 use std::time::Instant;
+use std::{error::Error, fs};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
