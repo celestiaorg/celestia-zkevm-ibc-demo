@@ -51,13 +51,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         std::process::exit(1);
     }
 
-    // TODO delete these print statements. Mostly for development time debugging.
     if args.mock {
         println!("In mock mode so using BLEVM_MOCK_ELF.")
     } else {
         println!("Not in mock mode so using BLEVM_ELF.")
     }
-
     let prover_config = ProverConfig {
         elf_bytes: if args.mock { BLEVM_MOCK_ELF } else { BLEVM_ELF },
     };
@@ -82,18 +80,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
         l2_block_data: fs::read("input/1/18884864.bin")?,
     };
 
-    // TODO: implement execute mode
+    if args.execute {
+        println!("Executing...");
+        let (public_values, execution_report) = prover.execute(input).await?;
+        println!("Program executed successfully.");
+        println!("Public values: {:?}", public_values);
+        println!(
+            "Number of cycles: {}",
+            execution_report.total_instruction_count()
+        );
+        return Ok(());
+    }
 
-    println!("Generating proof...");
-    let start = Instant::now();
-    let proof = prover.generate_proof(input).await?;
-    let duration = start.elapsed();
-    println!("Generated proof in {:?}.", duration);
+    if args.prove {
+        println!("Generating proof...");
+        let start = Instant::now();
+        let proof = prover.generate_proof(input).await?;
+        let duration = start.elapsed();
+        println!("Generated proof in {:?}.", duration);
 
-    // Save proof to file
-    println!("Saving proof to proof.bin");
-    fs::write("proof.bin", proof)?;
-    println!("Saved proof.");
+        // Save proof to file
+        println!("Saving proof to proof.bin");
+        fs::write("proof.bin", proof)?;
+        println!("Saved proof.");
+        return Ok(());
+    }
 
     Ok(())
 }
