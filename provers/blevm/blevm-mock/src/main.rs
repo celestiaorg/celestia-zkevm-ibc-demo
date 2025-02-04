@@ -5,27 +5,14 @@
 sp1_zkvm::entrypoint!(main);
 
 use blevm_common::BlevmOutput;
-use celestia_types::nmt::{NamespaceProof, NamespacedHashExt};
-use celestia_types::{nmt::Namespace, AppVersion, Blob};
-use nmt_rs::simple_merkle::tree::MerkleHash;
+use celestia_types::nmt::Namespace;
+use celestia_types::nmt::NamespaceProof;
 use nmt_rs::{simple_merkle::proof::Proof, NamespacedHash, TmSha2Hasher};
-use rsp_client_executor::{io::ClientExecutorInput, ClientExecutor, EthereumVariant};
-use tendermint::Hash as TmHash;
-use tendermint_proto::Protobuf;
+use rsp_client_executor::io::ClientExecutorInput;
 
 pub fn main() {
-    // Read all the input values.
-    let input: ClientExecutorInput = sp1_zkvm::io::read();
-    let namespace: Namespace = sp1_zkvm::io::read();
-    let celestia_header_hash = sp1_zkvm::io::read::<Vec<u8>>();
-    let data_hash_bytes: Vec<u8> = sp1_zkvm::io::read_vec();
-    let data_hash_proof: Proof<TmSha2Hasher> = sp1_zkvm::io::read();
-    let row_root_multiproof: Proof<TmSha2Hasher> = sp1_zkvm::io::read();
-    let nmt_multiproofs: Vec<NamespaceProof> = sp1_zkvm::io::read();
-    let row_roots: Vec<NamespacedHash<29>> = sp1_zkvm::io::read();
-
-    // since this is a mock proof, we can hard-code all the output values to be the same as a valid
-    // execution of blevm.
+    // This is a mock proof so it hard-codes all the output values. Note: these values were sourced
+    // from a valid execution of blevm.
     let output = BlevmOutput {
         blob_commitment: [
             196, 0, 0, 0, 0, 0, 0, 0, 121, 70, 207, 82, 142, 221, 116, 94, 251, 37, 32, 18, 70,
