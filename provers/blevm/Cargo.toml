@@ -1,24 +1,18 @@
 [workspace]
-members = [
-    "blevm",
-    "blevm-mock",
-    "script",
-    "blevm-aggregator",
-    "common",
-]
+members = ["blevm", "blevm-mock", "script", "blevm-aggregator", "common"]
 resolver = "2"
 
 [workspace.dependencies]
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 alloy-sol-types = "0.7.7"
-rsp-client-executor = {git = "https://github.com/succinctlabs/rsp.git", rev="c01149568a2ed4d3e766756e8b847c870a0b1e4e"}
+rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", rev = "c01149568a2ed4d3e766756e8b847c870a0b1e4e" }
 reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-20240830", default-features = false, features = [
     "alloy-compat",
     "optimism",
     "std",
 ] }
-celestia-types = {git="https://github.com/S1nus/lumina.git", rev="c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3"}
-celestia-rpc = {git="https://github.com/S1nus/lumina.git", rev="c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3"}
+celestia-types = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
+celestia-rpc = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
 tendermint-proto = "*"
 tendermint = "*"
 bincode = "1.3.3"
@@ -26,6 +20,7 @@ nmt-rs = "*"
 sp1-sdk = "4.0.1"
 sp1-zkvm = "4.0.1"
 sp1-helper = "4.0.1"
+sp1-build = "4.0.1"
 
 [patch.crates-io]
 ecdsa-core = { git = "https://github.com/sp1-patches/signatures", package = "ecdsa", tag = "patch-0.16.9-sp1-4.0.0" }
