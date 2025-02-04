@@ -12,6 +12,7 @@
 //! ```shell
 //! RUST_LOG=info cargo run --release -- --prove --mock
 //! ```
+use blevm_common::BlevmOutput;
 use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -84,7 +85,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("Executing...");
         let (public_values, execution_report) = prover.execute(input).await?;
         println!("Program executed successfully.");
-        println!("Public values: {:?}", public_values);
+
+        let output: BlevmOutput = bincode::deserialize(public_values.as_slice()).unwrap();
+        println!("{:?}", output);
         println!(
             "Number of cycles: {}",
             execution_report.total_instruction_count()

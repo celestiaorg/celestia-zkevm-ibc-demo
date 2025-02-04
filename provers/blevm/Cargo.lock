@@ -1167,8 +1167,17 @@ dependencies = [
 name = "blevm-mock"
 version = "0.1.0"
 dependencies = [
+ "alloy-sol-types 0.7.7",
+ "bincode",
  "blevm-common",
+ "celestia-types",
+ "hex",
+ "nmt-rs",
+ "reth-primitives",
+ "rsp-client-executor",
  "sp1-zkvm",
+ "tendermint",
+ "tendermint-proto",
 ]
 
 [[package]]
@@ -1198,6 +1207,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-sol-types 0.7.7",
  "bincode",
+ "blevm-common",
  "blevm-prover",
  "celestia-rpc",
  "celestia-types",
