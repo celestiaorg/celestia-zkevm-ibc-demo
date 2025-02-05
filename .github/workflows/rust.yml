@@ -26,7 +26,7 @@ jobs:
 
       - name: Run cargo fmt
         run: cargo fmt --check
-        working-directory: ./provers/celestia-prover/
+        working-directory: .
 
   lint-blevm:
     name: lint-blevm
