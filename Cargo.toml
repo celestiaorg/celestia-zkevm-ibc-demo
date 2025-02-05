@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "provers/celestia-prover",
-    "programs/sp1/mock-update-client",
-    "programs/sp1/mock-membership",
+    "provers/celestia-prover/prover",
+    "provers/celestia-prover/programs/sp1/mock-update-client",
+    "provers/celestia-prover/programs/sp1/mock-membership",
 ]
 resolver = "2"
 
