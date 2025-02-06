@@ -1,0 +1,106 @@
+services:
+  sovereign: # sov sdk is a zk rollup framework. This is a zk rollup image with an EVM module using celestia bridge
+    image: sovrollup:latest # this will be replaced with an image from ghcr
+    container_name: sovereign
+    volumes:
+      - ./testing/files/celestia_rollup_config.toml:/app/config/mock_rollup_config.toml
+      - ./testing/files/sovereign-genesis/celestia:/app/examples/test-data/genesis/celestia
+    depends_on:
+      celestia-network-validator:
+        condition: service_healthy
+      celestia-network-bridge:
+        condition: service_healthy
+    ports:
+      - "8545:8545"
+    networks:
+      - sov-network
+
+  celestia-network-validator:
+    image: ghcr.io/celestiaorg/celestia-app:v3.0.0-mocha
+    container_name: celestia-network-validator
+    volumes:
+      - ./.tmp/celestia-validator:/home/celestia
+      - ./testing/files/celestia-validator:/testapp_files
+    ports:
+      - "9090:9090"
+      - "26656:26656"
+      - "26657:26657"
+    entrypoint: /testapp_files/entrypoint.sh
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/bin/sh -c ''BLOCK_HEIGHT=$(curl -sf http://localhost:26657/status | jq -r .result.sync_info.latest_block_height); if [ "$$BLOCK_HEIGHT" -gt 1 ]; then exit 0; else echo "Block height too low: $$BLOCK_HEIGHT"; exit 1; fi''',
+        ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - sov-network
+
+  celestia-network-bridge:
+    image: ghcr.io/celestiaorg/celestia-node:v0.20.1-mocha
+    container_name: celestia-network-bridge
+    environment:
+      - P2P_NETWORK=private
+      - "CELESTIA_CUSTOM=private:BFCEC14C1A50F3549777ED9EF350A9D79BE826C7836CD4FBEFE9C9C4F61A111F"
+    volumes:
+      - ./testing/files/celestia-bridge:/testapp_files
+      - ./.tmp/celestia-bridge:/home/celestia
+    entrypoint: /testapp_files/entrypoint.sh
+    command: celestia bridge start --p2p.network private --core.ip celestia-network-validator --rpc.addr 0.0.0.0 --rpc.port 26658 --keyring.keyname bridge
+    ports:
+      - "26658:26658"
+      - "2121:2121"
+    depends_on:
+      celestia-network-validator:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'AUTH_TOKEN=$(celestia bridge auth read --node.store=/home/celestia 2>/dev/null | tail -n 1); OUTPUT=$(curl -sf --max-time 0.5 -X POST -H "Content-type: application/json" -H "Accept: application/json" -H "Authorization: Bearer $$AUTH_TOKEN" -d ''{"id":1,"jsonrpc":"2.0","method":"header.SyncWait","params":[]}'' http://0.0.0.0:26658); if [ $$? -eq 0 ]; then exit 0; else echo "Catching up. $$OUTPUT"; exit 1; fi ',
+        ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - sov-network
+
+  simapp-validator:
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp:latest
+    container_name: simapp-validator
+    volumes:
+      - ./.tmp/simapp-validator:/home/celestia
+      - ./testing/files/simapp-validator:/testapp_files
+    entrypoint: /testapp_files/entrypoint.sh
+    ports:
+      - "9190:9090"
+      - "5123:26657"
+    networks:
+      - sov-network
+
+  celestia-prover:
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
+    container_name: celestia-prover
+    environment:
+      # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
+      # for Celestia (with IBC Eurekea enabled).
+      - TENDERMINT_RPC_URL=http://simapp-validator:26657
+      - RPC_URL=http://reth:8545
+    ports:
+      - "50051:50051"
+    depends_on:
+      sovereign:
+        condition: service_started
+    networks:
+      - sov-network
+
+networks:
+  sov-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.0.0/24

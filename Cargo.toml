@@ -1,10 +1,8 @@
 [workspace]
 members = [
-    "provers/evm-prover",
-    "provers/celestia-prover",
-    "programs/sp1/mock-update-client",
-    "programs/sp1/mock-membership",
-    "provers/evm-prover",
+    "provers/celestia-prover/prover",
+    "provers/celestia-prover/programs/sp1/mock-update-client",
+    "provers/celestia-prover/programs/sp1/mock-membership",
 ]
 resolver = "2"
 
@@ -35,10 +33,10 @@ ibc-core-commitment-types = "0.56"
 sp1-sdk = { version = "4.0.1", default-features = false }
 tracing = { version = "0.1", default-features = false }
 sp1-helper = "4.0.1"
-
-ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/solidity", features = ["rpc"]}
-sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/prover"}
-sp1-ics07-tendermint-utils = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/utils"}
-
 celestia-types = {git="https://github.com/S1nus/lumina.git", rev="c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3"}
 celestia-rpc = {git="https://github.com/S1nus/lumina.git", rev="c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3"}
+ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", features = [
+    "rpc",
+] }
+sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main"}
+sp1-ics07-tendermint-utils = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main"}

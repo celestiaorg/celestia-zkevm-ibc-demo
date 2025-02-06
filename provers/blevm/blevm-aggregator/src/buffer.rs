@@ -23,6 +23,7 @@ impl Buffer {
         }
     }
 
+    #[allow(dead_code)]
     /// Set the position ptr to the beginning of the buffer.
     pub fn head(&mut self) {
         self.ptr = 0;
@@ -37,11 +38,13 @@ impl Buffer {
         result
     }
 
+    #[allow(dead_code)]
     pub fn read_slice(&mut self, slice: &mut [u8]) {
         slice.copy_from_slice(&self.data[self.ptr..self.ptr + slice.len()]);
         self.ptr += slice.len();
     }
 
+    #[allow(dead_code)]
     /// Write the serializable object from the buffer.
     pub fn write<T: Serialize>(&mut self, data: &T) {
         let mut tmp = Vec::new();
@@ -49,6 +52,7 @@ impl Buffer {
         self.data.extend(tmp);
     }
 
+    #[allow(dead_code)]
     /// Write the slice of bytes to the buffer.
     pub fn write_slice(&mut self, slice: &[u8]) {
         self.data.extend_from_slice(slice);

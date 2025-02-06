@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct BlevmOutput {
     pub blob_commitment: [u8; 32],
     pub header_hash: [u8; 32],

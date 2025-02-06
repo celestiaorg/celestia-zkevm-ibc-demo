@@ -25,8 +25,11 @@ bincode = { workspace = true }
 rsp-client-executor = { workspace = true }
 nmt-rs = { workspace = true }
 tokio = { version = "1", features = ["full"] }
-blevm-prover = { path = "../blevm-prover" }
 dotenv = "0.15.0"
+
+blevm-prover = { path = "../blevm-prover" }
+blevm-common = {path = "../common"}
 
 [build-dependencies]
 sp1-helper = { workspace = true }
+sp1-build = { workspace = true }

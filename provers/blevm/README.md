@@ -64,18 +64,27 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     ```shell
     # Change to the correct directory
     cd celestia-zkevm-ibc-demo/provers/blevm/script
-    # Run the script
-    cargo run
+
+    # Execute blevm mock
+    RUST_LOG=info cargo run --release -- --execute --mock
+    # Execute blevm
+    RUST_LOG=info cargo run --release -- --execute
+    # Generate a mock proof
+    RUST_LOG=info cargo run --release -- --prove --mock
+    # Generate a real proof
+    RUST_LOG=info cargo run --release -- --prove
     ```
 
-4. [Optional] To generate a `blevm-mock` proof, modify `script/src/bin/main.rs` with the diff below then run the script again.
+### Development
 
-    ```diff
-    let prover_config = ProverConfig {
-    -   elf_bytes: include_elf!("blevm"),
-    +   elf_bytes: include_elf!("blevm-mock"),
-    };
-    ```
+While developing SP1 programs (i.e. `blevm`, `blevm-mock`, `blevm-aggregate`) it is helpful to generate [development builds](https://docs.succinct.xyz/docs/writing-programs/compiling#development-builds):
+
+```shell
+# Change to an SP1 program crate
+cd blevm-mock
+# Build for development
+cargo prove build
+```
 
 also modify the build.rs with current diff:
 
@@ -84,6 +93,7 @@ also modify the build.rs with current diff:
 
 How long does it take to generate a proof?
 
-| Proof | Time      | SP1_PROVER |
-|-------|-----------|------------|
-| blevm | 6 minutes | network    |
+| SP1_PROVER | Program    | Time       |
+|------------|------------|------------|
+| network    | blevm-mock | 30 seconds |
+| network    | blevm      | 6 minutes  |

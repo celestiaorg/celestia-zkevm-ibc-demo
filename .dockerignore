@@ -1,4 +1,6 @@
 .tmp
 build
-/target
 *.bin
+
+# Ignore all target directories
+**/target/
