@@ -27,7 +27,7 @@ use ethers::{
     types::BlockNumber,
 };
 
-use ibc_proto::ibc::core::client::v1::query_client::QueryClient as ClientQueryClient;
+// use ibc_proto::ibc::core::client::v2::query_client::QueryClient as ClientQueryClient;
 
 /// The ELF file for the Succinct RISC-V zkVM.
 const BLEVM_ELF: &[u8] = include_elf!("blevm-mock");
@@ -36,7 +36,7 @@ pub struct ProverService {
     evm_client: Provider<Http>,
     sp1_prover: EnvProver,
     sp1_proving_key: SP1ProvingKey,
-    simapp_client: ClientQueryClient<tonic::transport::Channel>,
+    // simapp_client: ClientQueryClient<tonic::transport::Channel>,
     namespace: Namespace,
 }
 
@@ -55,7 +55,7 @@ impl ProverService {
         let evm_rpc = env::var("RPC_URL").expect("evm RPC_URL not provided");
         let evm_client = Provider::try_from(evm_rpc)?;
         let simapp_rpc = env::var("SIMAPP_RPC_URL").expect("SIMAPP_RPC_URL not provided");
-        let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
+        // let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
         let sp1_prover = ProverClient::from_env();
         let (pk, _) = sp1_prover.setup(&BLEVM_ELF);
 
@@ -64,7 +64,7 @@ impl ProverService {
             evm_client,
             sp1_prover: sp1_prover,
             sp1_proving_key: pk,
-            simapp_client,
+            // simapp_client,
             namespace,
         })
     }
@@ -83,23 +83,23 @@ impl ProverService {
     }
 
     async fn get_trusted_height(&self, client_id: &str) -> Result<u64, Status> {
-        let request = tonic::Request::new(QueryClientStateRequest {
-            client_id: client_id.to_string(),
-        });
+        // let request = tonic::Request::new(QueryClientStateRequest {
+        //     client_id: client_id.to_string(),
+        // });
 
-        let response = self
-            .simapp_client
-            .clone()
-            .client_state(request)
-            .await?
-            .into_inner();
+        // let response = self
+        //     // .simapp_client
+        //     .clone()
+        //     .client_state(request)
+        //     .await?
+        //     .into_inner();
 
-        let client_state_json = response
-            .client_state
-            .ok_or_else(|| Status::internal("Failed to query client state"))?;
-        let client_state = ClientState::decode(client_state_json.value.as_slice())
-            .map_err(|e| Status::internal(format!("Failed to decode client state: {}", e)))?;
-        Ok(client_state.latest_height)
+        // let client_state_json = response
+        //     .client_state
+        //     .ok_or_else(|| Status::internal("Failed to query client state"))?;
+        // let client_state = ClientState::decode(client_state_json.value.as_slice())
+        //     .map_err(|e| Status::internal(format!("Failed to decode client state: {}", e)))?;
+        // Ok(client_state.latest_height)
     }
 }
 
