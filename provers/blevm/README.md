@@ -86,6 +86,9 @@ cd blevm-mock
 cargo prove build
 ```
 
+also modify the build.rs with current diff:
+
+
 ## FAQ
 
 How long does it take to generate a proof?
