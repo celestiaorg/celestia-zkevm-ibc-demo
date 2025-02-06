@@ -5,24 +5,21 @@ The EVM Prover is a gRPC service that generates zero-knowledge proofs for EVM st
 ## Usage
 
 > [!WARNING]
-> This gRPC service is still under development and may not work as described
+> This gRPC service is still under development and may not lack some features or not work as described.
 
-To run the server you will need to clone the repo and install rust and cargo. To run the node you also need to set the following environment variables:
-
-- `CELESTIA_NODE_AUTH_TOKEN` - the auth token for the celestia node you are connecting to.
-- `RPC_URL` - the json rpc url of the evm chain you are generating the proofs for.
-- `SIMAPP_RPC_URL` - the grpc url of the simapp chain you are generating the proofs for.
-- `SP1_ELF_blevm` - the path to the ELF file for the Succinct RISC-V zkVM.
-- `CELESTIA_NAMESPACE` - the namespace of the rollup on celestia node you are connecting to.
+Before running this program, please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md).
 
 To then run the server (on port `:50051`):
 
-```
-cargo run
-```
+    ```shell
+    cargo run
+    ```
 
-To use the SP1 Prover Network you should also populate the `SP1_PROVER` and `SP1_PRIVATE_KEY` environment variables. You can also use a `.env` file for all environment variables
+The only endpoint currently working is:
 
+    ```shell
+    grpcurl -plaintext localhost:50051 celestia.prover.v1.Prover/Info
+    ```
 
 ## Protobuf
 
