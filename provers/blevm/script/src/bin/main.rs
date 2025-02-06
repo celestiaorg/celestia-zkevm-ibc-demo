@@ -69,14 +69,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let namespace_hex =
         std::env::var("CELESTIA_NAMESPACE").expect("CELESTIA_NAMESPACE must be set");
     let namespace = Namespace::new_v0(&hex::decode(namespace_hex)?)?;
-
-    let prover_config = ProverConfig {
-        elf_bytes: include_elf!("blevm"),
-        // Uncomment the next line to generate a mock proof.
-        // elf_bytes: include_elf!("blevm-mock"),
-    };
-
-    // Initialize the prover service
     let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
 
     let prover = BlockProver::new(celestia_client, prover_config);
