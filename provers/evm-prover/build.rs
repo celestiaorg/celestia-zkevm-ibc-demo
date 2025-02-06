@@ -1,3 +1,5 @@
+use sp1_helper::build_program_with_args;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_server(true)
@@ -9,5 +11,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ],
             &["../../proto"],
         )?;
+    build_program_with_args("../blevm/blevm-mock", Default::default());
     Ok(())
 }

@@ -77,6 +77,9 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     };
     ```
 
+also modify the build.rs with current diff:
+
+
 ## FAQ
 
 How long does it take to generate a proof?

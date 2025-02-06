@@ -19,7 +19,7 @@ alloy-provider = { workspace = true }
 celestia-types = {workspace=true}
 celestia-rpc = {workspace=true}
 ibc-eureka-solidity-types.workspace = true
-sp1-sdk = { workspace = true }
+sp1-sdk = { workspace = true, features = ["network"] }
 rsp-client-executor = { workspace = true }
 sp1-ics07-tendermint-prover.workspace = true
 sp1-ics07-tendermint-utils.workspace = true
@@ -31,3 +31,4 @@ serde = "1.0.217"
 prost-types = "0.13.4"
 [build-dependencies]
 tonic-build.workspace = true
+sp1-helper = "4.0.1"

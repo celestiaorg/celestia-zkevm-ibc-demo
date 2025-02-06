@@ -34,6 +34,7 @@ ibc-client-tendermint-types = "0.56"
 ibc-core-commitment-types = "0.56"
 sp1-sdk = { version = "4.0.1", default-features = false }
 tracing = { version = "0.1", default-features = false }
+sp1-helper = "4.0.1"
 
 ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/solidity", features = ["rpc"]}
 sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", branch = "main", subdir = "packages/prover"}
