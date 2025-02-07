@@ -66,13 +66,13 @@ func InitializeGroth16LightClientOnSimapp() error {
 func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
 	// Query the info endpoint for the state transition verifier key
 	// Membership proofs are currently not supported
-	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
 	}
 	defer conn.Close()
 
-	fmt.Printf("Getting celestia prover info...\n")
+	fmt.Printf("Getting evm prover info...\n")
 	proverClient := proverclient.NewProverClient(conn)
 	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
 	if err != nil {
