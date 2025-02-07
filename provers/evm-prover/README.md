@@ -9,7 +9,7 @@ The EVM Prover is a gRPC service that generates zero-knowledge proofs for EVM st
 
 Before running this program, please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md).
 
-To then run the server (on port `:50051`):
+To then run the server (on port `:50052`):
 
     ```shell
     cargo run
@@ -18,7 +18,7 @@ To then run the server (on port `:50051`):
 The only endpoint currently working is:
 
     ```shell
-    grpcurl -plaintext localhost:50051 celestia.prover.v1.Prover/Info
+    grpcurl -plaintext localhost:50052 celestia.prover.v1.Prover/Info
     ```
 
 ## Protobuf
