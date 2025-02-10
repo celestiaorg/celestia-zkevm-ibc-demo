@@ -115,7 +115,7 @@ services:
       # for Celestia (with IBC Eurekea enabled).
       - TENDERMINT_RPC_URL=http://simapp-validator:26657
       - RPC_URL=http://reth:8545
-      - PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+      - CELESTIA_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
     ports:
       - "50051:50051"
     depends_on:
@@ -125,16 +125,16 @@ services:
       - rollkit-network
 
   evm-prover:
-    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
-    container_name: celestia-prover
+    image: evmprover:latest
+    container_name: evm-prover
     environment:
       # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
       # for Celestia (with IBC Eurekea enabled).
       - TENDERMINT_RPC_URL=http://simapp-validator:26657
       - RPC_URL=http://reth:8545
-      - PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+      - EVM_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
     ports:
-      - "50051:50051"
+      - "50052:50052"
     depends_on:
       beacond:
         condition: service_started
