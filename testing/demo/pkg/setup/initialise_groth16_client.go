@@ -2,17 +2,22 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
+	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
@@ -59,10 +64,30 @@ func InitializeGroth16LightClientOnSimapp() error {
 }
 
 func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
-	// TODO: this clientState isn't created with a state transition verifier key or state inclusion verifier key.
-	// Query the EVM prover for the verifier keys
-	// See: https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/proto/prover/v1/prover.proto#L16-L20
-	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
+	// Query the info endpoint for the state transition verifier key
+	// Membership proofs are currently not supported
+	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
+	}
+	defer conn.Close()
+
+	fmt.Printf("Getting evm prover info...\n")
+	proverClient := proverclient.NewProverClient(conn)
+	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get evm prover info %w", err)
+	}
+	fmt.Printf("Got evm prover info. StateTransitionVerifierKey: %v", info.StateTransitionVerifierKey)
+	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to decode verifier key %w", err)
+	}
+	// Q: Do we still need the fixed size of 32 bytes considering the verifier key is of type []byte?
+	// var verifierKey [32]byte
+	// copy(verifierKey[:], verifierKeyDecoded)
+
+	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), verifierKeyDecoded, []byte{}, []byte{}, genesisBlock.Root().Bytes())
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create client state any: %v", err)

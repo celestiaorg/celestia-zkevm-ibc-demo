@@ -2064,6 +2064,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "evm-prover"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-provider",
+ "anyhow",
+ "bincode",
+ "dotenv",
+ "futures",
+ "ibc-client-tendermint-types",
+ "ibc-core-commitment-types",
+ "ibc-eureka-solidity-types",
+ "ibc-proto 0.51.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "prost",
+ "prost-types",
+ "reqwest 0.12.12",
+ "serde",
+ "sp1-helper",
+ "sp1-ics07-tendermint-prover",
+ "sp1-ics07-tendermint-utils",
+ "sp1-sdk",
+ "tendermint-rpc",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tonic-reflection",
+]
+
+[[package]]
 name = "eyre"
 version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
