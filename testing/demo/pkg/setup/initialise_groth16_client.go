@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
-	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -29,7 +26,7 @@ import (
 const relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 
 func InitializeGroth16LightClientOnSimapp() error {
-	fmt.Println("Initializing the Groth16 light client on simapp...")
+	fmt.Println("Creating the Groth16 light client on simapp...")
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
@@ -72,22 +69,7 @@ func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*
 	}
 	defer conn.Close()
 
-	fmt.Printf("Getting evm prover info...\n")
-	proverClient := proverclient.NewProverClient(conn)
-	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get evm prover info %w", err)
-	}
-	fmt.Printf("Got evm prover info. StateTransitionVerifierKey: %v", info.StateTransitionVerifierKey)
-	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to decode verifier key %w", err)
-	}
-	// Q: Do we still need the fixed size of 32 bytes considering the verifier key is of type []byte?
-	// var verifierKey [32]byte
-	// copy(verifierKey[:], verifierKeyDecoded)
-
-	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), verifierKeyDecoded, []byte{}, []byte{}, genesisBlock.Root().Bytes())
+	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create client state any: %v", err)
@@ -142,7 +124,7 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 		return "", fmt.Errorf("failed to parse client id from events: %v", err)
 	}
 
-	fmt.Printf("Created Groth16 client with clientId %v on simapp.\n", clientId)
+	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 	return clientId, nil
 }
 
