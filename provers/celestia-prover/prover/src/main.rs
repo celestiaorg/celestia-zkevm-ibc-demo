@@ -73,30 +73,46 @@ impl Prover for ProverService {
         let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
             Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
         })?;
+        println!("client_id: {:?}", client_id);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_http(self.evm_rpc_url.clone());
-        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("provider: {:?}", provider);
 
-        let client_state: ClientState = contract
-            .clientState()
+        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("contract: {:?}", contract);
+
+        // Fetch the client state as Bytes
+        let client_state_bytes = contract
+            .getClientState()
             .call()
             .await
-            .map_err(|e| Status::internal(e.to_string()))?
-            .into();
+            .map_err(|e| Status::internal(e.to_string()))?;
+            // ._0;
+        println!("client_state_bytes: {:?}", client_state_bytes._0);
+
+        // let client_state = ClientState::decode(client_state_bytes);
+        // let client_state: ClientState = IICS07TendermintMsgs.ClientState.decode(&client_state_bytes._0).unwrap();
+
+        let client_state: ClientState = ClientState{ chainId: todo!(), trustLevel: todo!(), latestHeight: todo!(), trustingPeriod: todo!(), unbondingPeriod: todo!(), isFrozen: todo!(), zkAlgorithm: todo!() };
+        // println!("client_state chainId: {:?}", client_state.chainId);
+
         // fetch the light block at the latest height of the client state
         let trusted_light_block = self
             .tendermint_rpc_client
             .get_light_block(Some(client_state.latestHeight.revisionHeight))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+        println!("trusted_light_block: {:?}", trusted_light_block);
+
         // fetch the latest light block
         let target_light_block = self
             .tendermint_rpc_client
             .get_light_block(None)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+        println!("target_light_block: {:?}", target_light_block);
 
         let trusted_consensus_state: ConsensusState =
             trusted_light_block.to_consensus_state().into();
