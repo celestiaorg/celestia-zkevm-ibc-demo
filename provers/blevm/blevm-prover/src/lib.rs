@@ -12,7 +12,10 @@ use nmt_rs::{
     TmSha2Hasher,
 };
 use rsp_client_executor::io::ClientExecutorInput;
-use sp1_sdk::{ExecutionReport, ProverClient, SP1PublicValues, SP1Stdin};
+use sp1_sdk::{
+    ExecutionReport, ProverClient, SP1ProofWithPublicValues, SP1PublicValues, SP1Stdin,
+    SP1VerifyingKey,
+};
 use std::error::Error;
 use tendermint_proto::{
     v0_37::{types::BlockId as RawBlockId, version::Consensus as RawConsensusVersion},
@@ -30,7 +33,13 @@ pub struct ProverConfig {
     pub elf_bytes: &'static [u8],
 }
 
+/// Configuration for the aggregator
+pub struct AggregatorConfig {
+    pub elf_bytes: &'static [u8],
+}
+
 /// Input data for block proving
+#[derive(Clone)]
 pub struct BlockProverInput {
     pub block_height: u64,
     pub l2_block_data: Vec<u8>,
@@ -177,13 +186,19 @@ pub fn generate_row_proofs(
 pub struct BlockProver {
     celestia_client: CelestiaClient,
     prover_config: ProverConfig,
+    aggregator_config: AggregatorConfig,
 }
 
 impl BlockProver {
-    pub fn new(celestia_client: CelestiaClient, prover_config: ProverConfig) -> Self {
+    pub fn new(
+        celestia_client: CelestiaClient,
+        prover_config: ProverConfig,
+        aggregator_config: AggregatorConfig,
+    ) -> Self {
         Self {
             celestia_client,
             prover_config,
+            aggregator_config,
         }
     }
 
@@ -237,13 +252,88 @@ impl BlockProver {
         Ok((public_values, execution_report))
     }
 
-    pub async fn generate_proof(&self, input: BlockProverInput) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub async fn generate_proof(
+        &self,
+        input: BlockProverInput,
+    ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey), Box<dyn Error>> {
         // Generate and return the proof
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
-        let (pk, _) = client.setup(self.prover_config.elf_bytes);
+        let (pk, vk) = client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
         let proof = client.prove(&pk, &stdin).groth16().run()?;
+        Ok((proof, vk))
+    }
+}
 
-        bincode::serialize(&proof).map_err(|e| e.into())
+/// Input for proof aggregation
+pub struct AggregationInput {
+    pub proof: SP1ProofWithPublicValues,
+    pub vk: SP1VerifyingKey,
+}
+
+/// Output from proof aggregation
+pub struct AggregationOutput {
+    /// The aggregated proof
+    pub proof: SP1ProofWithPublicValues,
+}
+
+impl BlockProver {
+    /// Aggregates multiple proofs into a single proof
+    pub async fn aggregate_proofs(
+        &self,
+        inputs: Vec<AggregationInput>,
+    ) -> Result<AggregationOutput, Box<dyn Error>> {
+        if inputs.len() < 2 {
+            return Err("Must provide at least 2 proofs to aggregate".into());
+        }
+
+        // Create stdin for the aggregator
+        let mut stdin = SP1Stdin::new();
+
+        // Write number of proofs
+        stdin.write(&inputs.len());
+
+        // Write all verification keys first
+        for input in &inputs {
+            stdin.write(&input.vk);
+        }
+
+        // Then write all public values
+        for input in &inputs {
+            stdin.write_vec(input.proof.public_values.to_vec());
+        }
+
+        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+
+        // Generate the aggregated proof
+        let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
+        let proof = client.prove(&pk, &stdin).groth16().run()?;
+
+        Ok(AggregationOutput { proof })
+    }
+
+    /// Proves a range of blocks and aggregates their proofs
+    pub async fn prove_block_range(
+        &self,
+        inputs: Vec<BlockProverInput>,
+    ) -> Result<AggregationOutput, Box<dyn Error>> {
+        if inputs.len() < 2 {
+            return Err("Must provide at least 2 proofs to aggregate".into());
+        }
+
+        // Generate proofs and collect verifying keys
+        let mut agg_inputs = Vec::with_capacity(inputs.len());
+
+        for input in inputs {
+            let (proof, vk) = self.generate_proof(input).await?;
+
+            agg_inputs.push(AggregationInput {
+                proof,
+                vk: vk.clone(),
+            });
+        }
+
+        // Aggregate the proofs
+        self.aggregate_proofs(agg_inputs).await
     }
 }
