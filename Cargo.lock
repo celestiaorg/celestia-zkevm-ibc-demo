@@ -1606,7 +1606,6 @@ dependencies = [
  "prost",
  "serde",
  "tendermint-proto",
- "tonic",
 ]
 
 [[package]]
@@ -2892,7 +2891,6 @@ dependencies = [
  "serde",
  "subtle-encoding",
  "tendermint-proto",
- "tonic",
 ]
 
 [[package]]

@@ -125,7 +125,7 @@ services:
       - rollkit-network
 
   evm-prover:
-    image: evmprover:latest
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover:latest
     container_name: evm-prover
     environment:
       # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
