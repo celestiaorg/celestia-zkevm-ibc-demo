@@ -12,7 +12,7 @@ import (
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -20,7 +20,8 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/srdtrk/solidity-ibc-eureka/e2e/v8/ethereum"
+
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -55,7 +56,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	icsCore, err := icscore.NewContract(ethcommon.HexToAddress(addresses.ICSCore), ethClient)
+	icsClient, err := ics02client.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
 	if err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ func updateTendermintLightClient() error {
 	}
 
 	fmt.Printf("Invoking icsCore.UpdateClient...\n")
-	tx, err := icsCore.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
+	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
 	if err != nil {
 		return err
 	}
