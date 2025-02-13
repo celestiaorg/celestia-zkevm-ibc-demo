@@ -31,12 +31,12 @@ sp1-sdk = { version = "4.0.1", default-features = false }
 tracing = { version = "0.1", default-features = false }
 
 ibc-proto = { version = "0.51", default-features = false }
-ibc-proto-eureka = { package = "ibc-proto", git = "https://github.com/srdtrk/ibc-proto-rs", branch = "feat/ibc-eureka", default-features = false }
+ibc-proto-eureka = { package = "ibc-proto", git = "https://github.com/srdtrk/ibc-proto-rs", rev = "9f550f7a582f09ee82bdf58a416631715e15bad7", default-features = false }
 
 # The rev in the following dependencies should match the commit used by the
 # solidity-ibc-eureka submodule in this repo.
-sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "242c9ab" }
-sp1-ics07-tendermint-utils = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "242c9ab" }
-ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "242c9ab", features = [
+sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "b241dc76" }
+sp1-ics07-tendermint-utils = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "b241dc76" }
+ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "b241dc76", features = [
     "rpc",
 ] }
