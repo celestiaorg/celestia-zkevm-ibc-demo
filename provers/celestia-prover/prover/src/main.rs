@@ -89,13 +89,21 @@ impl Prover for ProverService {
             .call()
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-            // ._0;
+        // ._0;
         println!("client_state_bytes: {:?}", client_state_bytes._0);
 
         // let client_state = ClientState::decode(client_state_bytes);
         // let client_state: ClientState = IICS07TendermintMsgs.ClientState.decode(&client_state_bytes._0).unwrap();
 
-        let client_state: ClientState = ClientState{ chainId: todo!(), trustLevel: todo!(), latestHeight: todo!(), trustingPeriod: todo!(), unbondingPeriod: todo!(), isFrozen: todo!(), zkAlgorithm: todo!() };
+        let client_state: ClientState = ClientState {
+            chainId: todo!(),
+            trustLevel: todo!(),
+            latestHeight: todo!(),
+            trustingPeriod: todo!(),
+            unbondingPeriod: todo!(),
+            isFrozen: todo!(),
+            zkAlgorithm: todo!(),
+        };
         // println!("client_state chainId: {:?}", client_state.chainId);
 
         // fetch the light block at the latest height of the client state
