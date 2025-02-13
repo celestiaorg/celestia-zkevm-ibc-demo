@@ -1,3 +1,4 @@
+use alloy_sol_types::SolType;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
 use sp1_sdk::HashableKey;
 use std::env;
@@ -88,23 +89,13 @@ impl Prover for ProverService {
             .getClientState()
             .call()
             .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            ._0;
+        println!("client_state_bytes: {:?}", client_state_bytes);
+
+        let client_state = ClientState::abi_decode(&client_state_bytes, true)
             .map_err(|e| Status::internal(e.to_string()))?;
-        // ._0;
-        println!("client_state_bytes: {:?}", client_state_bytes._0);
-
-        // let client_state = ClientState::decode(client_state_bytes);
-        // let client_state: ClientState = IICS07TendermintMsgs.ClientState.decode(&client_state_bytes._0).unwrap();
-
-        let client_state: ClientState = ClientState {
-            chainId: todo!(),
-            trustLevel: todo!(),
-            latestHeight: todo!(),
-            trustingPeriod: todo!(),
-            unbondingPeriod: todo!(),
-            isFrozen: todo!(),
-            zkAlgorithm: todo!(),
-        };
-        // println!("client_state chainId: {:?}", client_state.chainId);
+        println!("client_state chainId: {:?}", client_state.chainId);
 
         // fetch the light block at the latest height of the client state
         let trusted_light_block = self
