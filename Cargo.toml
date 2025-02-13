@@ -20,15 +20,16 @@ tonic-reflection = "0.12"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 prost = "0.13"
 reqwest = { version = "0.12", features = ["json"] }
-alloy = { version = "0.9.2", features = ["providers"] }
-alloy-primitives = "0.9.2"
-alloy-provider = { version = "0.9.2", features = ["default"] }
-alloy-sol-types = { version = "0.8.0", default-features = false }
 tendermint-rpc = "0.40"
 ibc-client-tendermint-types = "0.56"
 ibc-core-commitment-types = "0.56"
 sp1-sdk = { version = "4.0.1", default-features = false }
 tracing = { version = "0.1", default-features = false }
+
+alloy = { version = "0.9.2", default-features = false }
+alloy-primitives = { version = "0.9.2", default-features = false }
+alloy-provider = { version = "0.9.2", default-features = false }
+alloy-sol-types = { version = "0.8.0", default-features = false }
 
 ibc-proto = { version = "0.51", default-features = false }
 ibc-proto-eureka = { package = "ibc-proto", git = "https://github.com/srdtrk/ibc-proto-rs", rev = "9f550f7a582f09ee82bdf58a416631715e15bad7", default-features = false }
