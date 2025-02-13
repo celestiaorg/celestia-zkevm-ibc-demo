@@ -25,7 +25,7 @@ use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
 use ibc_core_commitment_types::merkle::MerkleProof;
 use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
-use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
@@ -113,9 +113,12 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
         println!("target_light_block: {:?}", target_light_block);
 
-        let trusted_consensus_state: ConsensusState =
+        let trusted_consensus_state: SolConsensusState =
             trusted_light_block.to_consensus_state().into();
+        println!("trusted_consensus_state: {:?}", trusted_consensus_state);
+
         let proposed_header = target_light_block.into_header(&trusted_light_block);
+        println!("proposed_header: {:?}", proposed_header);
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
