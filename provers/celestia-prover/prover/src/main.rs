@@ -1,4 +1,5 @@
-use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ClientState;
+use alloy_sol_types::SolType;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
@@ -23,8 +24,8 @@ use celestia_prover::{
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
 use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ConsensusState;
 use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
@@ -73,34 +74,51 @@ impl Prover for ProverService {
         let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
             Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
         })?;
+        println!("client_id: {:?}", client_id);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_http(self.evm_rpc_url.clone());
-        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("provider: {:?}", provider);
 
-        let client_state: ClientState = contract
-            .clientState()
+        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("contract: {:?}", contract);
+
+        // Fetch the client state as Bytes
+        let client_state_bytes = contract
+            .getClientState()
             .call()
             .await
             .map_err(|e| Status::internal(e.to_string()))?
-            .into();
+            ._0;
+        println!("client_state_bytes: {:?}", client_state_bytes);
+
+        let client_state = ClientState::abi_decode(&client_state_bytes, true)
+            .map_err(|e| Status::internal(e.to_string()))?;
+        println!("client_state chainId: {:?}", client_state.chainId);
+
         // fetch the light block at the latest height of the client state
         let trusted_light_block = self
             .tendermint_rpc_client
             .get_light_block(Some(client_state.latestHeight.revisionHeight))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+        println!("trusted_light_block: {:?}", trusted_light_block);
+
         // fetch the latest light block
         let target_light_block = self
             .tendermint_rpc_client
             .get_light_block(None)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+        println!("target_light_block: {:?}", target_light_block);
 
-        let trusted_consensus_state: ConsensusState =
+        let trusted_consensus_state: SolConsensusState =
             trusted_light_block.to_consensus_state().into();
+        println!("trusted_consensus_state: {:?}", trusted_consensus_state);
+
         let proposed_header = target_light_block.into_header(&trusted_light_block);
+        println!("proposed_header: {:?}", proposed_header);
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

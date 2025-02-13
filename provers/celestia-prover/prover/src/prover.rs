@@ -4,7 +4,7 @@ use crate::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
 use alloy_sol_types::SolValue;
 use ibc_client_tendermint_types::Header;
 use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::{
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::{
     ClientState as SolClientState, ConsensusState as SolConsensusState,
 };
 use ibc_proto::Protobuf;
