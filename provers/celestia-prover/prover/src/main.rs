@@ -1,4 +1,4 @@
-use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ClientState;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
@@ -23,8 +23,8 @@ use celestia_prover::{
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
 use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::ConsensusState;
 use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;

@@ -9,10 +9,10 @@ sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolValue;
 use ibc_client_tendermint_types::{ConsensusState, Header};
-use ibc_eureka_solidity_types::msgs::IICS07TendermintMsgs::{
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::{
     ClientState as SolClientState, ConsensusState as SolConsensusState,
 };
-use ibc_eureka_solidity_types::msgs::IUpdateClientMsgs::UpdateClientOutput;
+use ibc_eureka_solidity_types::sp1_ics07::IUpdateClientMsgs::UpdateClientOutput;
 
 /// The main function of the program.
 ///
