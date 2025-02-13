@@ -16,6 +16,7 @@ use sp1_sdk::{
 use std::error::Error;
 
 /// Configuration for the Celestia client
+#[derive(Clone)]
 pub struct CelestiaConfig {
     pub node_url: String,
     pub auth_token: String,
