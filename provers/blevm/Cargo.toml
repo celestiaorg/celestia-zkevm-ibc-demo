@@ -1,5 +1,5 @@
 [workspace]
-members = ["blevm", "blevm-mock", "script", "blevm-aggregator", "common"]
+members = ["blevm", "blevm-mock", "script", "blevm-aggregator", "common", "blevm-aggregator-mock"]
 resolver = "2"
 
 [workspace.dependencies]
