@@ -20,6 +20,7 @@ use tendermint_proto::{
 };
 
 /// Configuration for the Celestia client
+#[derive(Clone)]
 pub struct CelestiaConfig {
     pub node_url: String,
     pub auth_token: String,
