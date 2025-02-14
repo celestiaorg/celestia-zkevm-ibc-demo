@@ -23,8 +23,8 @@ RUN $SP1_DIR/bin/sp1up
 WORKDIR /celestia_zkevm_ibc_demo/
 COPY . .
 
-# Build release binary
-RUN cargo build --release
+# Build evm-prover release binary
+RUN cargo build --release --bin evm-prover
 
 # Runtime stage
 FROM debian:bookworm-slim
