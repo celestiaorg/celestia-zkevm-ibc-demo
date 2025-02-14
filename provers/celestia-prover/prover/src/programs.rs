@@ -1,8 +1,7 @@
 //! Programs for `sp1-ics07-tendermint`.
 
-// use sp1_sdk::{MockProver, Prover, SP1VerifyingKey};
 pub use sp1_ics07_tendermint_prover::programs::SP1Program;
-// use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, MembershipProgram};
+use sp1_sdk::include_elf;
 
 /// SP1 ICS07 Tendermint update client program.
 pub struct UpdateClientProgram;
@@ -11,9 +10,9 @@ pub struct UpdateClientProgram;
 pub struct MembershipProgram;
 
 impl SP1Program for UpdateClientProgram {
-    const ELF: &'static [u8] = include_bytes!("../../elf/mock-update-client-elf");
+    const ELF: &[u8] = include_elf!("mock-membership");
 }
 
 impl SP1Program for MembershipProgram {
-    const ELF: &'static [u8] = include_bytes!("../../elf/mock-membership-elf");
+    const ELF: &[u8] = include_elf!("mock-update-client");
 }
