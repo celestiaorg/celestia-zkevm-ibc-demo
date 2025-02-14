@@ -10,3 +10,4 @@ sp1-zkvm = "4.0.1"
 ibc-client-tendermint-types = { workspace = true }
 ibc-eureka-solidity-types = { workspace = true }
 alloy-sol-types = "0.8.15"
+ibc-client-tendermint       = { version = "0.56", default-features = false }
