@@ -1,3 +1,5 @@
+use sp1_build::build_program;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_server(true)
@@ -6,5 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &["../../../proto/prover/v1/prover.proto"],
             &["../../../proto"],
         )?;
+    build_program("../programs/sp1/mock-membership");
+    build_program("../programs/sp1/mock-update-client");
     Ok(())
 }

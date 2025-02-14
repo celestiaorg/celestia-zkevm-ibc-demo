@@ -1431,6 +1431,7 @@ dependencies = [
  "prost",
  "reqwest 0.12.12",
  "serde_cbor",
+ "sp1-build",
  "sp1-ics07-tendermint-prover",
  "sp1-ics07-tendermint-utils",
  "sp1-prover",
