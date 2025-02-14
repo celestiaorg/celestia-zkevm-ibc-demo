@@ -1,6 +1,9 @@
 //! Prover for SP1 ICS07 Tendermint programs.
 
+// These are the empty programs.
 use crate::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
+// Comment this out to use real programs.
+// use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, SP1Program, MembershipProgram};
 use alloy_sol_types::SolValue;
 use ibc_client_tendermint_types::Header;
 use ibc_core_commitment_types::merkle::MerkleProof;

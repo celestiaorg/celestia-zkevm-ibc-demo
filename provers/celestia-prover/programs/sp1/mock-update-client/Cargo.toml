@@ -12,3 +12,6 @@ sp1-zkvm = { version = "4.0.1" }
 
 serde = { version = "1.0" }
 serde_cbor = { version = "0.11.2" }
+ibc-eureka-solidity-types = { workspace = true }
+alloy-sol-types = "0.8.15"
+ibc-client-tendermint       = { version = "0.56", default-features = false }

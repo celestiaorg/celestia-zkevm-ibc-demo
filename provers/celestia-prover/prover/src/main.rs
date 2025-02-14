@@ -20,6 +20,7 @@ use celestia_prover::{
     programs::{MembershipProgram, UpdateClientProgram},
     prover::{SP1ICS07TendermintProver, SupportedProofType},
 };
+// use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, MembershipProgram};
 
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
@@ -29,7 +30,6 @@ use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState a
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use tendermint_rpc::HttpClient;
-// use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, MembershipProgram};
 
 
 pub struct ProverService {
