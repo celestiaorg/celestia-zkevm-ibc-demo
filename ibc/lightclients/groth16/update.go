@@ -17,10 +17,7 @@ import (
 )
 
 // VerifyClientMessage checks if the clientMessage is of type Header
-func (cs *ClientState) VerifyClientMessage(
-	ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore,
-	clientMsg exported.ClientMessage,
-) error {
+func (cs *ClientState) VerifyClientMessage(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) error {
 	switch msg := clientMsg.(type) {
 	case *Header:
 		return cs.verifyHeader(ctx, clientStore, cdc, msg)
@@ -29,8 +26,7 @@ func (cs *ClientState) VerifyClientMessage(
 	}
 }
 
-func (cs *ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec,
-	header *Header) error {
+func (cs *ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec, header *Header) error {
 	// sdkCtx := sdk.UnwrapSDKContext(ctx) // TODO: https://github.com/cosmos/ibc-go/issues/5917
 
 	// get consensus state from clientStore for trusted height
