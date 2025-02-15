@@ -102,26 +102,6 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make stop
     ```
 
-### Run a demo with Sov SDK Rollup using Celestia DA
-
-1. Clone the repo with dockerized Sov SDK rollup:
-
-```shell
-git clone https://github.com/ninabarbakadze/sovereign-sdk-wip
-```
-
-1. Build the image:
-
-```shell
-docker build -t sovrollup -f docker/sov-demo-rollup/Dockerfile .
-```
-
-1. Run the docker compose script to spin up a local dev environment and see that sovereign is producing blocks:
-
-```shell
-docker compose -f docker-compose.sov.yml up -d
-```
-
 ## A Breakdown of an IBC Transfer
 
 This section takes the diagram from above and breaks down each step during `make transfer` to help aid your understanding.
