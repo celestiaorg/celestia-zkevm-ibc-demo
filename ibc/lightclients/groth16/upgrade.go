@@ -12,7 +12,6 @@ import (
 // VerifyUpgradeAndUpdateState returns an error because it hasn't been
 // implemented yet.
 func (cs *ClientState) VerifyUpgradeAndUpdateState(
-	// QUESTION: should we change this to context.Context?
 	ctx context.Context,
 	cdc codec.BinaryCodec,
 	clientStore storetypes.KVStore,
