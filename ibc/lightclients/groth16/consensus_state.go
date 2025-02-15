@@ -41,5 +41,5 @@ func (cs ConsensusState) ValidateBasic() error {
 }
 
 func (cs ConsensusState) IsExpired(blockTime time.Time) bool {
-	return cs.HeaderTimestamp.AsTime().Add(DefaultUnbondingTime).After(blockTime)
+	return cs.HeaderTimestamp.AsTime().Add(unbondingTime).After(blockTime)
 }
