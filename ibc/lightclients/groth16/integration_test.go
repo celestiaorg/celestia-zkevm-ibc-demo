@@ -5,18 +5,15 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
-	testifysuite "github.com/stretchr/testify/suite"
-
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	cmtbytes "github.com/cometbft/cometbft/libs/bytes"
 	cmttypes "github.com/cometbft/cometbft/types"
-
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ibctm "github.com/cosmos/ibc-go/v9/modules/light-clients/07-tendermint"
 	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 	"github.com/cosmos/ibc-go/v9/testing/simapp"
+	testifysuite "github.com/stretchr/testify/suite"
 )
 
 const (
