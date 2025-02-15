@@ -1,4 +1,3 @@
-//nolint:govet
 package groth16
 
 import (
@@ -30,7 +29,7 @@ func (cs *ClientState) VerifyClientMessage(
 	}
 }
 
-func (cs ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec,
+func (cs *ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec,
 	header *Header) error {
 	// sdkCtx := sdk.UnwrapSDKContext(ctx) // TODO: https://github.com/cosmos/ibc-go/issues/5917
 
@@ -83,7 +82,7 @@ func (cs ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVS
 // UpdateClient will additionally retrieve the earliest consensus state for this clientID and check if it is expired. If it is,
 // that consensus state will be pruned from store along with all associated metadata. This will prevent the client store from
 // becoming bloated with expired consensus states that can no longer be used for updates and packet verification.
-func (cs ClientState) UpdateState(
+func (cs *ClientState) UpdateState(
 	ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore,
 	clientMsg exported.ClientMessage,
 ) []exported.Height {
@@ -185,7 +184,7 @@ func (cs ClientState) UpdateState(
 	}
 
 	// Q: do we need to set client state with updated height?
-	setClientState(clientStore, cdc, &cs)
+	setClientState(clientStore, cdc, cs)
 	// set consensus state in client store
 	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
 	// set metadata for this consensus state
