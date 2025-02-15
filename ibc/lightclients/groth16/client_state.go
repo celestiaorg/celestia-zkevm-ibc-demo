@@ -1,4 +1,3 @@
-//nolint:govet
 package groth16
 
 import (
@@ -8,11 +7,9 @@ import (
 
 	sdkerrors "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
-	"github.com/cosmos/cosmos-sdk/codec"
-
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/mpt"
+	"github.com/cosmos/cosmos-sdk/codec"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
-
 	commitmenttypes "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
@@ -28,9 +25,11 @@ var _ exported.ClientState = (*ClientState)(nil)
 // NewClientState creates a new ClientState instance.
 func NewClientState(latestHeight uint64, stateTransitionVerifierKey []byte, stateInclusionVerifierKey []byte, codeCommitment []byte, genesisStateRoot []byte) *ClientState {
 	return &ClientState{
-		LatestHeight:     latestHeight,
-		CodeCommitment:   codeCommitment,
-		GenesisStateRoot: genesisStateRoot,
+		LatestHeight:               latestHeight,
+		CodeCommitment:             codeCommitment,
+		GenesisStateRoot:           genesisStateRoot,
+		StateTransitionVerifierKey: stateInclusionVerifierKey,
+		// TODO why does this constructor accept a stateInclusionVerifierKey if that field doesn't exist on ClientState?
 	}
 }
 
