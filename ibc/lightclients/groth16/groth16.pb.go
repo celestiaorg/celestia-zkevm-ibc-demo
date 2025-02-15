@@ -21,24 +21,28 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ClientState defines a groth16 client that holds two keys that are needed to verify IBC packets. One key is for verifying state
-// transition proofs. The other key is for verifying state membership proofs.
+// ClientState defines a groth16 light client that is able to track the state of
+// an EVM roll-up. ClientState contains two holds two keys that are needed to
+// verify IBC packets. One key is for verifying state transition proofs. The
+// other key is for verifying state membership proofs.
 type ClientState struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// latest height of the client state
+	// LatestHeight is the latest block height on the EVM roll-up.
 	LatestHeight uint64 `protobuf:"varint,1,opt,name=latest_height,json=latestHeight,proto3" json:"latest_height,omitempty"`
-	// groth16 state transition proof verifier key. Verifies proofs on a rollup's
+	// StateTransitionVerifierKey is the verifier key that should be used when
+	// verifying Groth16 state transition proofs. These proofs verify a rollup's
 	// state root after the state transition has been applied. Only the BN254
-	// curve is supported
+	// curve is supported.
 	StateTransitionVerifierKey []byte `protobuf:"bytes,2,opt,name=state_transition_verifier_key,json=stateTransitionVerifierKey,proto3" json:"state_transition_verifier_key,omitempty"`
-	// Provided during initialization of the IBC Client
+	// CodeCommitment is a commitment to the EVM prover source.
 	CodeCommitment []byte `protobuf:"bytes,3,opt,name=code_commitment,json=codeCommitment,proto3" json:"code_commitment,omitempty"`
-	// Provided during initialization of the IBC Client
+	// GenesisStateRoot is the state root of the EVM roll-up's genesis block.
 	GenesisStateRoot []byte `protobuf:"bytes,4,opt,name=genesis_state_root,json=genesisStateRoot,proto3" json:"genesis_state_root,omitempty"`
-	// StateMembershipVerifierKey is the key used to verify state membership (a.k.a inclusion) proofs.
+	// StateMembershipVerifierKey is the key used to verify state membership
+	// (a.k.a inclusion) proofs.
 	StateMembershipVerifierKey []byte `protobuf:"bytes,5,opt,name=state_membership_verifier_key,json=stateMembershipVerifierKey,proto3" json:"state_membership_verifier_key,omitempty"`
 }
 
@@ -109,16 +113,23 @@ func (x *ClientState) GetStateMembershipVerifierKey() []byte {
 	return nil
 }
 
-// ConsensusState defines a groth16 consensus state.
+// ConsensusState is the trusted view of the state of a state machine at a
+// particular Height. It MUST contain sufficient information to enable the
+// ValidityPredicate to validate state updates, which can then be used to
+// generate new ConsensusStates. It MUST be serialisable in a canonical fashion
+// so that remote parties, such as remote state machines, can check whether a
+// particular ConsensusState was stored by a particular state machine. It MUST
+// be introspectable by the state machine whose view it represents, i.e., a
+// state machine can look up its own ConsensusStates at past Heights.
 type ConsensusState struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// timestamp that corresponds to the block height in which the ConsensusState
-	// was stored.
+	// HeaderTimestamp is the timestamp of a Celestia block that corresponds to
+	// when this consensus state was was stored.
 	HeaderTimestamp *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=header_timestamp,json=headerTimestamp,proto3" json:"header_timestamp,omitempty"`
-	// state root of the rollup
+	// StateRoot is the state root of the EVM rollup at a particular block height.
 	StateRoot []byte `protobuf:"bytes,2,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty"`
 }
 
@@ -168,8 +179,10 @@ func (x *ConsensusState) GetStateRoot() []byte {
 	return nil
 }
 
-// Header defines a groth16 header for updating the trusted state root of a
-// rollup
+// Header defines a struct that is used to update the trusted state root of an
+// EVM roll-up.
+//
+// TODO: consider renaming this to UpdateStateClientMessage
 type Header struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
