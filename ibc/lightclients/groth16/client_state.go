@@ -3,16 +3,21 @@ package groth16
 import (
 	"bytes"
 	"context"
-	fmt "fmt"
+	"errors"
+	"fmt"
 
 	sdkerrors "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/mpt"
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/backend/groth16"
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	commitmenttypes "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -177,4 +182,160 @@ func (cs *ClientState) CheckForMisbehaviour(ctx context.Context, cdc codec.Binar
 
 func (cs *ClientState) CheckSubstituteAndUpdateState(ctx context.Context, cdc codec.BinaryCodec, subjectClientStore, substituteClientStore storetypes.KVStore, substituteClient exported.ClientState) error {
 	return sdkerrors.Wrap(clienttypes.ErrUpdateClientFailed, "cannot update groth16 client with a proposal")
+}
+
+// VerifyUpgradeAndUpdateState returns an error because it hasn't been
+// implemented yet.
+func (cs *ClientState) VerifyUpgradeAndUpdateState(
+	ctx context.Context,
+	cdc codec.BinaryCodec,
+	clientStore storetypes.KVStore,
+	upgradedClient exported.ClientState,
+	upgradedConsState exported.ConsensusState,
+	proofUpgradeClient,
+	proofUpgradeConsState []byte,
+) error {
+	return errors.New("not implemented")
+}
+
+// VerifyClientMessage checks if the clientMessage is of type Header
+func (cs *ClientState) VerifyClientMessage(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) error {
+	switch msg := clientMsg.(type) {
+	case *Header:
+		return cs.verifyHeader(ctx, clientStore, cdc, msg)
+	default:
+		return clienttypes.ErrInvalidClientType
+	}
+}
+
+func (cs *ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec, header *Header) error {
+	// get consensus state from clientStore for trusted height
+	_, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
+	if err != nil {
+		return sdkerrors.Wrapf(
+			err, "could not get consensus state from clientstore at TrustedHeight: %d", header.TrustedHeight,
+		)
+	}
+
+	// assert header height is newer than consensus state
+	if header.GetHeight().LTE(clienttypes.NewHeight(0, uint64(header.TrustedHeight))) {
+		return sdkerrors.Wrapf(
+			clienttypes.ErrInvalidHeader,
+			"header height ≤ consensus state height (%d ≤ %d)", header.GetHeight(), header.TrustedHeight,
+		)
+	}
+
+	return nil
+}
+
+func (cs *ClientState) UpdateState(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) []exported.Height {
+	header, ok := clientMsg.(*Header)
+	if !ok {
+		fmt.Printf("the only support clientMsg type is Header")
+		return []exported.Height{}
+	}
+
+	// performance: do not prune in checkTx
+	// simulation must prune for accurate gas estimation
+	sdkCtx := sdk.UnwrapSDKContext(ctx) // TODO: https://github.com/cosmos/ibc-go/issues/5917
+
+	// check for duplicate update
+	// TODO: remove this because header is validated in VerifyClientMessage
+	consensusState, err := GetConsensusState(clientStore, cdc, header.GetHeight())
+	if err != nil {
+		panic(fmt.Sprintf("failed to retrieve consensus state: %s", err))
+	}
+	if consensusState != nil {
+		// perform no-op
+		return []exported.Height{header.GetHeight()}
+	}
+
+	trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
+	if err != nil {
+		panic(fmt.Sprintf("failed to retrieve trusted consensus state: %s", err))
+	}
+
+	vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
+	if err != nil {
+		return []exported.Height{}
+	}
+
+	// initialize the public witness
+	publicWitness := PublicWitness{
+		TrustedHeight:             header.TrustedHeight,
+		TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
+		TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
+		// TODO: check if NewHeight is the same as GetHeight
+		NewHeight:             header.NewHeight,
+		NewRollupStateRoot:    header.NewStateRoot,
+		NewCelestiaHeaderHash: header.NewCelestiaHeaderHash,
+		CodeCommitment:        cs.CodeCommitment,
+		GenesisStateRoot:      cs.GenesisStateRoot,
+	}
+
+	witness, err := publicWitness.Generate()
+	if err != nil {
+		panic(fmt.Sprintf("failed to generate state transition public witness: %s", err))
+	}
+
+	proof := groth16.NewProof(ecc.BN254)
+	_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
+	if err != nil {
+		panic(fmt.Sprintf("failed to read proof: %s", err))
+	}
+
+	err = groth16.Verify(proof, vk, witness)
+	if err != nil {
+		panic(fmt.Sprintf("failed to verify proof: %s", err))
+	}
+
+	// Check the earliest consensus state to see if it is expired, if so then set the prune height
+	// so that we can delete consensus state and all associated metadata.
+	var (
+		pruneHeight exported.Height
+		pruneError  error
+	)
+	pruneCb := func(height exported.Height) bool {
+		consState, err := GetConsensusState(clientStore, cdc, height)
+		// this error should never occur
+		if err != nil {
+			pruneError = err
+			return true
+		}
+		if consState.IsExpired(sdkCtx.BlockTime()) {
+			pruneHeight = height
+		}
+		return true
+	}
+	err = IterateConsensusStateAscending(clientStore, pruneCb)
+	if err != nil {
+		panic(fmt.Sprintf("failed to iterate consensus states: %s", err))
+	}
+	if pruneError != nil {
+		panic(fmt.Sprintf("failed to prune consensus state: %s", pruneError))
+	}
+	// if pruneHeight is set, delete consensus state and metadata
+	if pruneHeight != nil {
+		deleteConsensusState(clientStore, pruneHeight)
+		deleteConsensusMetadata(clientStore, pruneHeight)
+	}
+
+	// newClientState, consensusState := update(sdkCtx, clientStore, &cs, header)
+	newConsensusState := &ConsensusState{
+		HeaderTimestamp: timestamppb.New(sdkCtx.BlockTime()), // this should really be the Celestia block time at the newHeight
+		StateRoot:       header.NewStateRoot,
+	}
+
+	// Q: do we need to set client state with updated height?
+	setClientState(clientStore, cdc, cs)
+	// set consensus state in client store
+	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
+	// set metadata for this consensus state
+	setConsensusMetadata(ctx, clientStore, header.GetHeight())
+	height, ok := header.GetHeight().(clienttypes.Height)
+	if !ok {
+		panic(fmt.Sprintf("invalid height type %T", header.GetHeight()))
+	}
+
+	return []exported.Height{height}
 }
