@@ -51,6 +51,7 @@ func (cs *ClientState) status(_ context.Context, _ storetypes.KVStore, _ codec.B
 	return exported.Active
 }
 
+// Validate is a no-op.
 func (cs *ClientState) Validate() error {
 	return nil
 }
