@@ -23,23 +23,23 @@ const (
 var _ exported.ClientState = (*ClientState)(nil)
 
 // NewClientState creates a new ClientState instance.
-func NewClientState(latestHeight uint64, stateTransitionVerifierKey []byte, stateInclusionVerifierKey []byte, codeCommitment []byte, genesisStateRoot []byte) *ClientState {
+func NewClientState(latestHeight uint64, stateTransitionVerifierKey []byte, stateMembershipVerifierKey []byte, codeCommitment []byte, genesisStateRoot []byte) *ClientState {
 	return &ClientState{
 		LatestHeight:               latestHeight,
 		CodeCommitment:             codeCommitment,
 		GenesisStateRoot:           genesisStateRoot,
-		StateTransitionVerifierKey: stateInclusionVerifierKey,
-		// TODO why does this constructor accept a stateInclusionVerifierKey if that field doesn't exist on ClientState?
+		StateTransitionVerifierKey: stateMembershipVerifierKey,
+		StateMembershipVerifierKey: stateMembershipVerifierKey,
 	}
 }
 
 // ClientType returns the groth16 client type.
-func (cs ClientState) ClientType() string {
+func (cs *ClientState) ClientType() string {
 	return Groth16ClientType
 }
 
 // GetLatestClientHeight returns the latest block height of the client state.
-func (cs ClientState) GetLatestClientHeight() exported.Height {
+func (cs *ClientState) GetLatestClientHeight() exported.Height {
 	return clienttypes.Height{
 		RevisionNumber: 0,
 		RevisionHeight: cs.LatestHeight,
@@ -47,17 +47,17 @@ func (cs ClientState) GetLatestClientHeight() exported.Height {
 }
 
 // status returns the status of the groth16 client.
-func (cs ClientState) status(_ context.Context, _ storetypes.KVStore, _ codec.BinaryCodec) exported.Status {
+func (cs *ClientState) status(_ context.Context, _ storetypes.KVStore, _ codec.BinaryCodec) exported.Status {
 	return exported.Active
 }
 
-func (cs ClientState) Validate() error {
+func (cs *ClientState) Validate() error {
 	return nil
 }
 
 // ZeroCustomFields returns a ClientState that is a copy of the current ClientState
 // with all client customizable fields zeroed out.
-func (cs ClientState) ZeroCustomFields() exported.ClientState {
+func (cs *ClientState) ZeroCustomFields() exported.ClientState {
 	// Copy over all chain-specified fields and leave custom fields empty.
 	return &ClientState{
 		LatestHeight:               cs.LatestHeight,
@@ -65,7 +65,7 @@ func (cs ClientState) ZeroCustomFields() exported.ClientState {
 	}
 }
 
-func (cs ClientState) initialize(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, initialConsensusState exported.ConsensusState) error {
+func (cs *ClientState) initialize(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, initialConsensusState exported.ConsensusState) error {
 	consensusState, ok := initialConsensusState.(*ConsensusState)
 	if !ok {
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidConsensus, "invalid initial consensus state. expected type: %T, got: %T", &ConsensusState{}, initialConsensusState)
@@ -73,7 +73,7 @@ func (cs ClientState) initialize(ctx context.Context, cdc codec.BinaryCodec, cli
 	height := cs.GetLatestClientHeight()
 	SetConsensusState(clientStore, cdc, consensusState, height)
 	setConsensusMetadata(ctx, clientStore, height)
-	setClientState(clientStore, cdc, &cs)
+	setClientState(clientStore, cdc, cs)
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (cs ClientState) initialize(ctx context.Context, cdc codec.BinaryCodec, cli
 
 // The following are modified methods from the v9 IBC Client interface. The idea is to make
 // it easy to update this client once Celestia moves to v9 of IBC
-func (cs ClientState) verifyMembership(
+func (cs *ClientState) verifyMembership(
 	_ context.Context,
 	clientStore storetypes.KVStore,
 	cdc codec.BinaryCodec,
@@ -122,7 +122,7 @@ func (cs ClientState) verifyMembership(
 
 // verifyNonMembership verifies a proof of the absence of a key in the Merkle tree.
 // It's the same as VerifyMembership, but the value is nil.
-func (cs ClientState) verifyNonMembership(
+func (cs *ClientState) verifyNonMembership(
 	_ context.Context,
 	clientStore storetypes.KVStore,
 	cdc codec.BinaryCodec,
@@ -160,7 +160,7 @@ func (cs ClientState) verifyNonMembership(
 	return nil
 }
 
-func (cs ClientState) getTimestampAtHeight(clientStore storetypes.KVStore, cdc codec.BinaryCodec, height exported.Height) (uint64, error) {
+func (cs *ClientState) getTimestampAtHeight(clientStore storetypes.KVStore, cdc codec.BinaryCodec, height exported.Height) (uint64, error) {
 	consensusState, err := GetConsensusState(clientStore, cdc, height)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get consensus state: %w", err)
@@ -170,10 +170,10 @@ func (cs ClientState) getTimestampAtHeight(clientStore storetypes.KVStore, cdc c
 }
 
 // CheckForMisbehaviour is a no-op for groth16
-func (ClientState) CheckForMisbehaviour(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, msg exported.ClientMessage) bool {
+func (cs *ClientState) CheckForMisbehaviour(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, msg exported.ClientMessage) bool {
 	return false
 }
 
-func (cs ClientState) CheckSubstituteAndUpdateState(ctx context.Context, cdc codec.BinaryCodec, subjectClientStore, substituteClientStore storetypes.KVStore, substituteClient exported.ClientState) error {
+func (cs *ClientState) CheckSubstituteAndUpdateState(ctx context.Context, cdc codec.BinaryCodec, subjectClientStore, substituteClientStore storetypes.KVStore, substituteClient exported.ClientState) error {
 	return sdkerrors.Wrap(clienttypes.ErrUpdateClientFailed, "cannot update groth16 client with a proposal")
 }

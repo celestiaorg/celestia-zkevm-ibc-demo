@@ -6,15 +6,15 @@ option go_package = "ibc/lightclients/groth16";
 
 import "google/protobuf/timestamp.proto";
 
-// ClientState defines a groth16 client that holds two keys for verifying state
-// transition proofs needed to verify IBC packets
+// ClientState defines a groth16 client that holds two keys that are needed to verify IBC packets. One key is for verifying state
+// transition proofs. The other key is for verifying state membership proofs.
 message ClientState {
   // latest height of the client state
   uint64 latest_height = 1;
 
-  // groth16 state transition proof verifier key. Verifies proofs on a rollups
-  // state root after the state transition has been applied. Only BN254 curve is
-  // supported
+  // groth16 state transition proof verifier key. Verifies proofs on a rollup's
+  // state root after the state transition has been applied. Only the BN254
+  // curve is supported
   bytes state_transition_verifier_key = 2;
 
   // Provided during initialization of the IBC Client
@@ -22,6 +22,9 @@ message ClientState {
 
   // Provided during initialization of the IBC Client
   bytes genesis_state_root = 4;
+
+  // StateMembershipVerifierKey is the key used to verify state membership (a.k.a inclusion) proofs.
+  bytes state_membership_verifier_key = 5;
 }
 
 // ConsensusState defines a groth16 consensus state.
@@ -51,7 +54,7 @@ message Header {
   int64 new_height = 5;
   bytes new_celestia_header_hash = 6;
 
-  // TODO: This is provided by the user at the moment but we can't trust them 
+  // TODO: This is provided by the user at the moment but we can't trust them
   // with this data. We need to get all the data roots from the
   // the store.
   repeated bytes data_roots = 7;
