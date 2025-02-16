@@ -71,8 +71,14 @@ Push new image to GHCR:
 make publish-celestia-prover-docker
 ```
 
-If you update the circuits please regenerate the `elf` files:
+### Regenerate ELFs
+
+Currently the celestia-prover ELFs aren't automatically rebuilt so they must be manually rebuilt if you modify the SP1 source code.
 
 ```shell
-~/.sp1/bin/cargo-prove prove build --elf-name mock-membership-elf
+# Regenerate mock-membership-elf
+~/.sp1/bin/cargo-prove prove build --elf-name mock-membership-elf --output-directory provers/celestia-prover/elf/ --packages mock-membership --no-default-features
+
+# Regenerate mock-update-client-elf
+$ ~/.sp1/bin/cargo-prove prove build --elf-name mock-update-client-elf --output-directory provers/celestia-prover/elf/ --packages mock-update-client --no-default-features
 ```
