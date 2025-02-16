@@ -3,15 +3,13 @@ package groth16
 import (
 	"encoding/json"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/spf13/cobra"
-
 	"cosmossdk.io/core/appmodule"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -41,7 +39,7 @@ func (AppModule) IsOnePerModuleType() {}
 // IsAppModule implements the appmodule.AppModule interface.
 func (AppModule) IsAppModule() {}
 
-// RegisterLegacyAminoCodec performs a no-op. The groth16 client does not support amino.
+// RegisterLegacyAminoCodec is a no-op. The groth16 client does not support amino.
 func (AppModuleBasic) RegisterLegacyAminoCodec(*codec.LegacyAmino) {}
 
 // RegisterInterfaces registers module concrete types into protobuf Any. This allows core IBC
@@ -50,25 +48,25 @@ func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) 
 	RegisterInterfaces(registry)
 }
 
-// DefaultGenesis performs a no-op. Genesis is not supported for the groth16 light client.
+// DefaultGenesis is a no-op. Genesis is not supported for the groth16 light client.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return nil
 }
 
-// ValidateGenesis performs a no-op. Genesis is not supported for the groth16 light client.
+// ValidateGenesis is a no-op. Genesis is not supported for the groth16 light client.
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
 	return nil
 }
 
-// RegisterGRPCGatewayRoutes performs a no-op.
+// RegisterGRPCGatewayRoutes is a no-op.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {}
 
-// GetTxCmd performs a no-op. Please see the 02-client cli commands.
+// GetTxCmd is a no-op.
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
 	return nil
 }
 
-// GetQueryCmd performs a no-op. Please see the 02-client cli commands.
+// GetQueryCmd is a no-op.
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 	return nil
 }
@@ -79,7 +77,7 @@ type AppModule struct {
 	lightClientModule LightClientModule
 }
 
-// NewAppModule creates a new groth16 client module
+// NewAppModule returns a new groth16 client module.
 func NewAppModule(lightClientModule LightClientModule) AppModule {
 	return AppModule{
 		lightClientModule: lightClientModule,

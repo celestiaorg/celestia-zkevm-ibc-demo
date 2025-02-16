@@ -1,40 +1,53 @@
 syntax = "proto3";
-
 package celestia.ibc.lightclients.groth16.v1;
-
 option go_package = "ibc/lightclients/groth16";
-
 import "google/protobuf/timestamp.proto";
 
-// ClientState defines a groth16 client that holds two keys for verifying state
-// transition proofs needed to verify IBC packets
+// ClientState defines a groth16 light client that is able to track the state of
+// an EVM roll-up. ClientState contains two holds two keys that are needed to
+// verify IBC packets. One key is for verifying state transition proofs. The
+// other key is for verifying state membership proofs.
 message ClientState {
-  // latest height of the client state
+  // LatestHeight is the latest block height on the EVM roll-up.
   uint64 latest_height = 1;
 
-  // groth16 state transition proof verifier key. Verifies proofs on a rollups
-  // state root after the state transition has been applied. Only BN254 curve is
-  // supported
+  // StateTransitionVerifierKey is the verifier key that should be used when
+  // verifying Groth16 state transition proofs. These proofs verify a rollup's
+  // state root after the state transition has been applied. Only the BN254
+  // curve is supported.
   bytes state_transition_verifier_key = 2;
 
-  // Provided during initialization of the IBC Client
+  // CodeCommitment is a commitment to the EVM prover source.
   bytes code_commitment = 3;
 
-  // Provided during initialization of the IBC Client
+  // GenesisStateRoot is the state root of the EVM roll-up's genesis block.
   bytes genesis_state_root = 4;
+
+  // StateMembershipVerifierKey is the key used to verify state membership
+  // (a.k.a inclusion) proofs.
+  bytes state_membership_verifier_key = 5;
 }
 
-// ConsensusState defines a groth16 consensus state.
+// ConsensusState is the trusted view of the state of a state machine at a
+// particular Height. It MUST contain sufficient information to enable the
+// ValidityPredicate to validate state updates, which can then be used to
+// generate new ConsensusStates. It MUST be serialisable in a canonical fashion
+// so that remote parties, such as remote state machines, can check whether a
+// particular ConsensusState was stored by a particular state machine. It MUST
+// be introspectable by the state machine whose view it represents, i.e., a
+// state machine can look up its own ConsensusStates at past Heights.
 message ConsensusState {
-  // timestamp that corresponds to the block height in which the ConsensusState
-  // was stored.
+  // HeaderTimestamp is the timestamp of a Celestia block that corresponds to
+  // when this consensus state was was stored.
   google.protobuf.Timestamp header_timestamp = 1;
-  // state root of the rollup
+  // StateRoot is the state root of the EVM rollup at a particular block height.
   bytes state_root = 2;
 }
 
-// Header defines a groth16 header for updating the trusted state root of a
-// rollup
+// Header defines a struct that is used to update the trusted state root of an
+// EVM roll-up.
+//
+// TODO: consider renaming this to UpdateStateClientMessage
 message Header {
   // serialized groth16 proof that the given state transition is valid
   bytes state_transition_proof = 1;
@@ -51,7 +64,7 @@ message Header {
   int64 new_height = 5;
   bytes new_celestia_header_hash = 6;
 
-  // TODO: This is provided by the user at the moment but we can't trust them 
+  // TODO: This is provided by the user at the moment but we can't trust them
   // with this data. We need to get all the data roots from the
   // the store.
   repeated bytes data_roots = 7;
