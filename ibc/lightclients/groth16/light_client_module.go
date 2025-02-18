@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	errorsmod "cosmossdk.io/errors"
-
 	"github.com/cosmos/cosmos-sdk/codec"
-
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ibcerrors "github.com/cosmos/ibc-go/v9/modules/core/errors"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
@@ -21,7 +19,7 @@ type LightClientModule struct {
 	storeProvider clienttypes.StoreProvider
 }
 
-// NewLightClientModule creates and returns a new zk LightClientModule.
+// NewLightClientModule returns a new groth16 LightClientModule.
 func NewLightClientModule(cdc codec.BinaryCodec, storeProvider clienttypes.StoreProvider) LightClientModule {
 	return LightClientModule{
 		cdc:           cdc,
@@ -31,7 +29,7 @@ func NewLightClientModule(cdc codec.BinaryCodec, storeProvider clienttypes.Store
 
 // Initialize unmarshals the provided client and consensus states and performs basic validation. It calls into the
 // clientState.initialize method.
-func (l LightClientModule) Initialize(ctx context.Context, clientID string, clientStateBz, consensusStateBz []byte) error {
+func (l LightClientModule) Initialize(ctx context.Context, clientID string, clientStateBz []byte, consensusStateBz []byte) error {
 	var clientState ClientState
 	if err := l.cdc.Unmarshal(clientStateBz, &clientState); err != nil {
 		return fmt.Errorf("failed to unmarshal client state bytes into client state: %w", err)
@@ -51,11 +49,11 @@ func (l LightClientModule) Initialize(ctx context.Context, clientID string, clie
 	}
 
 	clientStore := l.storeProvider.ClientStore(ctx, clientID)
-
 	return clientState.initialize(ctx, l.cdc, clientStore, &consensusState)
 }
 
-// VerifyClientMessage obtains the client state associated with the client identifier and calls into the clientState.VerifyClientMessage method.
+// VerifyClientMessage obtains the client state associated with the client
+// identifier and calls into the clientState.VerifyClientMessage method.
 func (l LightClientModule) VerifyClientMessage(ctx context.Context, clientID string, clientMsg exported.ClientMessage) error {
 	clientStore := l.storeProvider.ClientStore(ctx, clientID)
 	clientState, found := getClientState(clientStore, l.cdc)
@@ -66,12 +64,12 @@ func (l LightClientModule) VerifyClientMessage(ctx context.Context, clientID str
 	return clientState.VerifyClientMessage(ctx, l.cdc, clientStore, clientMsg)
 }
 
-// CheckForMisbehaviour is a no-op in groth16 client.
+// CheckForMisbehaviour is a no-op.
 func (l LightClientModule) CheckForMisbehaviour(ctx context.Context, clientID string, clientMsg exported.ClientMessage) bool {
 	return false
 }
 
-// UpdateStateOnMisbehaviour is a no-op in groth16 light client.
+// UpdateStateOnMisbehaviour is a no-op.
 func (l LightClientModule) UpdateStateOnMisbehaviour(ctx context.Context, clientID string, clientMsg exported.ClientMessage) {
 }
 
@@ -106,7 +104,8 @@ func (l LightClientModule) VerifyMembership(
 	return clientState.verifyMembership(ctx, clientStore, l.cdc, height, delayTimePeriod, delayBlockPeriod, proof, path, value)
 }
 
-// VerifyNonMembership obtains the client state associated with the client identifier and calls into the clientState.verifyNonMembership method.
+// VerifyNonMembership obtains the client state associated with the client
+// identifier and calls into the clientState.verifyNonMembership method.
 func (l LightClientModule) VerifyNonMembership(
 	ctx context.Context,
 	clientID string,
@@ -125,7 +124,8 @@ func (l LightClientModule) VerifyNonMembership(
 	return clientState.verifyNonMembership(ctx, clientStore, l.cdc, height, delayTimePeriod, delayBlockPeriod, proof, path)
 }
 
-// Status obtains the client state associated with the client identifier and calls into the clientState.status method.
+// Status obtains the client state associated with the client identifier and
+// calls into the clientState.status method.
 func (l LightClientModule) Status(ctx context.Context, clientID string) exported.Status {
 	clientStore := l.storeProvider.ClientStore(ctx, clientID)
 	clientState, found := getClientState(clientStore, l.cdc)
