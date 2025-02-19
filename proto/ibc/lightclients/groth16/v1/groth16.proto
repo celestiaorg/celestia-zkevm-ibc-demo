@@ -37,8 +37,8 @@ message ClientState {
 // be introspectable by the state machine whose view it represents, i.e., a
 // state machine can look up its own ConsensusStates at past Heights.
 message ConsensusState {
-  // HeaderTimestamp is the timestamp of a Celestia block that corresponds to
-  // when this consensus state was was stored.
+  // HeaderTimestamp is the timestamp of an EVM header at a particular block
+  // height.
   google.protobuf.Timestamp header_timestamp = 1;
   // StateRoot is the state root of the EVM rollup at a particular block height.
   bytes state_root = 2;
@@ -46,8 +46,6 @@ message ConsensusState {
 
 // Header defines a struct that is used to update the trusted state root of an
 // EVM roll-up.
-//
-// TODO: consider renaming this to UpdateStateClientMessage
 message Header {
   // serialized groth16 proof that the given state transition is valid
   bytes state_transition_proof = 1;
@@ -68,4 +66,8 @@ message Header {
   // with this data. We need to get all the data roots from the
   // the store.
   repeated bytes data_roots = 7;
+
+  // Timestamp is the timestamp of an EVM header at a particular block
+  // height.
+  google.protobuf.Timestamp timestamp = 8;
 }

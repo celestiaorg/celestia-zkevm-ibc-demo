@@ -148,13 +148,8 @@ func (l LightClientModule) LatestHeight(ctx context.Context, clientID string) ex
 	return clientState.GetLatestClientHeight()
 }
 
-// TimestampAtHeight obtains the client state associated with the client identifier and calls into the clientState.getTimestampAtHeight method.
-// TODO: understand the purpose and if we need this method
-func (l LightClientModule) TimestampAtHeight(
-	ctx context.Context,
-	clientID string,
-	height exported.Height,
-) (uint64, error) {
+// TimestampAtHeight returns the timestamp at height.
+func (l LightClientModule) TimestampAtHeight(ctx context.Context, clientID string, height exported.Height) (uint64, error) {
 	clientStore := l.storeProvider.ClientStore(ctx, clientID)
 	clientState, found := getClientState(clientStore, l.cdc)
 	if !found {

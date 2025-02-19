@@ -17,7 +17,6 @@ import (
 	commitmenttypes "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
 	"github.com/cosmos/ibc-go/v9/modules/core/exported"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -235,12 +234,8 @@ func (cs *ClientState) UpdateState(ctx context.Context, cdc codec.BinaryCodec, c
 		return []exported.Height{}
 	}
 
-	// performance: do not prune in checkTx
-	// simulation must prune for accurate gas estimation
-	sdkCtx := sdk.UnwrapSDKContext(ctx) // TODO: https://github.com/cosmos/ibc-go/issues/5917
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
-	// check for duplicate update
-	// TODO: remove this because header is validated in VerifyClientMessage
 	consensusState, err := GetConsensusState(clientStore, cdc, header.GetHeight())
 	if err != nil {
 		panic(fmt.Sprintf("failed to retrieve consensus state: %s", err))
@@ -320,9 +315,8 @@ func (cs *ClientState) UpdateState(ctx context.Context, cdc codec.BinaryCodec, c
 		deleteConsensusMetadata(clientStore, pruneHeight)
 	}
 
-	// newClientState, consensusState := update(sdkCtx, clientStore, &cs, header)
 	newConsensusState := &ConsensusState{
-		HeaderTimestamp: timestamppb.New(sdkCtx.BlockTime()), // this should really be the Celestia block time at the newHeight
+		HeaderTimestamp: header.Timestamp,
 		StateRoot:       header.NewStateRoot,
 	}
 
