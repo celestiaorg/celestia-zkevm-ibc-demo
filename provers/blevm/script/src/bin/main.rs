@@ -13,7 +13,9 @@
 //! RUST_LOG=info cargo run --release -- --prove --mock
 //! ```
 use blevm_common::BlevmOutput;
-use blevm_prover::{BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig};
+use blevm_prover::{
+    AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig,
+};
 use celestia_types::nmt::Namespace;
 use clap::Parser;
 use sp1_sdk::{include_elf, utils};
@@ -22,6 +24,7 @@ use std::{error::Error, fs};
 
 pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
 pub const BLEVM_MOCK_ELF: &[u8] = include_elf!("blevm-mock");
+pub const BLEVM_AGGREGATOR_ELF: &[u8] = include_elf!("blevm-aggregator");
 
 // The arguments for the command.
 #[derive(Parser, Debug)]
@@ -71,7 +74,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let namespace = Namespace::new_v0(&hex::decode(namespace_hex)?)?;
     let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
 
-    let prover = BlockProver::new(celestia_client, prover_config);
+    let aggregator_config = AggregatorConfig {
+        elf_bytes: BLEVM_AGGREGATOR_ELF,
+    };
+    let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
     // Example input (replace with actual L2 block data)
     let input = BlockProverInput {
@@ -100,13 +106,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if args.prove {
         println!("Generating proof...");
         let start = Instant::now();
-        let proof = prover.generate_proof(input).await?;
+        let (proof, _) = prover.generate_proof(input).await?;
         let duration = start.elapsed();
         println!("Generated proof in {:?}.", duration);
 
+        let proof_bin = bincode::serialize(&proof)?;
         // Save proof to file
         println!("Saving proof to proof.bin");
-        fs::write("proof.bin", proof)?;
+        fs::write("proof.bin", proof_bin)?;
         println!("Saved proof.");
         return Ok(());
     }

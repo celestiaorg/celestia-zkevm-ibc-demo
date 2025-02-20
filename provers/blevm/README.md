@@ -8,7 +8,7 @@ This workspace contains multiple crates:
 
 - `blevm`: SP1 program that verifies an EVM block was included in a Celestia data square.
 - `blevm-mock`: SP1 program that acts as a mock version of `blevm`. It should execute faster than `blevm` because it skips verifying any inputs or outputs.
-- `blevm-aggregator`: SP1 program that takes as input the public values from two `blevm` proofs. It verifies the proofs and ensures they are for monotonically increasing EVM blocks.
+- `blevm-aggregator`: SP1 program that takes as input the verification keys and public values from multiple `blevm` proofs. It verifies the proofs and ensures they are for monotonically increasing EVM blocks.
 - `blevm-prover`: library that exposes a `BlockProver` which can generate proofs. The proofs can either be `blevm` proofs or `blevm-mock` proofs depending on the `elf_bytes` used.
 - `common`: library with common struct definitions
 - `script`: binary that generates a blevm proof for an EVM roll-up block that was posted to Celestia mainnet.
