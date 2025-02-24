@@ -46,7 +46,7 @@ pub struct ProverService<'a> {
     membership_prover: SP1ICS07TendermintProver<
         'a,
         MembershipProgram,
-        SP1ICS07TendermintProver<'a, UpdateClientProgram,dyn SP1ProverComponents>,
+        SP1ICS07TendermintProver<'a, UpdateClientProgram, dyn SP1ProverComponents>,
     >,
     membership_prover_fast: SP1ICS07TendermintProverFast<MembershipProgramFast>,
     evm_rpc_url: Url,
@@ -264,8 +264,6 @@ impl Prover for ProverService<'_> {
         Ok(Response::new(response))
     }
 
-
-
     async fn prove_state_membership(
         &self,
         request: Request<ProveStateMembershipRequest>,
@@ -314,55 +312,55 @@ impl Prover for ProverService<'_> {
 
         Ok(Response::new(response))
     }
-}
 
-async fn prove_state_membership_fast(
-    &self,
-    request: Request<ProveStateMembershipRequest>,
-) -> Result<Response<ProveStateMembershipResponse>, Status> {
-    println!("Got state membership request...");
-    let inner_request = request.into_inner();
+    async fn prove_state_membership_fast(
+        &self,
+        request: Request<ProveStateMembershipRequest>,
+    ) -> Result<Response<ProveStateMembershipResponse>, Status> {
+        println!("Got state membership request...");
+        let inner_request = request.into_inner();
 
-    let trusted_block = self
-        .tendermint_rpc_client
-        .get_light_block(Some(inner_request.height as u32))
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        let trusted_block = self
+            .tendermint_rpc_client
+            .get_light_block(Some(inner_request.height as u32))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-    let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
-        futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
-            let path = vec![b"ibc".into(), path.into_bytes()];
+        let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
+            futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
+                let path = vec![b"ibc".into(), path.into_bytes()];
 
-            let (value, proof) = self
-                .tendermint_rpc_client
-                .prove_path(
-                    &path,
-                    trusted_block.signed_header.header.height.value() as u32,
-                )
-                .await?;
+                let (value, proof) = self
+                    .tendermint_rpc_client
+                    .prove_path(
+                        &path,
+                        trusted_block.signed_header.header.height.value() as u32,
+                    )
+                    .await?;
 
-            anyhow::Ok((path, value, proof))
-        }))
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+                anyhow::Ok((path, value, proof))
+            }))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-    let proof = self.membership_prover.generate_proof(
-        trusted_block.signed_header.header.app_hash.as_bytes(),
-        key_proofs,
-    );
+        let proof = self.membership_prover.generate_proof(
+            trusted_block.signed_header.header.app_hash.as_bytes(),
+            key_proofs,
+        );
 
-    println!(
-        "Generated membership proof for height: {:?}",
-        trusted_block.signed_header.header.height.value() as i64
-    );
+        println!(
+            "Generated membership proof for height: {:?}",
+            trusted_block.signed_header.header.height.value() as i64
+        );
 
-    // Implement your membership proof logic here
-    let response = ProveStateMembershipResponse {
-        proof: proof.bytes().to_vec(),
-        height: trusted_block.signed_header.header.height.value() as i64,
-    };
+        // Implement your membership proof logic here
+        let response = ProveStateMembershipResponse {
+            proof: proof.bytes().to_vec(),
+            height: trusted_block.signed_header.header.height.value() as i64,
+        };
 
-    Ok(Response::new(response))
+        Ok(Response::new(response))
+    }
 }
 
 #[tokio::main]
