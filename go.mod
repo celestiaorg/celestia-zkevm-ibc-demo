@@ -16,14 +16,17 @@ require (
 	cosmossdk.io/x/feegrant v0.1.1
 	cosmossdk.io/x/tx v0.13.6
 	cosmossdk.io/x/upgrade v0.1.4
+	github.com/attestantio/go-eth2-client v0.21.11
 	github.com/cometbft/cometbft v0.38.15
 	github.com/cosmos/cosmos-db v1.1.0
 	github.com/cosmos/cosmos-sdk v0.50.10
 	github.com/cosmos/gogoproto v1.7.0
 	github.com/cosmos/ibc-go/v9 v9.0.1
+	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cast v1.7.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
+	github.com/strangelove-ventures/interchaintest/v8 v8.3.0
 	github.com/stretchr/testify v1.10.0
 )
 
@@ -32,10 +35,9 @@ require (
 	cosmossdk.io/math v1.4.0
 	github.com/consensys/gnark v0.11.0
 	github.com/consensys/gnark-crypto v0.14.0
-	github.com/cosmos/solidity-ibc-eureka/abigen v0.0.0
+	github.com/cosmos/solidity-ibc-eureka/abigen v0.0.0 // replaced below
 	github.com/ethereum/go-ethereum v1.14.12
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/srdtrk/solidity-ibc-eureka/e2e/v8 v8.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.2
 )
@@ -57,7 +59,6 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/attestantio/go-eth2-client v0.21.11 // indirect
 	github.com/avast/retry-go/v4 v4.5.1 // indirect
 	github.com/aws/aws-sdk-go v1.44.224 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -180,6 +181,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a // indirect
@@ -204,7 +206,6 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/ronanh/intcomp v1.1.0 // indirect
 	github.com/rs/cors v1.11.1 // indirect
-	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
@@ -212,7 +213,6 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/strangelove-ventures/interchaintest/v8 v8.3.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/supranational/blst v0.3.13 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
@@ -268,7 +268,6 @@ replace (
 	github.com/cosmos/solidity-ibc-eureka/abigen => ./solidity-ibc-eureka/abigen
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/misko9/go-substrate-rpc-client/v4 => github.com/DimitrisJim/go-substrate-rpc-client/v4 v4.0.0-20240717100841-406da076c1d5
-	github.com/srdtrk/solidity-ibc-eureka/e2e/v8 => ./solidity-ibc-eureka/e2e/interchaintestv8
 	github.com/strangelove-ventures/interchaintest/v8 => github.com/DimitrisJim/interchaintest/v8 v8.0.0-20240717102845-beba523a47ff
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/vedhavyas/go-subkey => github.com/strangelove-ventures/go-subkey v1.0.7

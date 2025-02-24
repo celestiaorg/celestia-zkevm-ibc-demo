@@ -38,8 +38,8 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     -  RUST_LOG=info cargo run --bin operator --release -- genesis -o scripts/genesis.json
     +  RUST_LOG=info cargo run --bin operator --release -- genesis --proof-type groth16 -o scripts/genesis.json
     +  @echo "--> Setting the verifier key in scripts/genesis.json"
-    +  @sed -i '' 's|"updateClientVkey": "0x00d003b09381282af2781e5ec015aae610d766a08fffd4ac45d2e6dad736ead3"|"updateClientVkey": "0x0081282e1279b92586a3330c1cd83a3f0910299bdc7be90ac1a24b2a0826523b"|' scripts/genesis.json
-    +  @echo "--> Set the verifier key to 0x0081282e1279b92586a3330c1cd83a3f0910299bdc7be90ac1a24b2a0826523b."
+    +  @sed -i '' 's|"updateClientVkey": "0x00b272e343194d68c33f1421ed09a30efaed2927c4943a1ad2f24fe54d52c984"|"updateClientVkey": "0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25"|' scripts/genesis.json
+    +  @echo "--> Set the verifier key to 0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25."
     ```
 
 1. Create and populate the `.env` file
@@ -101,26 +101,6 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     # To stop and teardown the test environment (when you're finished)
     make stop
     ```
-
-### Run a demo with Sov SDK Rollup using Celestia DA
-
-1. Clone the repo with dockerized Sov SDK rollup:
-
-```shell
-git clone https://github.com/ninabarbakadze/sovereign-sdk-wip
-```
-
-1. Build the image:
-
-```shell
-docker build -t sovrollup -f docker/sov-demo-rollup/Dockerfile .
-```
-
-1. Run the docker compose script to spin up a local dev environment and see that sovereign is producing blocks:
-
-```shell
-docker compose -f docker-compose.sov.yml up -d
-```
 
 ## A Breakdown of an IBC Transfer
 

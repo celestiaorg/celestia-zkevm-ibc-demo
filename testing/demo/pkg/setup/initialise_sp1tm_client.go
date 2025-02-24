@@ -13,7 +13,7 @@ import (
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/icscore"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	channelId     = "channel-0"
-	firstClientID = "07-tendermint-0"
+	counterpartyClientId = "channel-0"
+	expectedClientId     = "07-tendermint-0"
 )
 
 var TendermintLightClientID string
@@ -39,7 +39,7 @@ func InitializeSp1TendermintLightClientOnReth() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Contract Addresses: %v\n", addresses)
+	fmt.Printf("Contract Addresses: \n%v\n", addresses)
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
@@ -79,14 +79,14 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 	ethChainId := big.NewInt(80087)
 	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 
-	icsCoreContract, err := icscore.NewContract(ethcommon.HexToAddress(addresses.ICSCore), ethClient)
+	icsClientContract, err := ics02client.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
 	}
 
-	channel := icscore.IICS04ChannelMsgsChannel{
-		CounterpartyId: channelId,
-		MerklePrefix:   [][]byte{[]byte("ibc"), []byte("")},
+	counterpartyInfo := ics02client.IICS02ClientMsgsCounterpartyInfo{
+		ClientId:     counterpartyClientId,
+		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
 	}
 
 	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
@@ -96,29 +96,28 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 		return fmt.Errorf("failed to convert private key: %v", err)
 	}
 
-	tx, err := icsCoreContract.AddChannel(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, channel, tmLightClientAddress)
+	fmt.Printf("Adding client to the ICS Client contract on reth node with counterparty clientId %s...\n", counterpartyInfo.ClientId)
+	tx, err := icsClientContract.AddClient(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, counterpartyInfo, tmLightClientAddress)
 	if err != nil {
 		return fmt.Errorf("failed to add channel: %v", err)
 	}
 
 	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
-
-	event, err := GetEvmEvent(receipt, icsCoreContract.ParseICS04ChannelAdded)
+	event, err := GetEvmEvent(receipt, icsClientContract.ParseICS02ClientAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
-	if event.Channel.CounterpartyId == channelId {
-		fmt.Println("counterparty channel added successfully")
-	} else {
-		return fmt.Errorf("counterparty channel not set properly on reth node")
+
+	if event.ClientId != expectedClientId {
+		return fmt.Errorf("expected clientId %s, got %s", expectedClientId, event.ClientId)
 	}
 
-	if event.ChannelId == firstClientID {
-		fmt.Println("channel added successfully")
-	} else {
-		return fmt.Errorf("channel not set properly on reth node")
+	if event.CounterpartyInfo.ClientId != counterpartyClientId {
+		return fmt.Errorf("expected counterparty clientId %s, got %s", counterpartyClientId, event.CounterpartyInfo.ClientId)
 	}
-	TendermintLightClientID = event.ChannelId
+
+	fmt.Printf("Added client to the ICS client contract on reth node with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
+	TendermintLightClientID = event.CounterpartyInfo.ClientId
 
 	return nil
 }
@@ -132,7 +131,7 @@ func createCounterpartyOnSimapp() error {
 	}
 
 	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
-		ChannelId:             channelId,
+		ChannelId:             counterpartyClientId,
 		CounterpartyChannelId: TendermintLightClientID,
 		Signer:                relayer,
 	})
