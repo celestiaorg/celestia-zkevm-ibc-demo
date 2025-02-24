@@ -19,9 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Prover_Info_FullMethodName                 = "/celestia.prover.v1.Prover/Info"
-	Prover_ProveStateTransition_FullMethodName = "/celestia.prover.v1.Prover/ProveStateTransition"
-	Prover_ProveStateMembership_FullMethodName = "/celestia.prover.v1.Prover/ProveStateMembership"
+	Prover_Info_FullMethodName                      = "/celestia.prover.v1.Prover/Info"
+	Prover_ProveStateTransition_FullMethodName      = "/celestia.prover.v1.Prover/ProveStateTransition"
+	Prover_ProveStateMembership_FullMethodName      = "/celestia.prover.v1.Prover/ProveStateMembership"
+	Prover_Info_Fast_FullMethodName                 = "/celestia.prover.v1.Prover/Info_Fast"
+	Prover_ProveStateTransition_Fast_FullMethodName = "/celestia.prover.v1.Prover/ProveStateTransition_Fast"
+	Prover_ProveStateMembership_Fast_FullMethodName = "/celestia.prover.v1.Prover/ProveStateMembership_Fast"
 )
 
 // ProverClient is the client API for Prover service.
@@ -31,6 +34,9 @@ type ProverClient interface {
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	ProveStateTransition(ctx context.Context, in *ProveStateTransitionRequest, opts ...grpc.CallOption) (*ProveStateTransitionResponse, error)
 	ProveStateMembership(ctx context.Context, in *ProveStateMembershipRequest, opts ...grpc.CallOption) (*ProveStateMembershipResponse, error)
+	Info_Fast(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
+	ProveStateTransition_Fast(ctx context.Context, in *ProveStateTransitionRequest, opts ...grpc.CallOption) (*ProveStateTransitionResponse, error)
+	ProveStateMembership_Fast(ctx context.Context, in *ProveStateMembershipRequest, opts ...grpc.CallOption) (*ProveStateMembershipResponse, error)
 }
 
 type proverClient struct {
@@ -71,6 +77,36 @@ func (c *proverClient) ProveStateMembership(ctx context.Context, in *ProveStateM
 	return out, nil
 }
 
+func (c *proverClient) Info_Fast(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InfoResponse)
+	err := c.cc.Invoke(ctx, Prover_Info_Fast_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *proverClient) ProveStateTransition_Fast(ctx context.Context, in *ProveStateTransitionRequest, opts ...grpc.CallOption) (*ProveStateTransitionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProveStateTransitionResponse)
+	err := c.cc.Invoke(ctx, Prover_ProveStateTransition_Fast_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *proverClient) ProveStateMembership_Fast(ctx context.Context, in *ProveStateMembershipRequest, opts ...grpc.CallOption) (*ProveStateMembershipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProveStateMembershipResponse)
+	err := c.cc.Invoke(ctx, Prover_ProveStateMembership_Fast_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProverServer is the server API for Prover service.
 // All implementations must embed UnimplementedProverServer
 // for forward compatibility.
@@ -78,6 +114,9 @@ type ProverServer interface {
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	ProveStateTransition(context.Context, *ProveStateTransitionRequest) (*ProveStateTransitionResponse, error)
 	ProveStateMembership(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error)
+	Info_Fast(context.Context, *InfoRequest) (*InfoResponse, error)
+	ProveStateTransition_Fast(context.Context, *ProveStateTransitionRequest) (*ProveStateTransitionResponse, error)
+	ProveStateMembership_Fast(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error)
 	mustEmbedUnimplementedProverServer()
 }
 
@@ -96,6 +135,15 @@ func (UnimplementedProverServer) ProveStateTransition(context.Context, *ProveSta
 }
 func (UnimplementedProverServer) ProveStateMembership(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProveStateMembership not implemented")
+}
+func (UnimplementedProverServer) Info_Fast(context.Context, *InfoRequest) (*InfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Info_Fast not implemented")
+}
+func (UnimplementedProverServer) ProveStateTransition_Fast(context.Context, *ProveStateTransitionRequest) (*ProveStateTransitionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProveStateTransition_Fast not implemented")
+}
+func (UnimplementedProverServer) ProveStateMembership_Fast(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProveStateMembership_Fast not implemented")
 }
 func (UnimplementedProverServer) mustEmbedUnimplementedProverServer() {}
 func (UnimplementedProverServer) testEmbeddedByValue()                {}
@@ -172,6 +220,60 @@ func _Prover_ProveStateMembership_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Prover_Info_Fast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProverServer).Info_Fast(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Prover_Info_Fast_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProverServer).Info_Fast(ctx, req.(*InfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Prover_ProveStateTransition_Fast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProveStateTransitionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProverServer).ProveStateTransition_Fast(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Prover_ProveStateTransition_Fast_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProverServer).ProveStateTransition_Fast(ctx, req.(*ProveStateTransitionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Prover_ProveStateMembership_Fast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProveStateMembershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProverServer).ProveStateMembership_Fast(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Prover_ProveStateMembership_Fast_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProverServer).ProveStateMembership_Fast(ctx, req.(*ProveStateMembershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Prover_ServiceDesc is the grpc.ServiceDesc for Prover service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +292,18 @@ var Prover_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProveStateMembership",
 			Handler:    _Prover_ProveStateMembership_Handler,
+		},
+		{
+			MethodName: "Info_Fast",
+			Handler:    _Prover_Info_Fast_Handler,
+		},
+		{
+			MethodName: "ProveStateTransition_Fast",
+			Handler:    _Prover_ProveStateTransition_Fast_Handler,
+		},
+		{
+			MethodName: "ProveStateMembership_Fast",
+			Handler:    _Prover_ProveStateMembership_Fast_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -8,6 +8,9 @@ service Prover {
   rpc Info(InfoRequest) returns (InfoResponse);
   rpc ProveStateTransition(ProveStateTransitionRequest) returns (ProveStateTransitionResponse);
   rpc ProveStateMembership(ProveStateMembershipRequest) returns (ProveStateMembershipResponse);
+  rpc Info_Fast(InfoRequest) returns (InfoResponse);
+  rpc ProveStateTransition_Fast(ProveStateTransitionRequest) returns (ProveStateTransitionResponse);
+  rpc ProveStateMembership_Fast(ProveStateMembershipRequest) returns (ProveStateMembershipResponse);
 }
 
 message InfoRequest {

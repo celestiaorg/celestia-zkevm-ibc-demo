@@ -11,7 +11,7 @@ sp1_zkvm::entrypoint!(main);
 
 use alloy_sol_types::SolValue;
 
-use mock_membership::membership;
+use membership_fast::membership;
 
 /// The main function of the program.
 ///

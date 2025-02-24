@@ -1,6 +1,6 @@
 use alloy_sol_types::SolType;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
-use sp1_sdk::HashableKey;
+use sp1_sdk::{HashableKey, ProverClient};
 use std::env;
 use std::fs;
 use tonic::{transport::Server, Request, Response, Status};
@@ -17,10 +17,13 @@ use prover::{
 };
 
 use celestia_prover::{
+    programs::{MembershipProgramFast, UpdateClientProgramFast},
+    prover::{SP1ICS07TendermintProverFast, SupportedProofTypeFast},
+};
+use sp1_ics07_tendermint_prover::{
     programs::{MembershipProgram, UpdateClientProgram},
     prover::{SP1ICS07TendermintProver, SupportedProofType},
 };
-// use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, MembershipProgram};
 
 use alloy::primitives::Address;
 use alloy::providers::ProviderBuilder;
@@ -29,33 +32,66 @@ use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
+use sp1_prover::components::SP1ProverComponents;
 use tendermint_rpc::HttpClient;
 
-
-pub struct ProverService {
-    tendermint_prover: SP1ICS07TendermintProver<UpdateClientProgram>,
+pub struct ProverService<'a> {
+    tendermint_prover: SP1ICS07TendermintProver<
+        'a,
+        UpdateClientProgram,
+        SP1ICS07TendermintProver<'a, UpdateClientProgram, dyn SP1ProverComponents>,
+    >,
+    tendermint_prover_fast: SP1ICS07TendermintProverFast<UpdateClientProgramFast>,
     tendermint_rpc_client: HttpClient,
-    membership_prover: SP1ICS07TendermintProver<MembershipProgram>,
+    membership_prover: SP1ICS07TendermintProver<
+        'a,
+        MembershipProgram,
+        SP1ICS07TendermintProver<'a, UpdateClientProgram,dyn SP1ProverComponents>,
+    >,
+    membership_prover_fast: SP1ICS07TendermintProverFast<MembershipProgramFast>,
     evm_rpc_url: Url,
 }
 
-impl ProverService {
-    fn new() -> ProverService {
+impl ProverService<'_> {
+    fn new() -> ProverService<'static> {
         let rpc_url = env::var("RPC_URL").expect("RPC_URL not set");
         let url = Url::parse(rpc_url.as_str()).expect("Failed to parse RPC_URL");
 
+        // let prover_components = EnvProver;
+        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+
         ProverService {
-            tendermint_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16),
+            tendermint_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16, &client),
+            tendermint_prover_fast: SP1ICS07TendermintProverFast::new(
+                SupportedProofTypeFast::Groth16,
+            ),
             tendermint_rpc_client: HttpClient::from_env(),
-            membership_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16),
+            membership_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16, &client),
+            membership_prover_fast: SP1ICS07TendermintProverFast::new(
+                SupportedProofTypeFast::Groth16,
+            ),
             evm_rpc_url: url,
         }
     }
 }
 
 #[tonic::async_trait]
-impl Prover for ProverService {
+impl Prover for ProverService<'_> {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
+        let state_transition_verifier_key = self.tendermint_prover.vkey.bytes32();
+        let state_membership_verifier_key = self.membership_prover.vkey.bytes32();
+        let response = InfoResponse {
+            state_transition_verifier_key,
+            state_membership_verifier_key,
+        };
+
+        Ok(Response::new(response))
+    }
+
+    async fn info_fast(
+        &self,
+        _request: Request<InfoRequest>,
+    ) -> Result<Response<InfoResponse>, Status> {
         let state_transition_verifier_key = self.tendermint_prover.vkey.bytes32();
         let state_membership_verifier_key = self.membership_prover.vkey.bytes32();
         let response = InfoResponse {
@@ -147,6 +183,89 @@ impl Prover for ProverService {
         Ok(Response::new(response))
     }
 
+    async fn prove_state_transition_fast(
+        &self,
+        request: Request<ProveStateTransitionRequest>,
+    ) -> Result<Response<ProveStateTransitionResponse>, Status> {
+        println!("Got state transition request: {:?}", request);
+        let inner_request = request.into_inner();
+
+        let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
+            Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
+        })?;
+        println!("client_id: {:?}", client_id);
+
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .on_http(self.evm_rpc_url.clone());
+        println!("provider: {:?}", provider);
+
+        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("contract: {:?}", contract);
+
+        // Fetch the client state as Bytes
+        let client_state_bytes = contract
+            .getClientState()
+            .call()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            ._0;
+        println!("client_state_bytes: {:?}", client_state_bytes);
+
+        let client_state = ClientState::abi_decode(&client_state_bytes, true)
+            .map_err(|e| Status::internal(e.to_string()))?;
+        println!("client_state chainId: {:?}", client_state.chainId);
+
+        // fetch the light block at the latest height of the client state
+        let trusted_light_block = self
+            .tendermint_rpc_client
+            .get_light_block(Some(client_state.latestHeight.revisionHeight))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        println!("trusted_light_block: {:?}", trusted_light_block);
+
+        // fetch the latest light block
+        let target_light_block = self
+            .tendermint_rpc_client
+            .get_light_block(None)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        println!("target_light_block: {:?}", target_light_block);
+
+        let trusted_consensus_state: SolConsensusState =
+            trusted_light_block.to_consensus_state().into();
+        println!("trusted_consensus_state: {:?}", trusted_consensus_state);
+
+        let proposed_header = target_light_block.into_header(&trusted_light_block);
+        println!("proposed_header: {:?}", proposed_header);
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| Status::internal(e.to_string()))?
+            .as_secs();
+
+        println!(
+            "proving from height {:?} to height {:?}",
+            &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height
+        );
+
+        let proof = self.tendermint_prover.generate_proof(
+            &client_state,
+            &trusted_consensus_state,
+            &proposed_header,
+            now,
+        );
+
+        let response = ProveStateTransitionResponse {
+            proof: proof.bytes().to_vec(),
+            public_values: proof.public_values.to_vec(),
+        };
+
+        Ok(Response::new(response))
+    }
+
+
+
     async fn prove_state_membership(
         &self,
         request: Request<ProveStateMembershipRequest>,
@@ -195,6 +314,55 @@ impl Prover for ProverService {
 
         Ok(Response::new(response))
     }
+}
+
+async fn prove_state_membership_fast(
+    &self,
+    request: Request<ProveStateMembershipRequest>,
+) -> Result<Response<ProveStateMembershipResponse>, Status> {
+    println!("Got state membership request...");
+    let inner_request = request.into_inner();
+
+    let trusted_block = self
+        .tendermint_rpc_client
+        .get_light_block(Some(inner_request.height as u32))
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+    let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
+        futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
+            let path = vec![b"ibc".into(), path.into_bytes()];
+
+            let (value, proof) = self
+                .tendermint_rpc_client
+                .prove_path(
+                    &path,
+                    trusted_block.signed_header.header.height.value() as u32,
+                )
+                .await?;
+
+            anyhow::Ok((path, value, proof))
+        }))
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+    let proof = self.membership_prover.generate_proof(
+        trusted_block.signed_header.header.app_hash.as_bytes(),
+        key_proofs,
+    );
+
+    println!(
+        "Generated membership proof for height: {:?}",
+        trusted_block.signed_header.header.height.value() as i64
+    );
+
+    // Implement your membership proof logic here
+    let response = ProveStateMembershipResponse {
+        proof: proof.bytes().to_vec(),
+        height: trusted_block.signed_header.header.height.value() as i64,
+    };
+
+    Ok(Response::new(response))
 }
 
 #[tokio::main]

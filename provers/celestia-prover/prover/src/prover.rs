@@ -1,7 +1,7 @@
 //! Prover for SP1 ICS07 Tendermint programs.
 
 // These are the empty programs.
-use crate::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
+use crate::programs::{MembershipProgramFast, SP1Program, UpdateClientProgramFast};
 // Comment this out to use real programs.
 // use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, SP1Program, MembershipProgram};
 use alloy_sol_types::SolValue;
@@ -17,7 +17,7 @@ use sp1_sdk::{
 
 /// A prover for for [`SP1Program`] programs.
 #[allow(clippy::module_name_repetitions)]
-pub struct SP1ICS07TendermintProver<T: SP1Program> {
+pub struct SP1ICS07TendermintProverFast<T: SP1Program> {
     /// [`sp1_sdk::ProverClient`] for generating proofs.
     pub prover_client: EnvProver,
     /// The proving key.
@@ -25,22 +25,22 @@ pub struct SP1ICS07TendermintProver<T: SP1Program> {
     /// The verifying key.
     pub vkey: SP1VerifyingKey,
     /// The proof type.
-    pub proof_type: SupportedProofType,
+    pub proof_type: SupportedProofTypeFast,
     _phantom: std::marker::PhantomData<T>,
 }
 
 /// The supported proof types.
 #[derive(Clone, Debug, Copy)]
-pub enum SupportedProofType {
+pub enum SupportedProofTypeFast {
     /// Groth16 proof.
     Groth16,
 }
 
-impl<T: SP1Program> SP1ICS07TendermintProver<T> {
+impl<T: SP1Program> SP1ICS07TendermintProverFast<T> {
     /// Create a new prover.
     #[must_use]
     #[tracing::instrument(skip_all)]
-    pub fn new(proof_type: SupportedProofType) -> Self {
+    pub fn new(proof_type: SupportedProofTypeFast) -> Self {
         tracing::info!("Initializing SP1 ProverClient...");
         let prover_client = ProverClient::from_env();
         let (pkey, vkey) = prover_client.setup(T::ELF);
@@ -62,7 +62,7 @@ impl<T: SP1Program> SP1ICS07TendermintProver<T> {
         // Generate the proof. Depending on SP1_PROVER env variable, this may be a mock, local or
         // network proof.
         let proof: SP1ProofWithPublicValues = match self.proof_type {
-            SupportedProofType::Groth16 => self
+            SupportedProofTypeFast::Groth16 => self
                 .prover_client
                 .prove(&self.pkey, stdin)
                 .groth16()
@@ -78,7 +78,7 @@ impl<T: SP1Program> SP1ICS07TendermintProver<T> {
     }
 }
 
-impl SP1ICS07TendermintProver<UpdateClientProgram> {
+impl SP1ICS07TendermintProverFast<UpdateClientProgramFast> {
     /// Generate a proof of an update from `trusted_consensus_state` to a proposed header.
     ///
     /// # Panics
@@ -110,7 +110,7 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
     }
 }
 
-impl SP1ICS07TendermintProver<MembershipProgram> {
+impl SP1ICS07TendermintProverFast<MembershipProgramFast> {
     /// Generate a proof of verify (non)membership for multiple key-value pairs.
     ///
     /// # Panics
@@ -137,7 +137,7 @@ impl SP1ICS07TendermintProver<MembershipProgram> {
     }
 }
 
-impl TryFrom<u8> for SupportedProofType {
+impl TryFrom<u8> for SupportedProofTypeFast {
     type Error = String;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
