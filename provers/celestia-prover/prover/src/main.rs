@@ -204,8 +204,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Prover Server listening on {}", addr);
 
     // Get the path to the proto descriptor file from the environment variable
-    let proto_descriptor_path = env::var("PROTO_DESCRIPTOR_PATH")
-        .expect("PROTO_DESCRIPTOR_PATH environment variable not set");
+    let proto_descriptor_path = env::var("CELESTIA_PROTO_DESCRIPTOR_PATH")
+        .expect("CELESTIA_PROTO_DESCRIPTOR_PATH environment variable not set");
 
     println!(
         "Loading proto descriptor set from {}",

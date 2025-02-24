@@ -60,7 +60,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
         # for Celestia (with IBC Eurekea enabled).
         - TENDERMINT_RPC_URL=http://simapp-validator:26657
         - RPC_URL=http://reth:8545
-        - PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+        - CELESTIA_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
     +      - SP1_PROVER=network
     +      - NETWORK_PRIVATE_KEY=PRIVATE_KEY
     ```
