@@ -1431,6 +1431,7 @@ dependencies = [
  "prost",
  "reqwest 0.12.12",
  "serde_cbor",
+ "sp1-build",
  "sp1-ics07-tendermint-prover",
  "sp1-ics07-tendermint-utils",
  "sp1-prover",
@@ -3511,6 +3512,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
+name = "membership-fast"
+version = "0.1.0"
+dependencies = [
+ "alloy-sol-types",
+ "ibc-core-commitment-types",
+ "ibc-eureka-solidity-types",
+ "sp1-zkvm",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3552,29 +3563,6 @@ dependencies = [
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "mock-membership"
-version = "0.1.0"
-dependencies = [
- "alloy-sol-types",
- "ibc-core-commitment-types",
- "ibc-eureka-solidity-types",
- "sp1-zkvm",
-]
-
-[[package]]
-name = "mock-update-client"
-version = "0.1.0"
-dependencies = [
- "alloy-sol-types",
- "ibc-client-tendermint",
- "ibc-client-tendermint-types",
- "ibc-eureka-solidity-types",
- "serde",
- "serde_cbor",
- "sp1-zkvm",
 ]
 
 [[package]]
@@ -6892,6 +6880,19 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
+name = "update-client-fast"
+version = "0.1.0"
+dependencies = [
+ "alloy-sol-types",
+ "ibc-client-tendermint",
+ "ibc-client-tendermint-types",
+ "ibc-eureka-solidity-types",
+ "serde",
+ "serde_cbor",
+ "sp1-zkvm",
+]
 
 [[package]]
 name = "url"
