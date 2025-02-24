@@ -5,10 +5,6 @@
 sp1_zkvm::entrypoint!(main);
 
 use blevm_common::BlevmOutput;
-use celestia_types::nmt::Namespace;
-use celestia_types::nmt::NamespaceProof;
-use nmt_rs::{simple_merkle::proof::Proof, NamespacedHash, TmSha2Hasher};
-use rsp_client_executor::io::ClientExecutorInput;
 
 pub fn main() {
     // This is a mock proof so it hard-codes all the output values. Note: these values were sourced

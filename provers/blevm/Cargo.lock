@@ -1156,6 +1156,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "blevm-aggregator-mock"
+version = "0.1.0"
+dependencies = [
+ "alloy-sol-types 0.7.7",
+ "bincode",
+ "blevm-common",
+ "celestia-types",
+ "hex",
+ "hex-literal",
+ "nmt-rs",
+ "reth-primitives",
+ "rsp-client-executor",
+ "serde",
+ "serde_cbor",
+ "sha2 0.10.8",
+ "sp1-zkvm",
+ "tendermint",
+ "tendermint-proto",
+]
+
+[[package]]
 name = "blevm-common"
 version = "0.1.0"
 dependencies = [
