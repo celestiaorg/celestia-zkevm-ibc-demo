@@ -2,8 +2,8 @@
 sp1_zkvm::entrypoint!(main);
 
 mod buffer;
-use buffer::Buffer;
 use blevm_common::{BlevmAggOutput, BlevmOutput};
+use buffer::Buffer;
 
 pub fn main() {
     // Read the number of proofs
@@ -11,6 +11,12 @@ pub fn main() {
 
     if n < 2 {
         panic!("must provide at least 2 proofs");
+    }
+
+    // Read all verification keys first
+    let mut verification_keys: Vec<[u32; 8]> = Vec::with_capacity(n);
+    for _ in 0..n {
+        verification_keys.push(sp1_zkvm::io::read());
     }
 
     // Read all public values
