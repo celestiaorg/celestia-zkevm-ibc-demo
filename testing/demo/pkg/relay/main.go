@@ -37,6 +37,17 @@ const (
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 	// cliendID is for the SP1 Tendermint light client on the EVM roll-up.
 	clientID = "07-tendermint-0"
+	// sender is an address on SimApp that will send funds via the MsgTransfer.
+	Sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
+	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
+	Receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
+	// denom is the denomination of the token on SimApp.
+	Denom  = "stake"
+	Amount = 100
+	// SenderInitialBalance is the initial balance of the sender from genesis.
+	SenderInitialBalance = 274883996352
+	// ReceiverInitialBalance is the initial balance of the receiver.
+	ReceiverInitialBalance = 0
 )
 
 func main() {
@@ -177,7 +188,7 @@ func ackMembershipOnRethAndUpdatedBalances() error {
 
 	// Embed it in the ack packet that will be submitted to the SimApp chain
 	// Q: should this be the relayer?
-	ackMsg := channeltypesv2.NewMsgAcknowledgement(packet, ack, proof.Bytes(), proofHeight, transfer.Sender)
+	ackMsg := channeltypesv2.NewMsgAcknowledgement(packet, ack, proof.Bytes(), proofHeight, Sender)
 
 	txHash, err := submitMessageAck(ackMsg)
 	if err != nil {
@@ -185,17 +196,17 @@ func ackMembershipOnRethAndUpdatedBalances() error {
 	}
 
 	// Query the updated balance from the Reth node (increased)
-	receiverBalance, err := ethClient.BalanceAt(context.Background(), ethcommon.HexToAddress(transfer.Receiver), nil)
+	receiverBalance, err := ethClient.BalanceAt(context.Background(), ethcommon.HexToAddress(Receiver), nil)
 	if err != nil {
 		return err
 	}
-	if receiverBalance != big.Int(transfer.ReceiverInitialBalance)+transfer.Amount {
+	if receiverBalance != big.Int(ReceiverInitialBalance)+Amount {
 		return fmt.Errorf("receiver balance not updated")
 
 	}
 
 	// Query the updated balance from the SimApp chain (decreased)
-	senderBalance, err := utils.GetAccountBalance(transfer.Sender)
+	senderBalance, err := utils.GetAccountBalance(Sender)
 	if err != nil {
 		return err
 	}
@@ -210,7 +221,7 @@ func submitMessageAck(msg *channeltypesv2.MsgAcknowledgement) (txHash string, er
 	}
 
 	fmt.Printf("Broadcasting MsgTransfer...\n")
-	response, err := utils.BroadcastMessages(clientCtx, transfer.Sender, 200_000, msg)
+	response, err := utils.BroadcastMessages(clientCtx, Sender, 200_000, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
 	}
