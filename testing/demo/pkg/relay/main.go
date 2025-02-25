@@ -11,7 +11,9 @@ import (
 	"time"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
+	transfer "github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/transfer"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
+	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -136,6 +138,88 @@ func updateTendermintLightClient() error {
 	recvBlockNumber := receipt.BlockNumber.Uint64()
 	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
 	return nil
+}
+
+// ackMembershipOnRethAndUpdatedBalances queries the Reth node for the membership proof of ack, submits it to SimApp
+// and makes sure balances are updated on both chains.
+func ackMembershipOnRethAndUpdatedBalances() error {
+	// Query the Membership proof of ack on the Reth node
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Extracted deployed contract addresses: %#v\n", addresses)
+
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Replace this with Ack key
+	key := ethcommon.HexToHash("0x123...abc")
+
+	// Prepare the arguments
+	// Storage proof takes the address and the storage slot as arguments; here, only the key is shown for simplicity
+	args := map[string]interface{}{
+		"address":     "0xAddress", // What is this address going to be with ack?
+		"key":         key.Hex(),
+		"blockNumber": "latest", // or provide a specific block number
+	}
+
+	proof := ethcommon.Hash{}
+	proofHeight := big.NewInt(0)
+	err = ethClient.Client().CallContext(context.Background(), &proof, "eth_getProof", args["address"], []string{args["key"].(string)}, proofHeight)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Parse Ack from Ethereum events
+
+	// Embed it in the ack packet that will be submitted to the SimApp chain
+	// Q: should this be the relayer?
+	ackMsg := channeltypesv2.NewMsgAcknowledgement(packet, ack, proof.Bytes(), proofHeight, transfer.Sender)
+
+	txHash, err := submitMessageAck(ackMsg)
+	if err != nil {
+		return err
+	}
+
+	// Query the updated balance from the Reth node (increased)
+	receiverBalance, err := ethClient.BalanceAt(context.Background(), ethcommon.HexToAddress(transfer.Receiver), nil)
+	if err != nil {
+		return err
+	}
+	if receiverBalance != big.Int(transfer.ReceiverInitialBalance)+transfer.Amount {
+		return fmt.Errorf("receiver balance not updated")
+
+	}
+
+	// Query the updated balance from the SimApp chain (decreased)
+	senderBalance, err := utils.GetAccountBalance(transfer.Sender)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func submitMessageAck(msg *channeltypesv2.MsgAcknowledgement) (txHash string, err error) {
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return "", fmt.Errorf("failed to setup client context: %v", err)
+	}
+
+	fmt.Printf("Broadcasting MsgTransfer...\n")
+	response, err := utils.BroadcastMessages(clientCtx, transfer.Sender, 200_000, msg)
+	if err != nil {
+		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
+	}
+
+	if response.Code != 0 {
+		return "", fmt.Errorf("failed to execute MsgTransfer %v", response.RawLog)
+	}
+	fmt.Printf("Broadcasted MsgTransfer. Response code: %v, tx hash: %v\n", response.Code, response.TxHash)
+	return response.TxHash, nil
 }
 
 func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.TransactOpts {

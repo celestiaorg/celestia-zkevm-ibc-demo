@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"cosmossdk.io/x/tx/signing"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -115,6 +116,33 @@ func SetupClientContext() (client.Context, error) {
 		WithCodec(appCodec)
 
 	return clientCtx, nil
+}
+
+func GetAccountBalance(account sdk.AccAddress) (sdk.Coin, error) {
+	var queryReqToPath = make(map[string]string)
+
+	clientCtx, err := SetupClientContext()
+	if err != nil {
+		return sdk.Coin{}, fmt.Errorf("failed to setup client context: %v", err)
+	}
+
+	req := &banktypes.QueryBalanceRequest{
+		Address: account.String(),
+		Denom:   "stake",
+	}
+	path, ok := queryReqToPath[proto.MessageName(req)]
+	if !ok {
+		return sdk.Coin{}, fmt.Errorf("no path found for %s", proto.MessageName(req))
+	}
+
+	resp := new(banktypes.QueryBalanceResponse)
+	err = clientCtx.GRPCClient.Invoke(context.Background(), path, resp, req)
+	if err != nil {
+		return sdk.Coin{}, fmt.Errorf("failed to get account: %v", err)
+	}
+
+
+	return *resp.Balance, nil
 }
 
 // GetFactory returns an instance of tx.Factory that is configured with this Broadcaster's CosmosChain
