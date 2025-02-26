@@ -1,5 +1,5 @@
 # Use official Rust image as base
-FROM rust:1.83-slim-bookworm AS builder
+FROM rust:1.85-slim-bookworm AS builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,8 +23,8 @@ RUN $SP1_DIR/bin/sp1up
 WORKDIR /celestia_zkevm_ibc_demo/
 COPY . .
 
-# Build release binary
-RUN cargo build --release
+# Build celestia-prover binary
+RUN cargo build --bin celestia-prover --release --locked
 
 # Runtime stage
 FROM debian:bookworm-slim
