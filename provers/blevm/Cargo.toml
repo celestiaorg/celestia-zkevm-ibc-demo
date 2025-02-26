@@ -1,6 +1,7 @@
 [workspace]
 members = ["blevm", "blevm-mock", "script", "blevm-aggregator", "common"]
 resolver = "2"
+package.rust-version = "1.85.0"
 
 [workspace.dependencies]
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
