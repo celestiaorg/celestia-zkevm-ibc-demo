@@ -102,8 +102,8 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 		return fmt.Errorf("failed to add channel: %v", err)
 	}
 
-	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
-	event, err := GetEvmEvent(receipt, icsClientContract.ParseICS02ClientAdded)
+	receipt := utils.GetTxReceipt(context.Background(), ethClient, tx.Hash())
+	event, err := utils.GetEvmEvent(receipt, icsClientContract.ParseICS02ClientAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
@@ -167,36 +167,4 @@ func GetTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclie
 	txOpts.GasPrice = gasPrice
 
 	return txOpts
-}
-
-func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
-	var receipt *ethtypes.Receipt
-	var err error
-	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
-		receipt, err = ethClient.TransactionReceipt(ctx, hash)
-		if err != nil {
-			return false, nil
-		}
-		return receipt != nil, nil
-	})
-	if err != nil {
-		panic(err)
-	}
-	return receipt
-}
-
-// GetEvmEvent parses the logs in the given receipt and returns the first event that can be parsed
-func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log) (*T, error)) (event *T, err error) {
-	for _, l := range receipt.Logs {
-		event, err = parseFn(*l)
-		if err == nil && event != nil {
-			break
-		}
-	}
-
-	if event == nil {
-		err = fmt.Errorf("event not found")
-	}
-
-	return
 }

@@ -26,6 +26,9 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -115,6 +118,62 @@ func SetupClientContext() (client.Context, error) {
 		WithCodec(appCodec)
 
 	return clientCtx, nil
+}
+
+// Queries the chain with a query request and deserializes the response to T
+func GRPCQuery[T any](ctx context.Context, req proto.Message, opts ...grpc.CallOption) (*T, error) {
+	var queryReqToPath = make(map[string]string)
+	path, ok := queryReqToPath[proto.MessageName(req)]
+	if !ok {
+		return nil, fmt.Errorf("no path found for %s", proto.MessageName(req))
+	}
+
+	clientCtx, err := SetupClientContext()
+	if err != nil {
+		return nil, err
+	}
+
+	defer clientCtx.GRPCClient.Close()
+
+	resp := new(T)
+	err = clientCtx.GRPCClient.Invoke(ctx, path, req, resp, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
+	var receipt *ethtypes.Receipt
+	var err error
+	err = WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+		receipt, err = ethClient.TransactionReceipt(ctx, hash)
+		if err != nil {
+			return false, nil
+		}
+		return receipt != nil, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return receipt
+}
+
+// GetEvmEvent parses the logs in the given receipt and returns the first event that can be parsed
+func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log) (*T, error)) (event *T, err error) {
+	for _, l := range receipt.Logs {
+		event, err = parseFn(*l)
+		if err == nil && event != nil {
+			break
+		}
+	}
+
+	if event == nil {
+		err = fmt.Errorf("event not found")
+	}
+
+	return
 }
 
 // GetFactory returns an instance of tx.Factory that is configured with this Broadcaster's CosmosChain
