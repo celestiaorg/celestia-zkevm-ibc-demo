@@ -11,10 +11,12 @@ import (
 	"time"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
-	transfer "github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/transfer"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
+	ics26router "github.com/cosmos/solidity-ibc-eureka/abigen/ics26Router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -38,16 +40,16 @@ const (
 	// cliendID is for the SP1 Tendermint light client on the EVM roll-up.
 	clientID = "07-tendermint-0"
 	// sender is an address on SimApp that will send funds via the MsgTransfer.
-	Sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
+	sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
-	Receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
+	receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
 	// denom is the denomination of the token on SimApp.
-	Denom  = "stake"
-	Amount = 100
+	denom  = "stake"
+	amount = 100
 	// SenderInitialBalance is the initial balance of the sender from genesis.
-	SenderInitialBalance = 274883996352
+	senderInitialBalance = 274883996352
 	// ReceiverInitialBalance is the initial balance of the receiver.
-	ReceiverInitialBalance = 0
+	receiverInitialBalance = 0
 )
 
 func main() {
@@ -151,68 +153,162 @@ func updateTendermintLightClient() error {
 	return nil
 }
 
-// ackMembershipOnRethAndUpdatedBalances queries the Reth node for the membership proof of ack, submits it to SimApp
-// and makes sure balances are updated on both chains.
-func ackMembershipOnRethAndUpdatedBalances() error {
-	// Query the Membership proof of ack on the Reth node
+func UpdateGroth16LightClient() error {
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Extracted deployed contract addresses: %#v\n", addresses)
+	// Query the Membership proof of the commitment on SimApp
+
+	fmt.Println("Querying the membership proof of the commitment on the SimApp chain...")
+
+	// Connect to the Celestia prover
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("failed to connect to prover: %w", err)
+	}
+	defer conn.Close()
+
+	fmt.Printf("Getting celestia prover info...\n")
+	proverClient := proverclient.NewProverClient(conn)
+	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
+	if err != nil {
+		return fmt.Errorf("failed to get celestia prover info %w", err)
+	}
+	fmt.Printf("Got celestia prover info with StateMembershipVerifierKey: %v\n", info.StateMembershipVerifierKey)
+	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateMembershipVerifierKey, "0x"))
+	if err != nil {
+		return fmt.Errorf("failed to decode verifier key %w", err)
+	}
+	var verifierKey [32]byte
+	copy(verifierKey[:], verifierKeyDecoded)
+
+	request := &proverclient.ProveStateMembershipRequest{Height: 3, KeyPaths: []string{"path/to/key1", "path/to/key2"}}
+	// Get state transition proof from Celestia prover with retry logic
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	var resp *proverclient.ProveStateMembershipResponse
+	for retries := 0; retries < 3; retries++ {
+		resp, err = proverClient.ProveStateMembership(ctx, request)
+		if err == nil {
+			break
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("context cancelled while getting state membership proof: %w", ctx.Err())
+		}
+		time.Sleep(time.Second * time.Duration(retries+1))
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get state membership proof after retries: %w", err)
+	}
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Replace this with Ack key
-	key := ethcommon.HexToHash("0x123...abc")
-
-	// Prepare the arguments
-	// Storage proof takes the address and the storage slot as arguments; here, only the key is shown for simplicity
-	args := map[string]interface{}{
-		"address":     "0xAddress", // What is this address going to be with ack?
-		"key":         key.Hex(),
-		"blockNumber": "latest", // or provide a specific block number
-	}
-
-	proof := ethcommon.Hash{}
-	proofHeight := big.NewInt(0)
-	err = ethClient.Client().CallContext(context.Background(), &proof, "eth_getProof", args["address"], []string{args["key"].(string)}, proofHeight)
+	// Attach that proof to the transfer packet that needs to be sent to the Reth chain (router smart contract)
+	ics26Contract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Parse Ack from Ethereum events
-
-	// Embed it in the ack packet that will be submitted to the SimApp chain
-	// Q: should this be the relayer?
-	ackMsg := channeltypesv2.NewMsgAcknowledgement(packet, ack, proof.Bytes(), proofHeight, Sender)
-
-	txHash, err := submitMessageAck(ackMsg)
+	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	if err != nil {
+		return err
+	}
+	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, faucet)
+	if err != nil {
+		return err
+	}
+	msgReceivePacket := ics26router.IICS26RouterMsgsMsgRecvPacket{
+		Packet: ics26router.IICS26RouterMsgsPacket{
+			Sequence:         1,
+			SourceClient:     "07-tendermint-0",
+			DestClient:       "07-tendermint-0",
+			TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
+		},
+		ProofCommitment: resp.Proof,
+		ProofHeight:     ics26router.IICS02ClientMsgsHeight{RevisionNumber: 0, RevisionHeight: 3},
+	}
+	tx, err := ics26Contract.RecvPacket(getTransactOpts(faucet, eth), msgReceivePacket)
 	if err != nil {
 		return err
 	}
 
-	// Query the updated balance from the Reth node (increased)
-	receiverBalance, err := ethClient.BalanceAt(context.Background(), ethcommon.HexToAddress(Receiver), nil)
+	receipt := utils.GetTxReceipt(context.Background(), ethClient, tx.Hash())
+	event, err := utils.GetEvmEvent(receipt, ics26Contract.ParseRecvPacket)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get event: %v", err)
 	}
-	if receiverBalance != big.Int(ReceiverInitialBalance)+Amount {
-		return fmt.Errorf("receiver balance not updated")
-
-	}
-
-	// Query the updated balance from the SimApp chain (decreased)
-	senderBalance, err := utils.GetAccountBalance(Sender)
-	if err != nil {
-		return err
-	}
+	fmt.Println(event, "EVENT")
 
 	return nil
 }
+
+// ackMembershipOnRethAndUpdatedBalances queries the Reth node for the membership proof of ack, submits it to SimApp
+// and makes sure balances are updated on both chains.
+// func ackMembershipOnRethAndUpdatedBalances() error {
+// 	// Query the Membership proof of ack on the Reth node
+// 	addresses, err := utils.ExtractDeployedContractAddresses()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	fmt.Printf("Extracted deployed contract addresses: %#v\n", addresses)
+
+// 	ethClient, err := ethclient.Dial(ethereumRPC)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// TODO: Replace this with Ack key
+// 	key := ethcommon.HexToHash("0x123...abc")
+
+// 	// Prepare the arguments
+// 	// Storage proof takes the address and the storage slot as arguments; here, only the key is shown for simplicity
+// 	args := map[string]interface{}{
+// 		"address":     "0xAddress", // What is this address going to be with ack?
+// 		"key":         key.Hex(),
+// 		"blockNumber": "latest", // or provide a specific block number
+// 	}
+
+// 	proof := ethcommon.Hash{}
+// 	proofHeight := big.NewInt(0)
+// 	err = ethClient.Client().CallContext(context.Background(), &proof, "eth_getProof", args["address"], []string{args["key"].(string)}, proofHeight)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// TODO: Parse Ack from Ethereum events
+
+// 	// Embed it in the ack packet that will be submitted to the SimApp chain
+// 	// Q: should this be the relayer?
+// 	ackMsg := channeltypesv2.NewMsgAcknowledgement(packet, ack, proof.Bytes(), proofHeight, Sender)
+
+// 	txHash, err := submitMessageAck(ackMsg)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Query the updated balance from the Reth node (increased)
+// 	receiverBalance, err := ethClient.BalanceAt(context.Background(), ethcommon.HexToAddress(Receiver), nil)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if receiverBalance != big.Int(ReceiverInitialBalance)+Amount {
+// 		return fmt.Errorf("receiver balance not updated")
+
+// 	}
+
+// 	// Query the updated balance from the SimApp chain (decreased)
+// 	senderBalance, err := utils.GetAccountBalance(Sender)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	return nil
+// }
 
 func submitMessageAck(msg *channeltypesv2.MsgAcknowledgement) (txHash string, err error) {
 	clientCtx, err := utils.SetupClientContext()
@@ -221,7 +317,7 @@ func submitMessageAck(msg *channeltypesv2.MsgAcknowledgement) (txHash string, er
 	}
 
 	fmt.Printf("Broadcasting MsgTransfer...\n")
-	response, err := utils.BroadcastMessages(clientCtx, Sender, 200_000, msg)
+	response, err := utils.BroadcastMessages(clientCtx, sender, 200_000, msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
 	}
@@ -303,4 +399,52 @@ func getUpdateClientArguments() (abi.Arguments, error) {
 	}
 
 	return parsed.Methods["updateClient"].Inputs, nil
+}
+
+func createICS20MsgSendPacket(
+	sender ethcommon.Address,
+	denom string,
+	amount *big.Int,
+	receiver string,
+	sourceClient string,
+	timeoutTimestamp uint64,
+	memo string,
+	ics20Transfer ethcommon.Address,
+	ethRPC bind.ContractBackend,
+) ics26router.IICS26RouterMsgsMsgSendPacket {
+	ics20Contract, err := ics20transfer.NewContract(ics20Transfer, ethRPC)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msgSendTransfer := ics20transfer.IICS20TransferMsgsSendTransferMsg{
+		Denom:            denom,
+		Amount:           amount,
+		Receiver:         receiver,
+		SourceClient:     sourceClient,
+		DestPort:         transfertypes.PortID,
+		TimeoutTimestamp: timeoutTimestamp,
+		Memo:             memo,
+	}
+
+	msgSendPacket, err := ics20Contract.ContractCaller.NewMsgSendPacketV1(nil, sender, msgSendTransfer)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Because of the way abi generation work, the type returned by ics20 is ics20transfer.IICS26RouterMsgsMsgSendPacket
+	// So we just move the values over here:
+	return ics26router.IICS26RouterMsgsMsgSendPacket{
+		SourceClient:     sourceClient,
+		TimeoutTimestamp: timeoutTimestamp,
+		Payloads: []ics26router.IICS26RouterMsgsPayload{
+			{
+				SourcePort: msgSendPacket.Payloads[0].SourcePort,
+				DestPort:   msgSendPacket.Payloads[0].DestPort,
+				Version:    msgSendPacket.Payloads[0].Version,
+				Encoding:   msgSendPacket.Payloads[0].Encoding,
+				Value:      msgSendPacket.Payloads[0].Value,
+			},
+		},
+	}
 }

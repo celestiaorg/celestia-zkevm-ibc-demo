@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"cosmossdk.io/x/tx/signing"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -27,6 +26,9 @@ import (
 	"github.com/cosmos/gogoproto/proto"
 	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -118,31 +120,60 @@ func SetupClientContext() (client.Context, error) {
 	return clientCtx, nil
 }
 
-func GetAccountBalance(account sdk.AccAddress) (sdk.Coin, error) {
+// Queries the chain with a query request and deserializes the response to T
+func GRPCQuery[T any](ctx context.Context, req proto.Message, opts ...grpc.CallOption) (*T, error) {
 	var queryReqToPath = make(map[string]string)
+	path, ok := queryReqToPath[proto.MessageName(req)]
+	if !ok {
+		return nil, fmt.Errorf("no path found for %s", proto.MessageName(req))
+	}
 
 	clientCtx, err := SetupClientContext()
 	if err != nil {
-		return sdk.Coin{}, fmt.Errorf("failed to setup client context: %v", err)
+		return nil, err
 	}
 
-	req := &banktypes.QueryBalanceRequest{
-		Address: account.String(),
-		Denom:   "stake",
-	}
-	path, ok := queryReqToPath[proto.MessageName(req)]
-	if !ok {
-		return sdk.Coin{}, fmt.Errorf("no path found for %s", proto.MessageName(req))
-	}
+	defer clientCtx.GRPCClient.Close()
 
-	resp := new(banktypes.QueryBalanceResponse)
-	err = clientCtx.GRPCClient.Invoke(context.Background(), path, resp, req)
+	resp := new(T)
+	err = clientCtx.GRPCClient.Invoke(ctx, path, req, resp, opts...)
 	if err != nil {
-		return sdk.Coin{}, fmt.Errorf("failed to get account: %v", err)
+		return nil, err
 	}
 
+	return resp, nil
+}
 
-	return *resp.Balance, nil
+func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
+	var receipt *ethtypes.Receipt
+	var err error
+	err = WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+		receipt, err = ethClient.TransactionReceipt(ctx, hash)
+		if err != nil {
+			return false, nil
+		}
+		return receipt != nil, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return receipt
+}
+
+// GetEvmEvent parses the logs in the given receipt and returns the first event that can be parsed
+func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log) (*T, error)) (event *T, err error) {
+	for _, l := range receipt.Logs {
+		event, err = parseFn(*l)
+		if err == nil && event != nil {
+			break
+		}
+	}
+
+	if event == nil {
+		err = fmt.Errorf("event not found")
+	}
+
+	return
 }
 
 // GetFactory returns an instance of tx.Factory that is configured with this Broadcaster's CosmosChain
