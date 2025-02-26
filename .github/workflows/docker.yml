@@ -1,0 +1,17 @@
+name: docker
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  simapp:
+    permissions:
+      contents: write
+      packages: write
+    uses: celestiaorg/.github/.github/workflows/reusable_dockerfile_pipeline.yml@v0.5.0
+    with:
+      dockerfile: docker/simapp.Dockerfile
+      packageName: simapp
+      checkout_ref: ${{ github.event.inputs.ref }}
+    secrets: inherit
