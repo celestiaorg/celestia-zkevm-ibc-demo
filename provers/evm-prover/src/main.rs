@@ -73,17 +73,14 @@ impl ProverService {
         })
     }
 
-    async fn get_latest_height(&self) -> Result<u64, Status> {
+    async fn get_latest_height(&self) -> Result<ethers::types::U64, Status> {
         self.evm_client
             .get_block(BlockNumber::Latest)
             .await
             .map_err(|e| Status::internal(format!("Failed to get latest block: {}", e)))?
             .ok_or_else(|| Status::internal("No latest block found"))?
             .number
-            .ok_or_else(|| Status::internal("Block has no number"))?
-            .as_u64()
-            .try_into()
-            .map_err(|e| Status::internal(format!("Failed to convert block number: {}", e)))
+            .ok_or_else(|| Status::internal("Block has no number"))
     }
 
     async fn get_trusted_height(&self, client_id: &str) -> Result<u64, Status> {
