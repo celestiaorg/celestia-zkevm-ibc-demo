@@ -21,6 +21,7 @@ type LightClientModule struct {
 
 // NewLightClientModule returns a new groth16 LightClientModule.
 func NewLightClientModule(cdc codec.BinaryCodec, storeProvider clienttypes.StoreProvider) LightClientModule {
+	fmt.Println("NEW LIGHT CLIENT MODULE")
 	return LightClientModule{
 		cdc:           cdc,
 		storeProvider: storeProvider,

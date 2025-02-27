@@ -16,7 +16,7 @@ import (
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
-	ics26router "github.com/cosmos/solidity-ibc-eureka/abigen/ics26Router"
+	ics26router "github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -50,10 +50,16 @@ const (
 	senderInitialBalance = 274883996352
 	// ReceiverInitialBalance is the initial balance of the receiver.
 	receiverInitialBalance = 0
+	firstClientID          = "07-tendermint-0"
+	secondClientID         = "08-groth16-0"
 )
 
 func main() {
-	err := updateTendermintLightClient()
+	// err := updateTendermintLightClient()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	err := UpdateGroth16LightClient()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -222,12 +228,22 @@ func UpdateGroth16LightClient() error {
 	if err != nil {
 		return err
 	}
+
+	// These inputs need to be updated 
 	msgReceivePacket := ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
 			Sequence:         1,
 			SourceClient:     "07-tendermint-0",
 			DestClient:       "07-tendermint-0",
 			TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
+			Payloads: []ics26router.IICS26RouterMsgsPayload{{
+				SourcePort: "transfer",
+				DestPort:   "transfer",
+				Version:    "ics20-1",
+				Encoding:   "json",
+				Value: 	packet, // This is probably meant to be the transfer packet
+			},
+			},
 		},
 		ProofCommitment: resp.Proof,
 		ProofHeight:     ics26router.IICS02ClientMsgsHeight{RevisionNumber: 0, RevisionHeight: 3},
@@ -237,12 +253,15 @@ func UpdateGroth16LightClient() error {
 		return err
 	}
 
-	receipt := utils.GetTxReceipt(context.Background(), ethClient, tx.Hash())
+	receipt = utils.GetTxReceipt(context.Background(), ethClient, tx.Hash())
 	event, err := utils.GetEvmEvent(receipt, ics26Contract.ParseRecvPacket)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
-	fmt.Println(event, "EVENT")
+
+	// Now update the Groth16 light client on the SimApp with EVM's new state
+	
+
 
 	return nil
 }

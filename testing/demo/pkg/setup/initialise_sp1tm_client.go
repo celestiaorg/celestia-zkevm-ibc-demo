@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
@@ -16,7 +15,6 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
