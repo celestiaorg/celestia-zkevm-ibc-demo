@@ -18,7 +18,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
 1. Install [Foundry](https://book.getfoundry.sh/getting-started/installation)
 1. Install [Bun](https://bun.sh/)
 1. Install [Just](https://just.systems/man/en/)
-1. Install [SP1](https://docs.succinct.xyz/docs/getting-started/install)
+1. Install [SP1](https://docs.succinct.xyz/docs/sp1/getting-started/install)
 
 ### Steps
 
