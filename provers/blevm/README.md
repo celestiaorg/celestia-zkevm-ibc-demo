@@ -15,7 +15,7 @@ This workspace contains multiple crates:
 
 ## Contributing
 
-See <https://docs.succinct.xyz/docs/introduction>
+See <https://docs.succinct.xyz/docs/sp1/introduction>
 
 ### Prerequisites
 
@@ -77,7 +77,7 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
 
 ### Development
 
-While developing SP1 programs (i.e. `blevm`, `blevm-mock`, `blevm-aggregate`) it is helpful to generate [development builds](https://docs.succinct.xyz/docs/writing-programs/compiling#development-builds):
+While developing SP1 programs (i.e. `blevm`, `blevm-mock`, `blevm-aggregate`) it is helpful to generate [development builds](https://docs.succinct.xyz/docs/sp1/writing-programs/compiling#development-builds):
 
 ```shell
 # Change to an SP1 program crate
