@@ -1,5 +1,5 @@
 [package]
-name = "mock-membership"
+name = "membership-fast"
 repository.workspace = true
 version.workspace = true
 edition.workspace = true
