@@ -31,6 +31,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println(msg.Payloads[0].SourcePort, "SOURCE PORT")
+	fmt.Println(msg.Payloads[0].DestinationPort, "DEST PORT")
+	fmt.Println(msg.Payloads[0].Version, "VERSION")
+	fmt.Println(msg.Payloads[0].Encoding, "ENCODING")
+	fmt.Println(msg.Payloads[0].Value, "VALUE")
+
 	_, err = submitMsgTransfer(msg)
 	if err != nil {
 		log.Fatal(err)
