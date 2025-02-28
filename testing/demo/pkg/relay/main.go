@@ -57,11 +57,11 @@ const (
 var transferValue = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 115, 116, 97, 107, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45, 99, 111, 115, 109, 111, 115, 49, 108, 116, 118, 122, 112, 119, 102, 51, 101, 103, 56, 101, 57, 115, 55, 119, 122, 108, 101, 113, 100, 109, 119, 48, 50, 108, 101, 115, 114, 100, 101, 120, 57, 106, 103, 116, 48, 113, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 48, 120, 55, 102, 51, 57, 99, 53, 56, 49, 102, 53, 57, 53, 98, 53, 51, 99, 53, 99, 98, 49, 57, 98, 53, 97, 54, 101, 53, 98, 56, 102, 51, 97, 48, 98, 49, 102, 50, 102, 54, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 116, 101, 115, 116, 32, 116, 114, 97, 110, 115, 102, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func main() {
-	// err := updateTendermintLightClient()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	err := SendTransferPacketToReth()
+	err := updateTendermintLightClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = RelayTransferPacketToReth()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -161,7 +161,7 @@ func updateTendermintLightClient() error {
 	return nil
 }
 
-func SendTransferPacketToReth() error {
+func RelayTransferPacketToReth() error {
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func SendTransferPacketToReth() error {
 	msgReceivePacket := ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
 			Sequence:         1,
-			SourceClient:     "07-tendermint-0",
+			SourceClient:     "06-groth16-0",
 			DestClient:       "07-tendermint-0",
 			TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
 			Payloads: []ics26router.IICS26RouterMsgsPayload{{
