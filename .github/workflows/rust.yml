@@ -80,13 +80,8 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          profile: minimal
-          components: rustfmt, clippy
+      - name: "Set up environment"
+        uses: ./.github/setup
 
       - name: Install SP1 toolchain
         shell: bash
@@ -95,9 +90,6 @@ jobs:
           ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
-
-      # - name: Install specific Rust version
-      #   run: rustup override set 1.85.0
 
       - name: Build
         run: cargo build --release --locked
