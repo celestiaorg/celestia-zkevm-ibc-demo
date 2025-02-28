@@ -69,7 +69,10 @@ func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*
 	}
 	defer conn.Close()
 
-	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, []byte{}, genesisBlock.Root().Bytes())
+	// TODO: Query this from the EVM rollup.
+	codeCommitment := []byte{}
+
+	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, codeCommitment, genesisBlock.Root().Bytes())
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create client state any: %v", err)
