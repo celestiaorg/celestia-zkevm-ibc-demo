@@ -2,7 +2,12 @@
 members = ["blevm", "blevm-mock", "script", "blevm-aggregator", "common"]
 resolver = "2"
 edition = "2021"
-package.rust-version = "1.85.0"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.85.0"
 
 [workspace.dependencies]
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
