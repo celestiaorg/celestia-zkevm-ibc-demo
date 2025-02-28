@@ -17,7 +17,7 @@ message ClientState {
   // curve is supported.
   bytes state_transition_verifier_key = 2;
 
-  // CodeCommitment is a commitment to the EVM prover source.
+  // CodeCommitment is a commitment over the roll-up's source code.
   bytes code_commitment = 3;
 
   // GenesisStateRoot is the state root of the EVM roll-up's genesis block.
