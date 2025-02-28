@@ -79,7 +79,6 @@ impl Prover for ProverService {
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_http(self.evm_rpc_url.clone());
-        println!("provider: {:?}", provider);
 
         let contract = sp1_ics07_tendermint::new(client_id, provider);
         println!("contract: {:?}", contract);
@@ -97,28 +96,28 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
         println!("client_state chainId: {:?}", client_state.chainId);
 
-        // fetch the light block at the latest height of the client state
-        let trusted_light_block = self
+        // Fetch the block at the latest height of the client state. This is the
+        // beginning of the range we need to prove.
+        let trusted_block = self
             .tendermint_rpc_client
             .get_light_block(Some(client_state.latestHeight.revisionHeight))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        println!("trusted_light_block: {:?}", trusted_light_block);
+        println!("trusted_block.height: {:?}", trusted_block.height());
 
-        // fetch the latest light block
-        let target_light_block = self
+        // Fetch the latest block on the chain. This is the end of the range we
+        // need to prove.
+        let target_block = self
             .tendermint_rpc_client
             .get_light_block(None)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        println!("target_light_block: {:?}", target_light_block);
+        println!("target_block.height: {:?}", target_block.height());
 
-        let trusted_consensus_state: SolConsensusState =
-            trusted_light_block.to_consensus_state().into();
+        let trusted_consensus_state: SolConsensusState = trusted_block.to_consensus_state().into();
         println!("trusted_consensus_state: {:?}", trusted_consensus_state);
 
-        let proposed_header = target_light_block.into_header(&trusted_light_block);
-        println!("proposed_header: {:?}", proposed_header);
+        let header = target_block.into_header(&trusted_block);
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -127,13 +126,14 @@ impl Prover for ProverService {
 
         println!(
             "proving from height {:?} to height {:?}",
-            &trusted_light_block.signed_header.header.height, &proposed_header.trusted_height
+            &header.trusted_height.revision_height(),
+            &header.height().revision_height()
         );
 
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
             &trusted_consensus_state,
-            &proposed_header,
+            &header,
             now,
         );
 
@@ -141,6 +141,7 @@ impl Prover for ProverService {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
         };
+        println!("generated proof");
 
         Ok(Response::new(response))
     }
