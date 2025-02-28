@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"cosmossdk.io/math"
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	ics26router "github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -54,12 +54,14 @@ const (
 	secondClientID         = "08-groth16-0"
 )
 
+var transferValue = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 115, 116, 97, 107, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45, 99, 111, 115, 109, 111, 115, 49, 108, 116, 118, 122, 112, 119, 102, 51, 101, 103, 56, 101, 57, 115, 55, 119, 122, 108, 101, 113, 100, 109, 119, 48, 50, 108, 101, 115, 114, 100, 101, 120, 57, 106, 103, 116, 48, 113, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 48, 120, 55, 102, 51, 57, 99, 53, 56, 49, 102, 53, 57, 53, 98, 53, 51, 99, 53, 99, 98, 49, 57, 98, 53, 97, 54, 101, 53, 98, 56, 102, 51, 97, 48, 98, 49, 102, 50, 102, 54, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 116, 101, 115, 116, 32, 116, 114, 97, 110, 115, 102, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
 func main() {
 	// err := updateTendermintLightClient()
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-	err := UpdateGroth16LightClient()
+	err := SendTransferPacketToReth()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,7 +161,7 @@ func updateTendermintLightClient() error {
 	return nil
 }
 
-func UpdateGroth16LightClient() error {
+func SendTransferPacketToReth() error {
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
@@ -229,7 +231,7 @@ func UpdateGroth16LightClient() error {
 		return err
 	}
 
-	// These inputs need to be updated 
+	// These inputs need to be updated
 	msgReceivePacket := ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
 			Sequence:         1,
@@ -240,8 +242,8 @@ func UpdateGroth16LightClient() error {
 				SourcePort: "transfer",
 				DestPort:   "transfer",
 				Version:    "ics20-1",
-				Encoding:   "json",
-				Value: 	packet, // This is probably meant to be the transfer packet
+				Encoding:   "application/x-solidity-abi",
+				Value:      transferValue,
 			},
 			},
 		},
@@ -253,15 +255,34 @@ func UpdateGroth16LightClient() error {
 		return err
 	}
 
-	receipt = utils.GetTxReceipt(context.Background(), ethClient, tx.Hash())
+	receipt := utils.GetTxReceipt(context.Background(), ethClient, tx.Hash())
 	event, err := utils.GetEvmEvent(receipt, ics26Contract.ParseRecvPacket)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
+	fmt.Printf("Received packet with event: %v\n", event)
 
-	// Now update the Groth16 light client on the SimApp with EVM's new state
-	
+	// Query the updated balance from the Reth node (increased)
+	receiverBalance, err := ethClient.BalanceAt(context.Background(), ethcommon.HexToAddress(receiver), nil)
+	if err != nil {
+		return err
+	}
+	if receiverBalance != new(big.Int).Add(big.NewInt(receiverInitialBalance), (big.NewInt(amount))) {
+		return fmt.Errorf("receiver balance not updated")
 
+	}
+
+	senderBalance, err := utils.GRPCQuery[banktypes.QueryBalanceResponse](ctx, &banktypes.QueryBalanceRequest{
+		Address: sender,
+		Denom:   denom,
+	})
+	if err != nil {
+		return err
+	}
+
+	if senderBalance.Balance.Amount != math.NewInt(receiverInitialBalance).Add(math.NewInt(amount)) {
+		return fmt.Errorf("sender balance not updated")
+	}
 
 	return nil
 }
@@ -418,52 +439,4 @@ func getUpdateClientArguments() (abi.Arguments, error) {
 	}
 
 	return parsed.Methods["updateClient"].Inputs, nil
-}
-
-func createICS20MsgSendPacket(
-	sender ethcommon.Address,
-	denom string,
-	amount *big.Int,
-	receiver string,
-	sourceClient string,
-	timeoutTimestamp uint64,
-	memo string,
-	ics20Transfer ethcommon.Address,
-	ethRPC bind.ContractBackend,
-) ics26router.IICS26RouterMsgsMsgSendPacket {
-	ics20Contract, err := ics20transfer.NewContract(ics20Transfer, ethRPC)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	msgSendTransfer := ics20transfer.IICS20TransferMsgsSendTransferMsg{
-		Denom:            denom,
-		Amount:           amount,
-		Receiver:         receiver,
-		SourceClient:     sourceClient,
-		DestPort:         transfertypes.PortID,
-		TimeoutTimestamp: timeoutTimestamp,
-		Memo:             memo,
-	}
-
-	msgSendPacket, err := ics20Contract.ContractCaller.NewMsgSendPacketV1(nil, sender, msgSendTransfer)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Because of the way abi generation work, the type returned by ics20 is ics20transfer.IICS26RouterMsgsMsgSendPacket
-	// So we just move the values over here:
-	return ics26router.IICS26RouterMsgsMsgSendPacket{
-		SourceClient:     sourceClient,
-		TimeoutTimestamp: timeoutTimestamp,
-		Payloads: []ics26router.IICS26RouterMsgsPayload{
-			{
-				SourcePort: msgSendPacket.Payloads[0].SourcePort,
-				DestPort:   msgSendPacket.Payloads[0].DestPort,
-				Version:    msgSendPacket.Payloads[0].Version,
-				Encoding:   msgSendPacket.Payloads[0].Encoding,
-				Value:      msgSendPacket.Payloads[0].Value,
-			},
-		},
-	}
 }
