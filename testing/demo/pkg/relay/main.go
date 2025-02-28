@@ -50,7 +50,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Extracted deployed contract addresses: %#v\n", addresses)
+	fmt.Printf("Deployed contract addresses: %v\n", addresses)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
@@ -90,6 +90,7 @@ func updateTendermintLightClient() error {
 	var verifierKey [32]byte
 	copy(verifierKey[:], verifierKeyDecoded)
 
+	fmt.Printf("Requesting state transition proof from celestia-prover...\n")
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -108,6 +109,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
+	fmt.Printf("Received state transition proof from celestia-prover\n")
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
@@ -123,7 +125,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("error packing msg %w", err)
 	}
 
-	fmt.Printf("Invoking icsCore.UpdateClient...\n")
+	fmt.Printf("Invoking icsClient.UpdateClient...\n")
 	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
 	if err != nil {
 		return err
@@ -134,7 +136,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
-	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
+	fmt.Printf("Updated icsClient in EVM block %v.", recvBlockNumber)
 	return nil
 }
 
