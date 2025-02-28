@@ -1,8 +1,7 @@
 [package]
 version = "0.1.0"
 name = "blevm-script"
-edition = "2021"
-rust-version = {workspace = true}
+edition = { workspace = true }
 default-run = "blevm-script"
 
 [[bin]]

@@ -1,7 +1,7 @@
 [package]
 version = "0.1.0"
 name = "blevm-common"
-edition = "2021"
+edition = { workspace = true }
 
 [dependencies]
 serde = { workspace = true }
