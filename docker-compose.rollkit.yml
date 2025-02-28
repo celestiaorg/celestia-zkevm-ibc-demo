@@ -41,7 +41,7 @@ services:
       - rollkit-network
 
   celestia-network-validator:
-    image: ghcr.io/celestiaorg/celestia-app:v3.0.0-mocha
+    image: ghcr.io/celestiaorg/celestia-app:v3.3.1-mocha
     container_name: celestia-network-validator
     volumes:
       - ./.tmp/celestia-validator:/home/celestia
