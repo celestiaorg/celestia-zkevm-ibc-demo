@@ -37,7 +37,7 @@ type ClientState struct {
 	// state root after the state transition has been applied. Only the BN254
 	// curve is supported.
 	StateTransitionVerifierKey []byte `protobuf:"bytes,2,opt,name=state_transition_verifier_key,json=stateTransitionVerifierKey,proto3" json:"state_transition_verifier_key,omitempty"`
-	// CodeCommitment is a commitment to the EVM prover source.
+	// CodeCommitment is a commitment over the roll-up's source code.
 	CodeCommitment []byte `protobuf:"bytes,3,opt,name=code_commitment,json=codeCommitment,proto3" json:"code_commitment,omitempty"`
 	// GenesisStateRoot is the state root of the EVM roll-up's genesis block.
 	GenesisStateRoot []byte `protobuf:"bytes,4,opt,name=genesis_state_root,json=genesisStateRoot,proto3" json:"genesis_state_root,omitempty"`
