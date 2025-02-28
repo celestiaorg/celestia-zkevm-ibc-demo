@@ -1,12 +1,16 @@
 name: setup
+description: "Setup environment for Rust projects"
 
 runs:
   using: composite
   steps:
     - name: "Check out the repo"
       uses: "actions/checkout@v4"
-    - name: Install nightly toolchain
+    - name: Update Rust
       shell: bash
-      run: rustup update 1.81 && rustup default 1.81 && rustup component add rustfmt && rustup component add clippy
+      run: rustup update
+    - name: Set default Rust toolchain to stable
+      shell: bash
+      run: rustup default stable
     - name: Setup Protoc
       uses: taiki-e/install-action@protoc
