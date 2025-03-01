@@ -77,8 +77,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
     let input = BlockProverInput {
-        block_height: args.inclusion_block,
-        l2_block_data: fs::read(args.input_path).expect("failed to read input file"),
+        inclusion_height: args.inclusion_block,
+        client_executor_input: fs::read(args.input_path).expect("failed to read input file"),
     };
 
     if args.execute {

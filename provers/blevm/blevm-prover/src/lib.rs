@@ -48,8 +48,8 @@ pub struct AggregationOutput {
 /// Input data for block proving
 #[derive(Clone)]
 pub struct BlockProverInput {
-    pub block_height: u64,
-    pub l2_block_data: Vec<u8>,
+    pub inclusion_height: u64,
+    pub client_executor_input: Vec<u8>,
 }
 
 /// Handles interaction with Celestia network
@@ -121,15 +121,15 @@ impl BlockProver {
     }
 
     async fn get_stdin(&self, input: BlockProverInput) -> Result<SP1Stdin, Box<dyn Error>> {
-        // Create blob from L2 block data
-        let block: ClientExecutorInput = bincode::deserialize(&input.l2_block_data)?;
-        let block_bytes = bincode::serialize(&block.current_block)?;
+        let client_executor_input: ClientExecutorInput =
+            bincode::deserialize(&input.client_executor_input)?;
+        let block_bytes = bincode::serialize(&client_executor_input.current_block)?;
         let blob = Blob::new(self.celestia_client.namespace, block_bytes, AppVersion::V3)?;
 
         // Get blob and header from Celestia
         let (blob_from_chain, header) = self
             .celestia_client
-            .get_blob_and_header(input.block_height, &blob)
+            .get_blob_and_header(input.inclusion_height, &blob)
             .await?;
 
         // Generate all required proofs
@@ -140,12 +140,12 @@ impl BlockProver {
 
         let nmt_multiproofs = self
             .celestia_client
-            .get_nmt_proofs(input.block_height, &blob)
+            .get_nmt_proofs(input.inclusion_height, &blob)
             .await?;
 
         // Prepare stdin for the prover
         let mut stdin = SP1Stdin::new();
-        stdin.write(&block);
+        stdin.write(&client_executor_input);
         stdin.write(&self.celestia_client.namespace);
         stdin.write(&header.header.hash());
         stdin.write_vec(data_hash_bytes);
