@@ -79,13 +79,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
-    // Example input (replace with actual L2 block data)
     let input = BlockProverInput {
         // Hardcode the height of the block containing the blob
         // https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w%3D&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8%3D&height=2988873
-        block_height: 2988873,
-        l2_block_data: fs::read("input/1/18884864.bin").expect(
-            "Failed to load L2 block data. Ensure you're in a directory with input/1/18884864.bin",
+        inclusion_height: 2988873,
+        client_executor_input: fs::read("input/1/18884864.bin").expect(
+            "Failed to load client executor input. Ensure you're in a directory with input/1/18884864.bin",
         ),
     };
 
