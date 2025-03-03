@@ -37,6 +37,7 @@ services:
       --authrpc.jwtsecret /testapp_files/jwt.hex
       --datadir /.tmp/eth-home
       --ipcpath /.tmp/eth-home/eth-engine.ipc
+      --rpc.eth-proof-window 120000
     networks:
       - rollkit-network
 
