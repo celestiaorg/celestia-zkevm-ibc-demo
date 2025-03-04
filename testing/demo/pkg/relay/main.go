@@ -295,26 +295,72 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	sendPacketEvent := sendPacketEvents[0]
 	fmt.Printf("Extracted SendPacket event from transaction: %+v\n", sendPacketEvent)
 
+	// Generate a proof for the packet commitment
+	// This would involve:
+	// 1. Determining the key path in the SimApp state tree where the packet commitment is stored
+	// 2. Getting a proof for that key from the prover
+
+	// Get source client ID from the event
+	sourceClientID, ok := sendPacketEvent["packet_source_client"].(string)
+	if !ok {
+		return fmt.Errorf("packet_source_client not found in SendPacket event or not a string")
+	}
+
+	// Parse the packet sequence as uint64
+	packetSequenceStr, ok := sendPacketEvent["packet_sequence"].(string)
+	if !ok {
+		return fmt.Errorf("packet_sequence not found in SendPacket event or not a string")
+	}
+	packetSequence, err := strconv.ParseUint(packetSequenceStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse packet sequence: %w", err)
+	}
+
+	// Create the commitment path according to IBC Eureka specification:
+	// - Source client ID bytes
+	// - Marker byte (1 for packet commitment)
+	// - Sequence number in big-endian
+	var packetCommitmentPath []byte
+	packetCommitmentPath = append(packetCommitmentPath, []byte(sourceClientID)...)
+	packetCommitmentPath = append(packetCommitmentPath, byte(1)) // Marker byte for packet commitment
+
+	// Convert sequence to big-endian bytes and append
+	sequenceBytes := make([]byte, 8)
+	// Store sequence in big-endian format (most significant byte first)
+	for i := 7; i >= 0; i-- {
+		sequenceBytes[i] = byte(packetSequence & 0xff)
+		packetSequence >>= 8
+	}
+	packetCommitmentPath = append(packetCommitmentPath, sequenceBytes...)
+	fmt.Printf("Generating proof for packet commitment with path: %x\n", packetCommitmentPath)
+
 	celestiaProverConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to celestia-prover: %w", err)
 	}
 	defer celestiaProverConn.Close()
+	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
 
-	// Generate a proof for the packet commitment
-	// This would involve:
-	// 1. Determining the key path in the SimApp state tree where the packet commitment is stored
-	// 2. Getting a proof for that key from the prover
-	packetCommitmentPath := fmt.Sprintf("commitments/ports/%s/channels/%s/sequences/%d",
-		sendPacketEvent["packet_src_port"],
-		sendPacketEvent["packet_src_channel"],
-		sendPacketEvent["packet_sequence"])
+	fmt.Printf("Requesting celestia-prover state membership proof...\n")
+	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
+		Height:   tx.Height,
+		KeyPaths: []string{hex.EncodeToString(packetCommitmentPath)},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get state membership proof: %w", err)
+	}
+	fmt.Printf("Received celestia-prover state membership proof %v.\n", resp)
 
-	fmt.Printf("Generating proof for packet commitment at path: %s\n", packetCommitmentPath)
+	// Define a proof height structure for later use
+	type Height struct {
+		RevisionNumber uint64 `json:"revision_number"`
+		RevisionHeight uint64 `json:"revision_height"`
+	}
 
-	// In a real implementation, we would call the prover to get the proof
-	// For now, create a dummy proof structure
-	dummyProof := []byte{0x1, 0x2, 0x3, 0x4} // Example proof data
+	proofHeight := Height{
+		RevisionNumber: 0,
+		RevisionHeight: 0,
+	}
 
 	// Step 6: Get Ethereum client and contract
 	// Initialize Ethereum client and contract interfaces
@@ -334,12 +380,12 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to get contract addresses: %w", err)
 	}
 
-	// Get the ICS26Router contract
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
 
+	// Get the ICS26Router contract
 	ics26RouterAddr := ethcommon.HexToAddress(addresses.ICS26Router)
 
 	// Step 7: Prepare the contract call data
@@ -349,11 +395,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	type Channel struct {
 		PortID    string `json:"port_id"`
 		ChannelID string `json:"channel_id"`
-	}
-
-	type Height struct {
-		RevisionNumber uint64 `json:"revision_number"`
-		RevisionHeight uint64 `json:"revision_height"`
 	}
 
 	type Packet struct {
@@ -504,7 +545,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	_ = txID
 	_ = recvPacketABI
 	_ = proofHeight
-	_ = dummyProof
 
 	return nil
 }
