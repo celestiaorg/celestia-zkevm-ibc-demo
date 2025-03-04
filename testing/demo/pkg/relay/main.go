@@ -66,7 +66,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Deployed contract addresses: %v\n", addresses)
+	fmt.Printf("Deployed contract addresses: \n%v\n", addresses)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
@@ -141,7 +141,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("error packing msg %w", err)
 	}
 
-	fmt.Printf("Invoking icsClient.UpdateClient...\n")
+	fmt.Printf("Submitting UpdateClient tx to EVM roll-up...\n")
 	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
 	if err != nil {
 		return err
@@ -152,7 +152,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
-	fmt.Printf("Updated icsClient in EVM block %v.", recvBlockNumber)
+	fmt.Printf("UpdateClient tx landed in block %v\n", recvBlockNumber)
 	return nil
 }
 
