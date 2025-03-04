@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -233,39 +232,21 @@ func getUpdateClientArguments() (abi.Arguments, error) {
 func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Relaying transaction %s to client %s...\n", sourceTxHash, targetClientID)
 
-	// Step 1: Parse the transaction hash
 	txID, err := hex.DecodeString(strings.TrimPrefix(sourceTxHash, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode source tx hash: %w", err)
 	}
 
-	// Step 2: Setup Tendermint RPC client to fetch the transaction and its events
-	// This would connect to the SimApp node
-	tendermintRPCAddr := "http://localhost:26657"
-	httpClient, err := http.DefaultClient.Get(tendermintRPCAddr)
-	if err != nil {
-		return fmt.Errorf("failed to connect to tendermint RPC: %w", err)
-	}
-	if httpClient != nil && httpClient.Body != nil {
-		httpClient.Body.Close()
-	}
-	fmt.Println("Connected to Tendermint RPC")
-
-	// Step 3: Query the transaction and extract IBC events
-	// In a real implementation, we would make an RPC call to the node:
-	// GET /tx?hash=0x... to retrieve the transaction data and events
-	fmt.Println("Querying transaction and extracting IBC events...")
-
-	// Here's how we would actually query the transaction:
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %w", err)
 	}
+	fmt.Printf("Querying transaction and extracting IBC events...")
 	tx, err := clientCtx.Client.Tx(context.Background(), txID, true)
 	if err != nil {
 		return fmt.Errorf("failed to query transaction: %w", err)
 	}
-	fmt.Println("Queried transaction and extracted events%v\n", tx.TxResult.Events)
+	fmt.Printf("Queried transaction and extracted events %v\n", tx.TxResult.Events)
 
 	// Step 4: Extract SendPacket events and generate RecvPacket messages
 	// In a real implementation, we would parse the events from the transaction
