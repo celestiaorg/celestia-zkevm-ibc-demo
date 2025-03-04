@@ -26,7 +26,7 @@ pub struct ProverService {
 impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let sp1_prover = ProverClient::from_env();
-        let (pk, _) = sp1_prover.setup(&BLEVM_ELF);
+        let (pk, _) = sp1_prover.setup(BLEVM_ELF);
 
         Ok(ProverService {
             sp1_proving_key: pk,
