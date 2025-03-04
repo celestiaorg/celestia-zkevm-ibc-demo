@@ -92,13 +92,13 @@ func updateTendermintLightClient() error {
 	}
 	defer conn.Close()
 
-	fmt.Printf("Getting celestia prover info...\n")
+	fmt.Printf("Requesting celestia prover StateTransitionVerifierKey...\n")
 	proverClient := proverclient.NewProverClient(conn)
 	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
 	if err != nil {
 		return fmt.Errorf("failed to get celestia prover info %w", err)
 	}
-	fmt.Printf("Got celestia prover info with StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
+	fmt.Printf("Received celestia prover StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
 	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
@@ -106,7 +106,7 @@ func updateTendermintLightClient() error {
 	var verifierKey [32]byte
 	copy(verifierKey[:], verifierKeyDecoded)
 
-	fmt.Printf("Requesting state transition proof from celestia-prover...\n")
+	fmt.Printf("Requesting celestia-prover state transition proof...\n")
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -125,7 +125,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
-	fmt.Printf("Received state transition proof from celestia-prover\n")
+	fmt.Printf("Received celestia-prover state transition proof\n")
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
@@ -148,11 +148,10 @@ func updateTendermintLightClient() error {
 	}
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		fmt.Printf("receipt %v and logs %v\n", receipt, receipt.Logs)
-		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
+		return fmt.Errorf("receipt status want %v, got %v. logs: %v", ethtypes.ReceiptStatusSuccessful, receipt.Status, receipt.Logs)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
-	fmt.Printf("UpdateClient tx landed in block %v\n", recvBlockNumber)
+	fmt.Printf("Submitted UpdateClient tx in block %v with tx hash %v\n", recvBlockNumber, receipt.TxHash.Hex())
 	return nil
 }
 
@@ -206,10 +205,10 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	}
 
 	// Log more details about the receipt
-	fmt.Printf("Transaction hash: %s\n", hash.Hex())
-	fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
-	fmt.Printf("Gas used: %d\n", receipt.GasUsed)
-	fmt.Printf("Logs: %v\n", receipt.Logs)
+	// fmt.Printf("Transaction hash: %s\n", hash.Hex())
+	// fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
+	// fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+	// fmt.Printf("Logs: %v\n", receipt.Logs)
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
 		fmt.Println("Transaction failed. Inspect logs or contract.")
 	}
