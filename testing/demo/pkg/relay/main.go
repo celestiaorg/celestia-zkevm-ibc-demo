@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,7 +66,6 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Deployed contract addresses: \n%v\n", addresses)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
@@ -91,13 +91,13 @@ func updateTendermintLightClient() error {
 	}
 	defer conn.Close()
 
-	fmt.Printf("Requesting celestia prover StateTransitionVerifierKey...\n")
+	fmt.Printf("Requesting celestia-prover StateTransitionVerifierKey...\n")
 	proverClient := proverclient.NewProverClient(conn)
 	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
 	if err != nil {
-		return fmt.Errorf("failed to get celestia prover info %w", err)
+		return fmt.Errorf("failed to get celestia-prover info %w", err)
 	}
-	fmt.Printf("Received celestia prover StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
+	fmt.Printf("Received celestia-prover StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
 	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
@@ -124,7 +124,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
-	fmt.Printf("Received celestia-prover state transition proof\n")
+	fmt.Printf("Received celestia-prover state transition proof.\n")
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
@@ -241,57 +241,74 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %w", err)
 	}
-	fmt.Printf("Querying transaction and extracting IBC events...")
+	fmt.Printf("Querying transaction and extracting IBC events...\n")
 	tx, err := clientCtx.Client.Tx(context.Background(), txID, true)
 	if err != nil {
 		return fmt.Errorf("failed to query transaction: %w", err)
 	}
-	fmt.Printf("Queried transaction and extracted events %v\n", tx.TxResult.Events)
+	fmt.Printf("Queried transaction and extracted %v events.\n", len(tx.TxResult.Events))
 
-	// Step 4: Extract SendPacket events and generate RecvPacket messages
-	// In a real implementation, we would parse the events from the transaction
-	// For now, we'll create a dummy SendPacket event to simulate the process
+	// Extract real SendPacket events from the transaction
+	var sendPacketEvents []map[string]interface{}
+	for _, event := range tx.TxResult.Events {
+		// Check if this is a SendPacket event
+		if event.Type == "send_packet" {
+			// Extract the event attributes
+			packetEvent := make(map[string]interface{})
+			for _, attr := range event.Attributes {
+				key := string(attr.Key)
+				value := string(attr.Value)
 
-	// Create a dummy SendPacket event that mimics the structure we would get from a real tx
-	dummyEvent := map[string]interface{}{
-		"packet_src_port":    "transfer",
-		"packet_src_channel": "channel-0",
-		"packet_dst_port":    "transfer",
-		"packet_dst_channel": "channel-0",
-		"packet_timeout_height": map[string]interface{}{
-			"revision_number": "1",
-			"revision_height": "1000000",
-		},
-		"packet_timeout_timestamp": "0",
-		"packet_sequence":          "1",
-		"packet_data":              []byte(`{"amount":"1000000","denom":"transfer/channel-0/utia","receiver":"0xreceiverAddress","sender":"celestia_sender_address"}`),
+				switch key {
+				case "packet_src_port", "packet_src_channel", "packet_dst_port", "packet_dst_channel", "packet_data", "packet_sequence", "packet_timeout_timestamp":
+					// Store string values as is
+					packetEvent[key] = value
+				case "packet_timeout_height":
+					// Parse the height value which is expected to be in the format "1-1000000"
+					heightParts := strings.Split(value, "-")
+					if len(heightParts) == 2 {
+						revisionNumber, _ := strconv.ParseUint(heightParts[0], 10, 64)
+						revisionHeight, _ := strconv.ParseUint(heightParts[1], 10, 64)
+
+						packetEvent[key] = map[string]interface{}{
+							"revision_number": fmt.Sprintf("%d", revisionNumber),
+							"revision_height": fmt.Sprintf("%d", revisionHeight),
+						}
+					}
+				default:
+					// Store any other attributes
+					packetEvent[key] = value
+				}
+			}
+			sendPacketEvents = append(sendPacketEvents, packetEvent)
+		}
 	}
 
-	fmt.Println("Extracted SendPacket event from transaction")
+	// Check if we found any SendPacket events
+	if len(sendPacketEvents) == 0 {
+		return fmt.Errorf("no SendPacket events found in transaction")
+	}
+	if len(sendPacketEvents) > 1 {
+		return fmt.Errorf("multiple SendPacket events found in transaction")
+	}
 
-	// Step 5: Generate proofs for the packets
-	// This is where we would invoke the Celestia prover to generate a proof
-	// for the packet commitment in the SimApp state
+	sendPacketEvent := sendPacketEvents[0]
+	fmt.Printf("Extracted SendPacket event from transaction: %+v\n", sendPacketEvent)
 
-	// In a real implementation, we would create a proof for each packet
-	// using the appropriate height and store path
-	proofHeight := uint64(10) // Example height
-
-	// Connect to the Celestia prover
-	proofConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	celestiaProverConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to celestia-prover: %w", err)
 	}
-	defer proofConn.Close()
+	defer celestiaProverConn.Close()
 
 	// Generate a proof for the packet commitment
 	// This would involve:
-	// 1. Determining the key path in the Cosmos state tree where the packet commitment is stored
+	// 1. Determining the key path in the SimApp state tree where the packet commitment is stored
 	// 2. Getting a proof for that key from the prover
 	packetCommitmentPath := fmt.Sprintf("commitments/ports/%s/channels/%s/sequences/%d",
-		dummyEvent["packet_src_port"],
-		dummyEvent["packet_src_channel"],
-		dummyEvent["packet_sequence"])
+		sendPacketEvent["packet_src_port"],
+		sendPacketEvent["packet_src_channel"],
+		sendPacketEvent["packet_sequence"])
 
 	fmt.Printf("Generating proof for packet commitment at path: %s\n", packetCommitmentPath)
 
@@ -356,15 +373,39 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		RevisionHeight: 1000000,
 	}
 
+	// Get timeout height from the real event
+	if th, ok := sendPacketEvent["packet_timeout_height"].(map[string]interface{}); ok {
+		revNum, _ := strconv.ParseUint(th["revision_number"].(string), 10, 64)
+		revHeight, _ := strconv.ParseUint(th["revision_height"].(string), 10, 64)
+		timeoutHeight = Height{
+			RevisionNumber: revNum,
+			RevisionHeight: revHeight,
+		}
+	}
+
+	// Get sequence number from the real event
+	sequenceStr, _ := sendPacketEvent["packet_sequence"].(string)
+	sequence, err := strconv.ParseUint(sequenceStr, 10, 64)
+	if err != nil {
+		sequence = 1 // Default to 1 if parsing fails
+	}
+
+	// Get timeout timestamp from the real event
+	timeoutTimestampStr, _ := sendPacketEvent["packet_timeout_timestamp"].(string)
+	timeoutTimestamp, err := strconv.ParseUint(timeoutTimestampStr, 10, 64)
+	if err != nil {
+		timeoutTimestamp = 0 // Default to 0 if parsing fails
+	}
+
 	packet := Packet{
-		Sequence:           1, // From dummyEvent
-		SourcePort:         dummyEvent["packet_src_port"].(string),
-		SourceChannel:      dummyEvent["packet_src_channel"].(string),
-		DestinationPort:    dummyEvent["packet_dst_port"].(string),
-		DestinationChannel: dummyEvent["packet_dst_channel"].(string),
-		Data:               dummyEvent["packet_data"].([]byte),
+		Sequence:           sequence,
+		SourcePort:         sendPacketEvent["packet_src_port"].(string),
+		SourceChannel:      sendPacketEvent["packet_src_channel"].(string),
+		DestinationPort:    sendPacketEvent["packet_dst_port"].(string),
+		DestinationChannel: sendPacketEvent["packet_dst_channel"].(string),
+		Data:               sendPacketEvent["packet_data"].([]byte),
 		TimeoutHeight:      timeoutHeight,
-		TimeoutTimestamp:   0, // From dummyEvent
+		TimeoutTimestamp:   timeoutTimestamp,
 	}
 
 	// In a real implementation, we would encode this packet for the contract call
