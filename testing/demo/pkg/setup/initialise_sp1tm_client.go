@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
+	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
 	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -27,8 +27,6 @@ const (
 	// groth16ClientID is for the Ethereum light client on the SimApp.
 	groth16ClientID = "08-groth16-0"
 )
-
-var TendermintLightClientID string
 
 func InitializeSp1TendermintLightClientOnReth() error {
 	fmt.Println("Deploying IBC smart contracts on the reth node...")
@@ -48,18 +46,20 @@ func InitializeSp1TendermintLightClientOnReth() error {
 		return fmt.Errorf("failed to connect to ethereum client: %v", err)
 	}
 
-	if err := createChannelAndCounterpartyOnReth(addresses, ethClient); err != nil {
+	if err := createClientOnReth(addresses, ethClient); err != nil {
 		return err
 	}
-	fmt.Println("Created channel and counterparty on reth node.")
-
-	if err := createCounterpartyOnSimapp(); err != nil {
-		return err
-	}
-
-	fmt.Println("Created counterparty on simapp.")
+	fmt.Println("Created client on reth node.")
 	return nil
+}
 
+func RegisterCounterpartyOnSimapp() error {
+	fmt.Printf("Registering counterparty on simapp...\n")
+	if err := registerCounterpartyOnSimapp(); err != nil {
+		return err
+	}
+	fmt.Println("Registered counterparty on simapp.")
+	return nil
 }
 
 // runDeploymentCommand deploys the SP1 ICS07 Tendermint light client contract on the EVM roll-up.
@@ -77,7 +77,7 @@ func runDeploymentCommand() error {
 	return nil
 }
 
-func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
+func createClientOnReth(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
 	ethChainId := big.NewInt(80087)
 	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 
@@ -101,7 +101,7 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 	fmt.Printf("Adding client to the ICS Client contract on reth node with counterparty clientId %s...\n", counterpartyInfo.ClientId)
 	tx, err := icsClientContract.AddClient(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, counterpartyInfo, tmLightClientAddress)
 	if err != nil {
-		return fmt.Errorf("failed to add channel: %v", err)
+		return fmt.Errorf("failed to add client: %v", err)
 	}
 
 	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
@@ -119,23 +119,23 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 	}
 
 	fmt.Printf("Added client to the ICS client contract on reth node with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
-	TendermintLightClientID = event.CounterpartyInfo.ClientId
-
 	return nil
 }
 
-func createCounterpartyOnSimapp() error {
-	fmt.Println("Creating counterparty on simapp...")
-
+func registerCounterpartyOnSimapp() error {
+	fmt.Println("Registering counterparty on simapp...")
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
+	merklePathPrefix := [][]byte{[]byte("")}
 
-	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
-		ChannelId:             groth16ClientID,
-		CounterpartyChannelId: TendermintLightClientID,
-		Signer:                relayer,
+	// TODO: update ibc-go so that we can use the type MsgRegisterCounterparty
+	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypes.MsgRegisterCounterparty{
+		ClientId:                 groth16ClientID,
+		CounterpartyMerklePrefix: merklePathPrefix,
+		CounterpartyClientId:     tendermintClientID,
+		Signer:                   relayer,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to register counterparty: %v", err)
