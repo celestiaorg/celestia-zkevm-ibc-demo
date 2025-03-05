@@ -15,6 +15,7 @@ import (
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -31,12 +32,12 @@ import (
 const (
 	// ethereumRPC is the Reth RPC endpoint.
 	ethereumRPC = "http://localhost:8545/"
-	// ethereumAddress is an address on the EVM chain.
-	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
 	// ethPrivateKey is the private key for ethereumAddress.
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 	// cliendID is for the SP1 Tendermint light client on the EVM roll-up.
 	clientID = "07-tendermint-0"
+	// ethereumAddress is an address on the EVM chain.
+	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
 )
 
 func main() {
@@ -242,15 +243,15 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to setup client context: %w", err)
 	}
 	fmt.Printf("Querying transaction and extracting IBC events...\n")
-	tx, err := clientCtx.Client.Tx(context.Background(), txID, true)
+	simAppTx, err := clientCtx.Client.Tx(context.Background(), txID, true)
 	if err != nil {
 		return fmt.Errorf("failed to query transaction: %w", err)
 	}
-	fmt.Printf("Queried transaction and extracted %v events.\n", len(tx.TxResult.Events))
+	fmt.Printf("Queried transaction and extracted %v events.\n", len(simAppTx.TxResult.Events))
 
 	// Extract the SendPacket events from the transaction
 	var sendPacketEvents []map[string]interface{}
-	for _, event := range tx.TxResult.Events {
+	for _, event := range simAppTx.TxResult.Events {
 		// Check if this is a SendPacket event
 		if event.Type == "send_packet" {
 			// Extract the event attributes
@@ -263,18 +264,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 				case "packet_src_port", "packet_src_channel", "packet_dst_port", "packet_dst_channel", "packet_data", "packet_sequence", "packet_timeout_timestamp":
 					// Store string values as is
 					packetEvent[key] = value
-				case "packet_timeout_height":
-					// Parse the height value which is expected to be in the format "1-1000000"
-					heightParts := strings.Split(value, "-")
-					if len(heightParts) == 2 {
-						revisionNumber, _ := strconv.ParseUint(heightParts[0], 10, 64)
-						revisionHeight, _ := strconv.ParseUint(heightParts[1], 10, 64)
-
-						packetEvent[key] = map[string]interface{}{
-							"revision_number": fmt.Sprintf("%d", revisionNumber),
-							"revision_height": fmt.Sprintf("%d", revisionHeight),
-						}
-					}
 				default:
 					// Store any other attributes
 					packetEvent[key] = value
@@ -343,208 +332,59 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 
 	fmt.Printf("Requesting celestia-prover state membership proof...\n")
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		Height:   tx.Height,
+		Height:   simAppTx.Height,
 		KeyPaths: []string{hex.EncodeToString(packetCommitmentPath)},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get state membership proof: %w", err)
 	}
-	fmt.Printf("Received celestia-prover state membership proof %v.\n", resp)
+	fmt.Printf("Received celestia-prover state membership proof with height %v.\n", resp.GetHeight())
 
-	// Define a proof height structure for later use
-	type Height struct {
-		RevisionNumber uint64 `json:"revision_number"`
-		RevisionHeight uint64 `json:"revision_height"`
-	}
-
-	proofHeight := Height{
-		RevisionNumber: 0,
-		RevisionHeight: 0,
-	}
-
-	// Step 6: Get Ethereum client and contract
-	// Initialize Ethereum client and contract interfaces
-	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
 	if err != nil {
 		return fmt.Errorf("failed to parse private key: %w", err)
 	}
 
-	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, faucet)
+	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, privateKey)
 	if err != nil {
 		return fmt.Errorf("failed to create Ethereum client: %w", err)
 	}
 
-	// Get deployed contract addresses
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return fmt.Errorf("failed to get contract addresses: %w", err)
 	}
 
+	ics26RouterAddr := ethcommon.HexToAddress(addresses.ICS26Router)
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
 
-	// Get the ICS26Router contract
-	ics26RouterAddr := ethcommon.HexToAddress(addresses.ICS26Router)
-
-	// Step 7: Prepare the contract call data
-	// This is where we would encode the recvPacket call with all necessary arguments
-
-	// Define the data structure for RecvPacket based on the ICS26Router contract ABI
-	type Channel struct {
-		PortID    string `json:"port_id"`
-		ChannelID string `json:"channel_id"`
-	}
-
-	type Packet struct {
-		Sequence           uint64 `json:"sequence"`
-		SourcePort         string `json:"source_port"`
-		SourceChannel      string `json:"source_channel"`
-		DestinationPort    string `json:"destination_port"`
-		DestinationChannel string `json:"destination_channel"`
-		Data               []byte `json:"data"`
-		TimeoutHeight      Height `json:"timeout_height"`
-		TimeoutTimestamp   uint64 `json:"timeout_timestamp"`
-	}
-
-	// Create a packet based on the extracted event
-	timeoutHeight := Height{
-		RevisionNumber: 1,
-		RevisionHeight: 1000000,
-	}
-
-	// Get timeout height from the real event
-	if th, ok := sendPacketEvent["packet_timeout_height"].(map[string]interface{}); ok {
-		revNum, _ := strconv.ParseUint(th["revision_number"].(string), 10, 64)
-		revHeight, _ := strconv.ParseUint(th["revision_height"].(string), 10, 64)
-		timeoutHeight = Height{
-			RevisionNumber: revNum,
-			RevisionHeight: revHeight,
-		}
-	}
-
-	// Get sequence number from the real event
-	sequenceStr, _ := sendPacketEvent["packet_sequence"].(string)
-	sequence, err := strconv.ParseUint(sequenceStr, 10, 64)
+	ics26Router, err := ics26router.NewContract(ics26RouterAddr, ethClient)
 	if err != nil {
-		sequence = 1 // Default to 1 if parsing fails
+		return err
 	}
 
-	// Get timeout timestamp from the real event
-	timeoutTimestampStr, _ := sendPacketEvent["packet_timeout_timestamp"].(string)
-	timeoutTimestamp, err := strconv.ParseUint(timeoutTimestampStr, 10, 64)
+	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
+		Packet: ics26router.IICS26RouterMsgsPacket{
+			Sequence:         uint32(packetSequence),
+			SourceClient:     sendPacketEvent["packet_src_port"].(string),
+			DestClient:       sendPacketEvent["packet_src_channel"].(string),
+			TimeoutTimestamp: sendPacketEvent["packet_timeout_timestamp"].(uint64),
+			Payloads:         []ics26router.IICS26RouterMsgsPayload{},
+		},
+	})
 	if err != nil {
-		timeoutTimestamp = 0 // Default to 0 if parsing fails
+		return fmt.Errorf("failed to create transaction: %w", err)
 	}
+	fmt.Printf("Created transaction: %v\n", ethTx.Hash().Hex())
 
-	packet := Packet{
-		Sequence:           sequence,
-		SourcePort:         sendPacketEvent["packet_src_port"].(string),
-		SourceChannel:      sendPacketEvent["packet_src_channel"].(string),
-		DestinationPort:    sendPacketEvent["packet_dst_port"].(string),
-		DestinationChannel: sendPacketEvent["packet_dst_channel"].(string),
-		Data:               sendPacketEvent["packet_data"].([]byte),
-		TimeoutHeight:      timeoutHeight,
-		TimeoutTimestamp:   timeoutTimestamp,
-	}
-
-	// In a real implementation, we would encode this packet for the contract call
-	// For now, let's just print out what we would do
-	fmt.Printf("Prepared packet: Source Port=%s, Source Channel=%s, Sequence=%d\n",
-		packet.SourcePort, packet.SourceChannel, packet.Sequence)
-
-	// Step 8: Encode the contract call
-	// This would encode a call to the recvPacket function on the ICS26Router contract
-
-	// Load the ABI for the ICS26Router contract
-	// In a real implementation, we would have the ABI available
-	// For demonstration, create a simple ABI representation
-	recvPacketABI := `[{"inputs":[
-		{"name":"packet","type":"tuple","components":[
-			{"name":"sequence","type":"uint64"},
-			{"name":"sourcePort","type":"string"},
-			{"name":"sourceChannel","type":"string"},
-			{"name":"destinationPort","type":"string"},
-			{"name":"destinationChannel","type":"string"},
-			{"name":"data","type":"bytes"},
-			{"name":"timeoutHeight","type":"tuple","components":[
-				{"name":"revisionNumber","type":"uint64"},
-				{"name":"revisionHeight","type":"uint64"}
-			]},
-			{"name":"timeoutTimestamp","type":"uint64"}
-		]},
-		{"name":"proof","type":"bytes"},
-		{"name":"proofHeight","type":"uint64"}
-	]}]`
-
-	fmt.Println("Encoding contract call to recvPacket function")
-
-	// In a real implementation, we would use the ABI to encode the function call:
-	// Here's how we would actually encode the function call:
-	// contractABI, err := abi.JSON(strings.NewReader(recvPacketABI))
-	// calldata, err := contractABI.Pack("recvPacket", packet, dummyProof, proofHeight)
-
-	// For now, create dummy calldata
-	recvPacketCalldata := []byte{0x12, 0x34, 0x56, 0x78} // Example calldata
-
-	// Step 9: Create and sign the Ethereum transaction
-	txOpts := getTransactOpts(faucet, eth)
-
-	// Get the nonce
-	nonce, err := ethClient.PendingNonceAt(context.Background(), crypto.PubkeyToAddress(faucet.PublicKey))
+	err = ethClient.SendTransaction(context.Background(), ethTx)
 	if err != nil {
-		return fmt.Errorf("failed to get nonce: %w", err)
+		return fmt.Errorf("failed to send transaction: %w", err)
 	}
-
-	// Get gas price
-	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to get gas price: %w", err)
-	}
-
-	// Create the transaction
-	ethTx := ethtypes.NewTransaction(
-		nonce,
-		ics26RouterAddr,
-		big.NewInt(0), // No value transfer
-		txOpts.GasLimit,
-		gasPrice,
-		recvPacketCalldata,
-	)
-
-	// Sign the transaction
-	chainID, err := ethClient.ChainID(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to get chain ID: %w", err)
-	}
-
-	signedTx, err := ethtypes.SignTx(ethTx, ethtypes.NewEIP155Signer(chainID), faucet)
-	if err != nil {
-		return fmt.Errorf("failed to sign transaction: %w", err)
-	}
-
-	fmt.Printf("Created transaction: %v\n", signedTx.Hash().Hex())
-
-	// In a real implementation, we would send this transaction
-	// For the demo, let's not actually send as it's using dummy data
-	fmt.Println("Transaction prepared (but not sent to avoid errors with dummy data)")
-
-	// For demonstration purposes:
-	// err = ethClient.SendTransaction(context.Background(), signedTx)
-	// if err != nil {
-	//     return fmt.Errorf("failed to send transaction: %w", err)
-	// }
-	// receipt := getTxReciept(context.Background(), eth, signedTx.Hash())
-	// fmt.Printf("Transaction sent to Ethereum, hash: %s, status: %d\n", signedTx.Hash().Hex(), receipt.Status)
-
-	fmt.Println("Successfully implemented direct relayer functionality")
-	fmt.Println("Note: This implementation will need to be extended with real proofs and event parsing")
-
-	// Ensure variables are used to avoid linter warnings
-	_ = txID
-	_ = recvPacketABI
-	_ = proofHeight
-
+	receipt := getTxReciept(context.Background(), eth, ethTx.Hash())
+	fmt.Printf("Transaction sent to Ethereum, hash: %s, status: %d\n", ethTx.Hash().Hex(), receipt.Status)
 	return nil
 }
