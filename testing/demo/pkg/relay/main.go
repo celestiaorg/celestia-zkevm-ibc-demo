@@ -36,7 +36,7 @@ const (
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 	// rollupClientID is for the SP1 Tendermint light client on the EVM roll-up.
 	rollupClientID = "07-tendermint-0"
-	// simAppClientID is for the SP1 Tendermint light client on the SimApp.
+	// simAppClientID is for the Ethereum light client on the SimApp.
 	simAppClientID = "08-groth16-0"
 
 	// ethereumAddress is an address on the EVM chain.
@@ -366,20 +366,29 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return err
 	}
+	timeoutTimestamp, err := strconv.ParseUint(sendPacketEvent["packet_timeout_timestamp"].(string), 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse timeout timestamp: %w", err)
+	}
+
+	payloadData, err := hex.DecodeString(sendPacketEvent["packet_data"].(string))
+	if err != nil {
+		return fmt.Errorf("failed to decode payload data: %w", err)
+	}
 
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
 			Sequence:         uint32(packetSequence),
 			SourceClient:     simAppClientID,
 			DestClient:       targetClientID,
-			TimeoutTimestamp: sendPacketEvent["packet_timeout_timestamp"].(uint64),
+			TimeoutTimestamp: timeoutTimestamp,
 			Payloads: []ics26router.IICS26RouterMsgsPayload{
 				{
 					SourcePort: "",                                           // There are no ports in IBC Eureka
 					DestPort:   "",                                           // There are no ports in IBC Eureka
 					Version:    sendPacketEvent["payload_version"].(string),  // ics20-1
 					Encoding:   sendPacketEvent["payload_encoding"].(string), // application/x-solidity-abi
-					Value:      sendPacketEvent["packet_data"].([]byte),
+					Value:      payloadData,
 				},
 			},
 		},
