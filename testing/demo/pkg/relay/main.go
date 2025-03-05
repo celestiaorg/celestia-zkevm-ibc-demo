@@ -248,7 +248,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	}
 	fmt.Printf("Queried transaction and extracted %v events.\n", len(tx.TxResult.Events))
 
-	// Extract real SendPacket events from the transaction
+	// Extract the SendPacket events from the transaction
 	var sendPacketEvents []map[string]interface{}
 	for _, event := range tx.TxResult.Events {
 		// Check if this is a SendPacket event
@@ -301,10 +301,9 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	// 2. Getting a proof for that key from the prover
 
 	// Get source client ID from the event
-	sourceClientID, ok := sendPacketEvent["packet_source_client"].(string)
-	if !ok {
-		return fmt.Errorf("packet_source_client not found in SendPacket event or not a string")
-	}
+	// TODO: the version of ibc-go that SimApp uses doesn't emit the source client ID in the SendPacket event.
+	// After we upgrade ibc-go, stop hard-coding this and fetch the event from the packet.
+	sourceClientID := "08-groth16-0"
 
 	// Parse the packet sequence as uint64
 	packetSequenceStr, ok := sendPacketEvent["packet_sequence"].(string)
@@ -315,6 +314,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse packet sequence: %w", err)
 	}
+	fmt.Printf("Packet sequence: %d\n", packetSequence)
 
 	// Create the commitment path according to IBC Eureka specification:
 	// - Source client ID bytes
