@@ -9,6 +9,10 @@ The Celestia Prover is a gRPC service that generates zero-knowledge proofs for C
 
 To run the server you will need to clone the repo and install rust and cargo.
 
+> [!WARNING]
+> The prover currently only supports hollowed out proofs. These should be faster to generate than the real proofs.
+> See <https://github.com/celestiaorg/celestia-zkevm-ibc-demo/issues/180>
+
 ## Running it in Docker
 
 Before running this program, please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md).

@@ -1,8 +1,6 @@
 //! Programs for `sp1-ics07-tendermint`.
 
-// use sp1_sdk::{MockProver, Prover, SP1VerifyingKey};
 pub use sp1_ics07_tendermint_prover::programs::SP1Program;
-// use sp1_ics07_tendermint_prover::programs::{UpdateClientProgram, MembershipProgram};
 
 /// SP1 ICS07 Tendermint update client program.
 pub struct UpdateClientProgram;
