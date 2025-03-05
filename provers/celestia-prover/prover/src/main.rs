@@ -141,7 +141,7 @@ impl Prover for ProverService {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
         };
-        println!("generated proof");
+        println!("Generated state transition proof.");
 
         Ok(Response::new(response))
     }
