@@ -1,5 +1,7 @@
 //! Prover for SP1 ICS07 Tendermint programs.
 
+use std::env;
+
 use crate::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
 use alloy_sol_types::SolValue;
 use ibc_client_tendermint_types::Header;
@@ -39,6 +41,9 @@ impl<T: SP1Program> SP1ICS07TendermintProver<T> {
     #[tracing::instrument(skip_all)]
     pub fn new(proof_type: SupportedProofType) -> Self {
         tracing::info!("Initializing SP1 ProverClient...");
+        if let Ok(mode) = env::var("SP1_PROVER") {
+            println!("SP1_Prover mode: {mode}");
+        };
         let prover_client = ProverClient::from_env();
         let (pkey, vkey) = prover_client.setup(T::ELF);
         tracing::info!("SP1 ProverClient initialized");
