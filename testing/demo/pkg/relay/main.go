@@ -371,7 +371,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to parse timeout timestamp: %w", err)
 	}
 
-	payloadData, err := hex.DecodeString(sendPacketEvent["packet_data"].(string))
+	payloadData, err := hex.DecodeString(sendPacketEvent["payload_data"].(string))
 	if err != nil {
 		return fmt.Errorf("failed to decode payload data: %w", err)
 	}
