@@ -361,7 +361,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
-
 	ics26Router, err := ics26router.NewContract(ics26RouterAddr, ethClient)
 	if err != nil {
 		return err
@@ -370,17 +369,20 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse timeout timestamp: %w", err)
 	}
-
 	payloadData, err := hex.DecodeString(sendPacketEvent["payload_data"].(string))
 	if err != nil {
 		return fmt.Errorf("failed to decode payload data: %w", err)
 	}
 
+	destClient := sendPacketEvent["packet_dest_channel"].(string)
+	fmt.Printf("Destination client: %s\n", destClient)
+
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
-			Sequence:         uint32(packetSequence),
-			SourceClient:     simAppClientID,
-			DestClient:       targetClientID,
+			Sequence:     uint32(packetSequence),
+			SourceClient: simAppClientID,
+			// For some reason this field is named DestClient but it actually expects the packet_dest_channel
+			DestClient:       destClient, // channel-0
 			TimeoutTimestamp: timeoutTimestamp,
 			Payloads: []ics26router.IICS26RouterMsgsPayload{
 				{
