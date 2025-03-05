@@ -22,8 +22,10 @@ import (
 )
 
 const (
-	counterpartyClientId = "channel-0"
-	expectedClientId     = "07-tendermint-0"
+	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
+	tendermintClientID = "07-tendermint-0"
+	// groth16ClientID is for the Ethereum light client on the SimApp.
+	groth16ClientID = "08-groth16-0"
 )
 
 var TendermintLightClientID string
@@ -85,7 +87,7 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 	}
 
 	counterpartyInfo := ics02client.IICS02ClientMsgsCounterpartyInfo{
-		ClientId:     counterpartyClientId,
+		ClientId:     groth16ClientID,
 		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
 	}
 
@@ -108,12 +110,12 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 		return fmt.Errorf("failed to get event: %v", err)
 	}
 
-	if event.ClientId != expectedClientId {
-		return fmt.Errorf("expected clientId %s, got %s", expectedClientId, event.ClientId)
+	if event.ClientId != tendermintClientID {
+		return fmt.Errorf("expected clientId %s, got %s", tendermintClientID, event.ClientId)
 	}
 
-	if event.CounterpartyInfo.ClientId != counterpartyClientId {
-		return fmt.Errorf("expected counterparty clientId %s, got %s", counterpartyClientId, event.CounterpartyInfo.ClientId)
+	if event.CounterpartyInfo.ClientId != groth16ClientID {
+		return fmt.Errorf("expected counterparty clientId %s, got %s", groth16ClientID, event.CounterpartyInfo.ClientId)
 	}
 
 	fmt.Printf("Added client to the ICS client contract on reth node with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
@@ -131,7 +133,7 @@ func createCounterpartyOnSimapp() error {
 	}
 
 	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
-		ChannelId:             counterpartyClientId,
+		ChannelId:             groth16ClientID,
 		CounterpartyChannelId: TendermintLightClientID,
 		Signer:                relayer,
 	})

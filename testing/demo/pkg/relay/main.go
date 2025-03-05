@@ -34,10 +34,10 @@ const (
 	ethereumRPC = "http://localhost:8545/"
 	// ethPrivateKey is the private key for ethereumAddress.
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-	// rollupClientID is for the SP1 Tendermint light client on the EVM roll-up.
-	rollupClientID = "07-tendermint-0"
-	// simAppClientID is for the Ethereum light client on the SimApp.
-	simAppClientID = "08-groth16-0"
+	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
+	tendermintClientID = "07-tendermint-0"
+	// groth16ClientID is for the Ethereum light client on the SimApp.
+	groth16ClientID = "08-groth16-0"
 
 	// ethereumAddress is an address on the EVM chain.
 	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
@@ -57,7 +57,7 @@ func main() {
 	}
 	txHash := os.Args[1]
 	fmt.Printf("Relaying IBC transaction %v...\n", txHash)
-	err = relayByTx(txHash, rollupClientID)
+	err = relayByTx(txHash, tendermintClientID)
 	if err != nil {
 		log.Fatalf("Failed to relay transaction: %v", err)
 	}
@@ -145,7 +145,7 @@ func updateTendermintLightClient() error {
 	}
 
 	fmt.Printf("Submitting UpdateClient tx to EVM roll-up...\n")
-	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), rollupClientID, encoded)
+	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 
 	// TODO: the version of ibc-go that SimApp uses doesn't emit the source client ID in the SendPacket event.
 	// After we upgrade ibc-go, stop hard-coding the simAppClientID and fetch the event from the packet.
-	packetCommitmentPath = append(packetCommitmentPath, []byte(simAppClientID)...)
+	packetCommitmentPath = append(packetCommitmentPath, []byte(groth16ClientID)...)
 	packetCommitmentPath = append(packetCommitmentPath, byte(1)) // Marker byte for packet commitment
 
 	// Convert sequence to big-endian bytes and append
@@ -381,8 +381,8 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
 			Sequence:         uint32(packetSequence),
-			SourceClient:     "channel-0",
-			DestClient:       rollupClientID,
+			SourceClient:     groth16ClientID,
+			DestClient:       tendermintClientID,
 			TimeoutTimestamp: timeoutTimestamp,
 			Payloads: []ics26router.IICS26RouterMsgsPayload{
 				{
