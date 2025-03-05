@@ -94,9 +94,8 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
         let encoded_2 = trusted_consensus_state.abi_encode();
         let encoded_3 = serde_cbor::to_vec(proposed_header).unwrap();
         let encoded_4 = time.to_le_bytes().into();
-        // TODO: find an encoding that works for all the structs above.
 
-        // Write the encoded light blocks to stdin.
+        // Write the encoded inputs to stdin.
         let mut stdin = SP1Stdin::new();
         stdin.write_vec(encoded_1);
         stdin.write_vec(encoded_2);
@@ -108,7 +107,7 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
 }
 
 impl SP1ICS07TendermintProver<MembershipProgram> {
-    /// Generate a proof of verify (non)membership for multiple key-value pairs.
+    /// Generate a proof of (non)membership for multiple key-value pairs.
     ///
     /// # Panics
     /// Panics if the proof cannot be generated or the proof is invalid.
