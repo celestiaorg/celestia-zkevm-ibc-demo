@@ -186,7 +186,6 @@ impl Prover for ProverService {
             trusted_block.signed_header.header.height.value() as i64
         );
 
-        // Implement your membership proof logic here
         let response = ProveStateMembershipResponse {
             proof: proof.bytes().to_vec(),
             height: trusted_block.signed_header.header.height.value() as i64,
