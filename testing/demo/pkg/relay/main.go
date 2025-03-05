@@ -374,15 +374,15 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to decode payload data: %w", err)
 	}
 
-	destClient := sendPacketEvent["packet_dest_channel"].(string)
-	fmt.Printf("Destination client: %s\n", destClient)
+	// For some reason this field is named DestClient but it actually expects the packet_dest_channel
+	// destClient := sendPacketEvent["packet_dest_channel"].(string)
+	// fmt.Printf("Destination client: %s\n", destClient)
 
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
-			Sequence:     uint32(packetSequence),
-			SourceClient: simAppClientID,
-			// For some reason this field is named DestClient but it actually expects the packet_dest_channel
-			DestClient:       destClient, // channel-0
+			Sequence:         uint32(packetSequence),
+			SourceClient:     "channel-0",
+			DestClient:       rollupClientID,
 			TimeoutTimestamp: timeoutTimestamp,
 			Payloads: []ics26router.IICS26RouterMsgsPayload{
 				{
