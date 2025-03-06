@@ -49,7 +49,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     # Modify the .env file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
     ```
 
-1. Modify the `docker-compose.yml` file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+1. Modify the `docker-compose.yml` file and set `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
 
     ```diff
     celestia-prover:
@@ -61,8 +61,8 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
         - TENDERMINT_RPC_URL=http://simapp-validator:26657
         - RPC_URL=http://reth:8545
         - CELESTIA_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
-    +      - SP1_PROVER=network
-    +      - NETWORK_PRIVATE_KEY=PRIVATE_KEY
+        - SP1_PROVER=network
+    +   - NETWORK_PRIVATE_KEY=PRIVATE_KEY
     ```
 
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
