@@ -28,4 +28,4 @@ prost-types = "0.13.4"
 
 [build-dependencies]
 tonic-build.workspace = true
-sp1-helper = "4.0.1"
+sp1-helper = "4.1.2"
