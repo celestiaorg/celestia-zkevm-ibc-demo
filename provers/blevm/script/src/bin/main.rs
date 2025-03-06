@@ -14,7 +14,8 @@
 //! ```
 use blevm_common::BlevmOutput;
 use blevm_prover::{
-    AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig,
+    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
+    CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -38,6 +39,9 @@ struct Args {
 
     #[clap(long)]
     mock: bool,
+
+    #[clap(long)]
+    aggregate: bool,
 }
 
 #[tokio::main]
@@ -88,6 +92,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "Failed to load L2 block data. Ensure you're in a directory with input/1/18884864.bin",
         ),
     };
+
+    if args.aggregate {
+        // maybe accept variable length args containing [proof, vk] pairs
+        let aggregation_inputs: Vec<AggregationInput> = vec![];
+        println!("Generating proof...");
+        let start = Instant::now();
+        let aggregation_output = prover.aggregate_proofs(aggregation_inputs).await?;
+        let duration = start.elapsed();
+        println!("Generated proof in {:?}.", duration);
+
+        let proof_bin = bincode::serialize(&aggregation_output.proof)?;
+        // Save proof to file
+        println!("Saving proof to proof.bin");
+        fs::write("proof.bin", proof_bin)?;
+        println!("Saved proof.");
+        return Ok(());
+    }
 
     if args.execute {
         println!("Executing...");
