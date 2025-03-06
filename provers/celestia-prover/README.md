@@ -4,29 +4,22 @@ The Celestia Prover is a gRPC service that generates zero-knowledge proofs for C
 
 ## Usage
 
-> [!WARNING]
-> This gRPC service is still under development and may not work as described
-
 To run the server you will need to clone the repo and install rust and cargo.
 
 ## Running it in Docker
 
 Before running this program, please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md).
 
-After the one-time setup, the following minimum steps are necessary each time you run the program:
-
-1. Spin up the containers including the prover service:
-
-   ```shell
-   make start
-   ```
-
-   The server will be running (on port `:50051`):
-
-1. Deploy contracts and initialize light clients:
+1. Build the docker image:
 
     ```shell
-    make setup
+    build-celestia-prover-docker
+    ```
+
+1. Run the docker containers:
+
+    ```shell
+    make start
     ```
 
 1. Verify it's running by querying an endpoint.

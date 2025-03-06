@@ -24,7 +24,6 @@ ibc-proto = { version = "0.51", default-features = false }
 ibc-proto-eureka = { package = "ibc-proto", git = "https://github.com/srdtrk/ibc-proto-rs", rev = "9f550f7a582f09ee82bdf58a416631715e15bad7", default-features = false }
 prost = "0.13"
 reqwest = { version = "0.12", features = ["json"] }
-sp1-sdk = { version = "4.0.1", default-features = false }
 tendermint-rpc = "0.40"
 tendermint = "0.40.1"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
@@ -32,7 +31,9 @@ tonic = { version = "0.12", features = ["transport", "codegen", "prost"] }
 tonic-build = "0.12"
 tonic-reflection = "0.12"
 tracing = { version = "0.1", default-features = false }
-sp1-helper = "4.0.1"
+
+sp1-sdk = { version = "4.1.2", default-features = false }
+sp1-helper = "4.1.2"
 
 # The rev in the following dependencies should match the commit used by the
 # solidity-ibc-eureka submodule in this repo.

@@ -19,6 +19,9 @@ WORKDIR $SP1_DIR
 RUN curl -Lv https://sp1.succinct.xyz | bash -x
 RUN $SP1_DIR/bin/sp1up
 
+RUN rustup toolchain list
+RUN rustup default stable
+
 # Clone the repo and build
 WORKDIR /celestia_zkevm_ibc_demo/
 COPY . .
