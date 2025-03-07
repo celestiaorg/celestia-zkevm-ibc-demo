@@ -18,6 +18,7 @@ bincode = {workspace=true}
 rsp-client-executor = {workspace=true}
 nmt-rs = {workspace=true}
 tokio = { version = "1", features = ["full"] }
+serde = {workspace=true}
 
 [build-dependencies]
 sp1-helper = { workspace=true }

@@ -1208,6 +1208,7 @@ dependencies = [
  "nmt-rs",
  "reth-primitives",
  "rsp-client-executor",
+ "serde",
  "sp1-helper",
  "sp1-sdk",
  "tendermint",

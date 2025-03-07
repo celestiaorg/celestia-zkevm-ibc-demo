@@ -1,5 +1,6 @@
 mod proofs;
 
+use serde::{Deserialize, Serialize};
 use celestia_rpc::{BlobClient, Client, HeaderClient};
 use celestia_types::AppVersion;
 use celestia_types::Blob;
@@ -31,6 +32,7 @@ pub struct AggregatorConfig {
 }
 
 /// Input for proof aggregation
+#[derive(Serialize, Deserialize)]
 pub struct AggregationInput {
     pub proof: SP1ProofWithPublicValues,
     pub vk: SP1VerifyingKey,
