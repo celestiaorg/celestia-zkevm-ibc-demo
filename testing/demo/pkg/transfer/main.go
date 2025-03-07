@@ -10,7 +10,6 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
-	ibctesting "github.com/cosmos/ibc-go/v10/testing"
 )
 
 const (
@@ -19,9 +18,8 @@ const (
 	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
 	receiver = "0x7f39c581f595b53c5cb19b5a6e5b8f3a0b1f2f6e"
 	// denom is the denomination of the token on SimApp.
-	denom = "stake"
-	// sourceChannel is hard-coded to the name used by the first channel.
-	sourceChannel = ibctesting.FirstChannelID
+	denom        = "stake"
+	sourceClient = "08-groth16-0"
 )
 
 func main() {
@@ -42,12 +40,12 @@ func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
 	coin := sdktypes.NewCoin(denom, math.NewInt(100))
 	transferPayload := transfertypes.FungibleTokenPacketData{
 		Denom:    coin.Denom,
-		Amount:   coin.Amount.BigInt(),
+		Amount:   coin.Amount.String(),
 		Sender:   sender,
 		Receiver: receiver,
 		Memo:     "test transfer",
 	}
-	transferBz, err := transfertypes.EncodeABIFungibleTokenPacketData(transferPayload)
+	transferBz, err := transfertypes.EncodeABIFungibleTokenPacketData(&transferPayload)
 	if err != nil {
 		return channeltypesv2.MsgSendPacket{}, err
 	}
@@ -60,7 +58,7 @@ func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
 	}
 
 	return channeltypesv2.MsgSendPacket{
-		SourceChannel:    sourceChannel,
+		SourceClient:     sourceClient,
 		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
 		Payloads:         []channeltypesv2.Payload{payload},
 		Signer:           sender,

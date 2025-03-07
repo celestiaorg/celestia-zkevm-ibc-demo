@@ -112,6 +112,8 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
+
+	// TODO: figure out how to invoke update client with new contract.
 	encoded, err := arguments.Pack(sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
 		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
 			VKey:         verifierKey,
