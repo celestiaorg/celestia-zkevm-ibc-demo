@@ -1,3 +1,6 @@
+//! A SP1 program that commits the exact same output as blevm. This SP1 program should execute much
+//! faster than blevm because it does not perform the same verification that blevm does. Note: this
+//! should only be used for testing.
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 
