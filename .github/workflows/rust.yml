@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  SP1_VERSION: 4.1.0
+  SP1_VERSION: 4.1.2
 
 jobs:
   lint-celestia-prover:
