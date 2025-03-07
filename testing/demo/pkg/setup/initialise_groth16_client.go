@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
-	commitmenttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types/v2"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -52,10 +50,7 @@ func InitializeGroth16LightClientOnSimapp() error {
 	if err != nil {
 		return err
 	}
-
-	if err := createChannelOnSimapp(clientCtx, clientId); err != nil {
-		return err
-	}
+	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 
 	return nil
 }
@@ -129,25 +124,6 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 
 	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 	return clientId, nil
-}
-
-func createChannelOnSimapp(clientCtx client.Context, clientId string) error {
-	cosmosMerklePathPrefix := commitmenttypesv2.NewMerklePath([]byte("simd"))
-	msg := channeltypesv2.MsgCreateChannel{
-		ClientId:         clientId,
-		MerklePathPrefix: cosmosMerklePathPrefix,
-		Signer:           relayer,
-	}
-	response, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &msg)
-	if err != nil {
-		return fmt.Errorf("failed to create channel: %v", err)
-	}
-	if response.Code != 0 {
-		return fmt.Errorf("failed to create channel: %v", response.RawLog)
-	}
-
-	fmt.Println("Created channel on simapp.")
-	return nil
 }
 
 // parseClientIDFromEvents parses events emitted from a MsgCreateClient and

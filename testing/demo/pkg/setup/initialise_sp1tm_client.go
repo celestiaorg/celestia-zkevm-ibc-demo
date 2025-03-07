@@ -11,14 +11,9 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-<<<<<<< Updated upstream
-	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
-	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
-=======
-	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
->>>>>>> Stashed changes
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -84,12 +79,12 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 	ethChainId := big.NewInt(80087)
 	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 
-	icsClientContract, err := ics02client.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
+	icsClientContract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
 	}
 
-	counterpartyInfo := ics02client.IICS02ClientMsgsCounterpartyInfo{
+	counterpartyInfo := ics26router.IICS02ClientMsgsCounterpartyInfo{
 		ClientId:     counterpartyClientId,
 		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
 	}
@@ -135,10 +130,10 @@ func createCounterpartyOnSimapp() error {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &channeltypesv2.MsgRegisterCounterparty{
-		ChannelId:             counterpartyClientId,
-		CounterpartyChannelId: TendermintLightClientID,
-		Signer:                relayer,
+	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypesv2.MsgRegisterCounterparty{
+		ClientId:             counterpartyClientId,
+		CounterpartyClientId: TendermintLightClientID,
+		Signer:               relayer,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to register counterparty: %v", err)

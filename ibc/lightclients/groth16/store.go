@@ -2,7 +2,6 @@ package groth16
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	fmt "fmt"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	host "github.com/cosmos/ibc-go/v10/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v10/modules/core/exported"
@@ -373,7 +373,7 @@ func bigEndianHeightBytes(height exported.Height) []byte {
 // as this is internal tendermint light client logic.
 // client state and consensus state will be set by client keeper
 // set iteration key to provide ability for efficient ordered iteration of consensus states.
-func setConsensusMetadata(ctx context.Context, clientStore storetypes.KVStore, height exported.Height) {
+func setConsensusMetadata(ctx sdktypes.Context, clientStore storetypes.KVStore, height exported.Height) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx) // TODO: https://github.com/cosmos/ibc-go/issues/5917
 	setConsensusMetadataWithValues(clientStore, height, clienttypes.GetSelfHeight(ctx), uint64(sdkCtx.BlockTime().UnixNano()))
 }
