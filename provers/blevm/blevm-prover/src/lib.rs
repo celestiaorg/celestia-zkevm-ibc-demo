@@ -10,8 +10,8 @@ use celestia_types::{
 use rsp_client_executor::io::ClientExecutorInput;
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{
-    ExecutionReport, ProverClient, SP1ProofWithPublicValues, SP1PublicValues, SP1Stdin,
-    SP1VerifyingKey, SP1Proof
+    ExecutionReport, HashableKey, ProverClient, SP1Proof, SP1ProofWithPublicValues,
+    SP1PublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use std::error::Error;
 
@@ -159,29 +159,30 @@ impl BlockProver {
         &self,
         inputs: Vec<AggregationInput>,
     ) -> Result<SP1Stdin, Box<dyn Error>> {
-        if inputs.len() < 2 {
-            return Err("Must provide at least 2 proofs to aggregate".into());
-        }
+        assert!(inputs.len() > 1, "aggregation requires at least 2 proofs");
 
         // Create stdin for the aggregator
         let mut stdin = SP1Stdin::new();
 
-        // Write number of proofs
-        stdin.write(&inputs.len());
+        // Write the verification keys.
+        let vkeys = inputs
+            .iter()
+            .map(|input| input.vk.hash_u32())
+            .collect::<Vec<_>>();
+        stdin.write::<Vec<[u32; 8]>>(&vkeys);
 
-        // Write all verification keys first
-        for input in &inputs {
-            stdin.write(&input.vk);
-        }
-
-        // Then write all public values
-        for input in &inputs {
-            stdin.write_vec(input.proof.public_values.to_vec());
-        }
+        // Write the public values.
+        let public_values = inputs
+            .iter()
+            .map(|input| input.proof.public_values.to_vec())
+            .collect::<Vec<_>>();
+        stdin.write::<Vec<Vec<u8>>>(&public_values);
 
         // Write the proofs
         for input in &inputs {
-            let SP1Proof::Compressed(ref proof) = input.proof.proof else { panic!() };
+            let SP1Proof::Compressed(ref proof) = input.proof.proof else {
+                panic!()
+            };
             stdin.write_proof(*proof.clone(), input.vk.vk.clone());
         }
 
