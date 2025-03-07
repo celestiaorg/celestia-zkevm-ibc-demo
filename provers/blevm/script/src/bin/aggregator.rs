@@ -1,7 +1,6 @@
 use blevm_common::BlevmOutput;
 use blevm_prover::{
-    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
-    CelestiaConfig, ProverConfig,
+    AggregationInput, AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -25,6 +24,9 @@ struct Args {
 
     #[clap(long)]
     mock: bool,
+
+    #[clap(long)]
+    inputs: Vec<String>,
 }
 
 #[tokio::main]
@@ -66,7 +68,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
-    let aggregation_inputs: Vec<AggregationInput> = vec![];
+    let mut aggregation_inputs: Vec<AggregationInput> = vec![];
+    for input in args.inputs {
+        let input_bin = fs::read(input)?;
+        let aggregation_input = bincode::deserialize(&input_bin)?;
+        aggregation_inputs.push(aggregation_input);
+    }
+
+    println!("aggregation_inputs.len(): {}", aggregation_inputs.len());
 
     if args.execute {
         println!("Executing...");
