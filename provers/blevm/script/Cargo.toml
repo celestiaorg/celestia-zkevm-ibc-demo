@@ -12,6 +12,10 @@ path = "src/bin/main.rs"
 name = "blevm-aggregator-script"
 path = "src/bin/aggregator.rs"
 
+[[bin]]
+name = "blevm-tools"
+path = "src/bin/tools.rs"
+
 [dependencies]
 sp1-sdk = { workspace = true }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
