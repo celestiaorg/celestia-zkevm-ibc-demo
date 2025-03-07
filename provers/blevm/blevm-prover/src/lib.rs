@@ -1,6 +1,5 @@
 mod proofs;
 
-use serde::{Deserialize, Serialize};
 use celestia_rpc::{BlobClient, Client, HeaderClient};
 use celestia_types::AppVersion;
 use celestia_types::Blob;
@@ -9,9 +8,10 @@ use celestia_types::{
     ExtendedHeader,
 };
 use rsp_client_executor::io::ClientExecutorInput;
+use serde::{Deserialize, Serialize};
 use sp1_sdk::{
     ExecutionReport, ProverClient, SP1ProofWithPublicValues, SP1PublicValues, SP1Stdin,
-    SP1VerifyingKey,
+    SP1VerifyingKey, SP1Proof
 };
 use std::error::Error;
 
@@ -178,6 +178,13 @@ impl BlockProver {
         for input in &inputs {
             stdin.write_vec(input.proof.public_values.to_vec());
         }
+
+        // Write the proofs
+        for input in &inputs {
+            let SP1Proof::Compressed(ref proof) = input.proof.proof else { panic!() };
+            stdin.write_proof(*proof.clone(), input.vk.vk.clone());
+        }
+
         Ok(stdin)
     }
 
@@ -203,7 +210,7 @@ impl BlockProver {
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
         let (pk, vk) = client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
-        let proof = client.prove(&pk, &stdin).groth16().run()?;
+        let proof = client.prove(&pk, &stdin).compressed().run()?;
         Ok((proof, vk))
     }
 
