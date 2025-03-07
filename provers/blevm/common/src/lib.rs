@@ -12,7 +12,7 @@ pub struct BlevmOutput {
     pub celestia_header_hash: [u8; 32],
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct BlevmAggOutput {
     // newest_header_hash is the last block's hash on the EVM roll-up.
     // TODO: this may be removable.

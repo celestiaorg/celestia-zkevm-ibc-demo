@@ -1,21 +1,6 @@
-//! This script generates a blevm or blevm-mock proof.
-//!
-//! You can run this script using the following command:
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --execute
-//! ```
-//! or
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --prove
-//! ```
-//! and you can use blevm-mock in execute or prove mode:
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --prove --mock
-//! ```
-use blevm_common::BlevmOutput;
+use blevm_common::BlevmAggOutput;
 use blevm_prover::{
-    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
-    CelestiaConfig, ProverConfig,
+    AggregationInput, AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -41,7 +26,7 @@ struct Args {
     mock: bool,
 
     #[clap(long)]
-    aggregate: bool,
+    inputs: Vec<String>,
 }
 
 #[tokio::main]
@@ -83,22 +68,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
-    // Example input (replace with actual L2 block data)
-    let input = BlockProverInput {
-        // Hardcode the height of the block containing the blob
-        // https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w%3D&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8%3D&height=2988873
-        block_height: 2988873,
-        l2_block_data: fs::read("input/blevm/1/18884864.bin").expect(
-            "Failed to load L2 block data. Ensure you're in a directory with input/blevm/1/18884864.bin",
-        ),
-    };
+    let mut aggregation_inputs: Vec<AggregationInput> = vec![];
+    for input in args.inputs {
+        let input_bin = fs::read(input)?;
+        let aggregation_input = bincode::deserialize(&input_bin)?;
+        aggregation_inputs.push(aggregation_input);
+    }
+
+    println!("aggregation_inputs.len(): {}", aggregation_inputs.len());
 
     if args.execute {
         println!("Executing...");
-        let (public_values, execution_report) = prover.execute_generate_proof(input).await?;
+        let (public_values, execution_report) =
+            prover.execute_aggregate_proofs(aggregation_inputs).await?;
         println!("Program executed successfully.");
 
-        let output: BlevmOutput = bincode::deserialize(public_values.as_slice()).unwrap();
+        let output: BlevmAggOutput = bincode::deserialize(public_values.as_slice()).unwrap();
         println!("{:?}", output);
         println!(
             "Number of cycles: {}",
@@ -110,17 +95,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if args.prove {
         println!("Generating proof...");
         let start = Instant::now();
-        let (proof, vk) = prover.generate_proof(input).await?;
+        let aggregation_output = prover.aggregate_proofs(aggregation_inputs).await?;
         let duration = start.elapsed();
         println!("Generated proof in {:?}.", duration);
 
-        let aggregation_input = AggregationInput { proof, vk };
-        let aggregation_input_bin = bincode::serialize(&aggregation_input)?;
-
-        println!("Saving proof to proof.bin.");
-        fs::write("proof.bin", aggregation_input_bin)?;
+        let proof_bin = bincode::serialize(&aggregation_output.proof)?;
+        // Save proof to file
+        println!("Saving proof to proof.bin");
+        fs::write("proof.bin", proof_bin)?;
         println!("Saved proof.");
-
         return Ok(());
     }
 
