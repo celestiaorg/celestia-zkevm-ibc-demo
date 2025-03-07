@@ -73,6 +73,23 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     RUST_LOG=info cargo run --release -- --prove --mock
     # Generate a real proof
     RUST_LOG=info cargo run --release -- --prove
+
+    # (Optional) Copy the proof outputs to aggregator inputs
+    cp proof.bin input/blevm-aggregator/1/18884864.bin
+    cp proof.bin input/blevm-aggregator/1/18884865.bin
+    ```
+
+4. Aggregate proofs
+
+    ```shell
+    # Change to the correct directory
+    cd celestia-zkevm-ibc-demo/provers/blevm/script
+
+    # Aggregate proofs
+    # Execute blevm aggregator
+    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --execute --inputs=input/blevm-aggregator/1/18884864.bin --inputs=input/blevm-aggregator/1/18884865.bin 
+    # Generate aggregation proof
+    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --prove --inputs=input/blevm-aggregator/1/18884864.bin --inputs=input/blevm-aggregator/1/18884865.bin 
     ```
 
 ### Development
