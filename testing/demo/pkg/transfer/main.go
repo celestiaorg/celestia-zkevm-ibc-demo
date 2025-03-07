@@ -11,7 +11,6 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
 	ibctesting "github.com/cosmos/ibc-go/v10/testing"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20lib"
 )
 
 const (
@@ -41,14 +40,14 @@ func main() {
 // createMsgSendPacket returns a msg that sends 100stake over IBC.
 func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
 	coin := sdktypes.NewCoin(denom, math.NewInt(100))
-	transferPayload := ics20lib.ICS20LibFungibleTokenPacketData{
+	transferPayload := transfertypes.FungibleTokenPacketData{
 		Denom:    coin.Denom,
 		Amount:   coin.Amount.BigInt(),
 		Sender:   sender,
 		Receiver: receiver,
 		Memo:     "test transfer",
 	}
-	transferBz, err := ics20lib.EncodeFungibleTokenPacketData(transferPayload)
+	transferBz, err := transfertypes.EncodeABIFungibleTokenPacketData(transferPayload)
 	if err != nil {
 		return channeltypesv2.MsgSendPacket{}, err
 	}
