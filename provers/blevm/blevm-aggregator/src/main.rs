@@ -34,7 +34,7 @@ pub fn main() {
     }
 
     // // Verify adjacent headers
-    // for i in 0..outputs.len() {
+    // for i in 0..outputs.len()-1 {
     //     if outputs[i].header_hash != outputs[i + 1].prev_header_hash {
     //         panic!("header hash mismatch at position {}", i);
     //     }
