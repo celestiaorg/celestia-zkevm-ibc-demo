@@ -14,8 +14,7 @@
 //! ```
 use blevm_common::BlevmOutput;
 use blevm_prover::{
-    AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
-    CelestiaConfig, ProverConfig,
+    AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -88,8 +87,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         // Hardcode the height of the block containing the blob
         // https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w%3D&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8%3D&height=2988873
         block_height: 2988873,
-        l2_block_data: fs::read("input/1/18884864.bin").expect(
-            "Failed to load L2 block data. Ensure you're in a directory with input/1/18884864.bin",
+        l2_block_data: fs::read("input/blevm/1/18884864.bin").expect(
+            "Failed to load L2 block data. Ensure you're in a directory with input/blevm/1/18884864.bin",
         ),
     };
 
