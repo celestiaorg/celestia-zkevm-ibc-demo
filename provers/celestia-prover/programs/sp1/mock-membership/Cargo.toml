@@ -9,4 +9,4 @@ license.workspace = true
 alloy-sol-types = { workspace = true, default-features = false }
 ibc-core-commitment-types = { workspace = true }
 ibc-eureka-solidity-types = { workspace = true }
-sp1-zkvm = { version = "4.0.1" }
+sp1-zkvm = { version = "4.1.2" }
