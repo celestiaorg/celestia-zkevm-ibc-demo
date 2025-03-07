@@ -1,8 +1,9 @@
 use alloy_sol_types::SolType;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
-use sp1_sdk::{HashableKey, ProverClient};
+use sp1_sdk::{HashableKey, ProverClient, Prover};
 use std::env;
 use std::fs;
+// use std::intrinsics::mir::Checked;
 use tonic::{transport::Server, Request, Response, Status};
 // Import the generated proto rust code
 pub mod prover {
@@ -10,7 +11,7 @@ pub mod prover {
 }
 use std::path::PathBuf;
 
-use prover::prover_server::{Prover, ProverServer};
+use prover::prover_service_server::{ProverService, ProverServiceServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
@@ -32,51 +33,45 @@ use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
-use sp1_prover::components::SP1ProverComponents;
+use sp1_prover::components::CpuProverComponents;
 use tendermint_rpc::HttpClient;
+use std::sync::Arc;
 
-pub struct ProverService<'a> {
-    tendermint_prover: SP1ICS07TendermintProver<
-        'a,
-        UpdateClientProgram,
-        SP1ICS07TendermintProver<'a, UpdateClientProgram, dyn SP1ProverComponents>,
-    >,
+pub struct CelestiaProver {
+    tendermint_prover: SP1ICS07TendermintProver<'static, UpdateClientProgram, CpuProverComponents>,
     tendermint_prover_fast: SP1ICS07TendermintProverFast<UpdateClientProgramFast>,
     tendermint_rpc_client: HttpClient,
-    membership_prover: SP1ICS07TendermintProver<
-        'a,
-        MembershipProgram,
-        SP1ICS07TendermintProver<'a, UpdateClientProgram, dyn SP1ProverComponents>,
-    >,
+    membership_prover: SP1ICS07TendermintProver<'static, MembershipProgram, CpuProverComponents>,
     membership_prover_fast: SP1ICS07TendermintProverFast<MembershipProgramFast>,
     evm_rpc_url: Url,
+    prover_client: Arc<dyn Prover<CpuProverComponents>>,
 }
 
-impl ProverService<'_> {
-    fn new() -> ProverService<'static> {
+impl CelestiaProver {
+    fn new(prover_client: Arc<dyn Prover<CpuProverComponents>>) -> Self {
         let rpc_url = env::var("RPC_URL").expect("RPC_URL not set");
         let url = Url::parse(rpc_url.as_str()).expect("Failed to parse RPC_URL");
 
-        // let prover_components = EnvProver;
-        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        // Create a static reference by leaking a Box
+        // First, clone the Arc and get a reference to the trait object
+        let prover_ref: &dyn Prover<CpuProverComponents> = &*prover_client;
+        // Then, create a 'static reference by leaking a Box
+        let static_prover_client: &'static dyn Prover<CpuProverComponents> = Box::leak(Box::new(prover_ref));
 
-        ProverService {
-            tendermint_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16, &client),
-            tendermint_prover_fast: SP1ICS07TendermintProverFast::new(
-                SupportedProofTypeFast::Groth16,
-            ),
+        CelestiaProver {
+            tendermint_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16, static_prover_client),
+            tendermint_prover_fast: SP1ICS07TendermintProverFast::new(SupportedProofTypeFast::Groth16),
             tendermint_rpc_client: HttpClient::from_env(),
-            membership_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16, &client),
-            membership_prover_fast: SP1ICS07TendermintProverFast::new(
-                SupportedProofTypeFast::Groth16,
-            ),
+            membership_prover: SP1ICS07TendermintProver::new(SupportedProofType::Groth16, static_prover_client),
+            membership_prover_fast: SP1ICS07TendermintProverFast::new(SupportedProofTypeFast::Groth16),
             evm_rpc_url: url,
+            prover_client,
         }
     }
 }
 
 #[tonic::async_trait]
-impl Prover for ProverService<'_> {
+impl<'a> ProverService for CelestiaProver {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         let state_transition_verifier_key = self.tendermint_prover.vkey.bytes32();
         let state_membership_verifier_key = self.membership_prover.vkey.bytes32();
@@ -367,7 +362,12 @@ impl Prover for ProverService<'_> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
     let addr = "[::]:50051".parse()?;
-    let prover = ProverService::new();
+
+    // Initialize ProverClient and wrap it in an Arc
+    let prover_client: Arc<dyn Prover<CpuProverComponents>> = Arc::new(ProverClient::from_env());
+
+    // Pass the Arc to CelestiaProver
+    let prover = CelestiaProver::new(prover_client);
 
     println!("Prover Server listening on {}", addr);
 
@@ -386,7 +386,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Loaded proto descriptor set");
 
     Server::builder()
-        .add_service(ProverServer::new(prover))
+        .add_service(ProverServiceServer::new(prover))
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(&file_descriptor_set)

@@ -4,13 +4,13 @@ package celestia.prover.v1;
 
 option go_package = "provers/client";
 
-service Prover {
+service ProverService {
   rpc Info(InfoRequest) returns (InfoResponse);
   rpc ProveStateTransition(ProveStateTransitionRequest) returns (ProveStateTransitionResponse);
   rpc ProveStateMembership(ProveStateMembershipRequest) returns (ProveStateMembershipResponse);
-  rpc Info_Fast(InfoRequest) returns (InfoResponse);
-  rpc ProveStateTransition_Fast(ProveStateTransitionRequest) returns (ProveStateTransitionResponse);
-  rpc ProveStateMembership_Fast(ProveStateMembershipRequest) returns (ProveStateMembershipResponse);
+  rpc InfoFast(InfoRequest) returns (InfoResponse);
+  rpc ProveStateTransitionFast(ProveStateTransitionRequest) returns (ProveStateTransitionResponse);
+  rpc ProveStateMembershipFast(ProveStateMembershipRequest) returns (ProveStateMembershipResponse);
 }
 
 message InfoRequest {
