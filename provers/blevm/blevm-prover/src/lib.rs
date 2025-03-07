@@ -153,7 +153,33 @@ impl BlockProver {
         Ok(stdin)
     }
 
-    pub async fn execute(
+    async fn get_aggregate_stdin(
+        &self,
+        inputs: Vec<AggregationInput>,
+    ) -> Result<SP1Stdin, Box<dyn Error>> {
+        if inputs.len() < 2 {
+            return Err("Must provide at least 2 proofs to aggregate".into());
+        }
+
+        // Create stdin for the aggregator
+        let mut stdin = SP1Stdin::new();
+
+        // Write number of proofs
+        stdin.write(&inputs.len());
+
+        // Write all verification keys first
+        for input in &inputs {
+            stdin.write(&input.vk);
+        }
+
+        // Then write all public values
+        for input in &inputs {
+            stdin.write_vec(input.proof.public_values.to_vec());
+        }
+        Ok(stdin)
+    }
+
+    pub async fn execute_generate_proof(
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
@@ -179,33 +205,27 @@ impl BlockProver {
         Ok((proof, vk))
     }
 
+    pub async fn execute_aggregate_proofs(
+        &self,
+        inputs: Vec<AggregationInput>,
+    ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
+        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        let stdin = self.get_aggregate_stdin(inputs).await?;
+        let (public_values, execution_report) = client
+            .execute(self.aggregator_config.elf_bytes, &stdin)
+            .run()
+            .unwrap();
+
+        Ok((public_values, execution_report))
+    }
+
     /// Aggregates multiple proofs into a single proof
     pub async fn aggregate_proofs(
         &self,
         inputs: Vec<AggregationInput>,
     ) -> Result<AggregationOutput, Box<dyn Error>> {
-        if inputs.len() < 2 {
-            return Err("Must provide at least 2 proofs to aggregate".into());
-        }
-
-        // Create stdin for the aggregator
-        let mut stdin = SP1Stdin::new();
-
-        // Write number of proofs
-        stdin.write(&inputs.len());
-
-        // Write all verification keys first
-        for input in &inputs {
-            stdin.write(&input.vk);
-        }
-
-        // Then write all public values
-        for input in &inputs {
-            stdin.write_vec(input.proof.public_values.to_vec());
-        }
-
+        let stdin = self.get_aggregate_stdin(inputs).await?;
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
-
         // Generate the aggregated proof
         let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
         let proof = client.prove(&pk, &stdin).groth16().run()?;
