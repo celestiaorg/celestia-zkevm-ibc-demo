@@ -1,4 +1,4 @@
-use blevm_common::BlevmOutput;
+use blevm_common::BlevmAggOutput;
 use blevm_prover::{
     AggregationInput, AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
 };
@@ -83,7 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             prover.execute_aggregate_proofs(aggregation_inputs).await?;
         println!("Program executed successfully.");
 
-        let output: BlevmOutput = bincode::deserialize(public_values.as_slice()).unwrap();
+        let output: BlevmAggOutput = bincode::deserialize(public_values.as_slice()).unwrap();
         println!("{:?}", output);
         println!(
             "Number of cycles: {}",

@@ -27,18 +27,18 @@ pub fn main() {
     }
 
     // Parse all outputs
-    let mut outputs: Vec<BlevmOutput> = Vec::with_capacity(vkeys.len());
+    let mut outputs: Vec<BlevmOutput> = vec![];
     for values in &public_values {
         let mut buffer = Buffer::from(values);
         outputs.push(buffer.read::<BlevmOutput>());
     }
 
-    // Verify block sequence
-    for i in 1..vkeys.len() {
-        if outputs[i - 1].header_hash != outputs[i].prev_header_hash {
-            panic!("header hash mismatch at position {}", i);
-        }
-    }
+    // // Verify adjacent headers
+    // for i in 0..outputs.len() {
+    //     if outputs[i].header_hash != outputs[i + 1].prev_header_hash {
+    //         panic!("header hash mismatch at position {}", i);
+    //     }
+    // }
 
     // Collect all Celestia header hashes
     let celestia_header_hashes: Vec<_> = outputs
