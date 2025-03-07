@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -29,19 +32,36 @@ import (
 const (
 	// ethereumRPC is the Reth RPC endpoint.
 	ethereumRPC = "http://localhost:8545/"
-	// ethereumAddress is an address on the EVM chain.
-	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
 	// ethPrivateKey is the private key for ethereumAddress.
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-	// cliendID is for the SP1 Tendermint light client on the EVM roll-up.
-	clientID = "07-tendermint-0"
+	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
+	tendermintClientID = "07-tendermint-0"
+	// groth16ClientID is for the Ethereum light client on the SimApp.
+	groth16ClientID = "08-groth16-0"
+
+	// ethereumAddress is an address on the EVM chain.
+	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
 )
 
 func main() {
+	fmt.Printf("Updating Tendermint light client on EVM roll-up...\n")
 	err := updateTendermintLightClient()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to update Tendermint light client: %v\n", err)
 	}
+	fmt.Printf("Updated Tendermint light client on EVM roll-up.\n")
+
+	if len(os.Args) < 2 {
+		fmt.Printf("Usage: %s <transaction_hash>\n", os.Args[0])
+		os.Exit(1)
+	}
+	txHash := os.Args[1]
+	fmt.Printf("Relaying IBC transaction %v...\n", txHash)
+	err = relayByTx(txHash, tendermintClientID)
+	if err != nil {
+		log.Fatalf("Failed to relay transaction: %v", err)
+	}
+	fmt.Printf("Relayed IBC transaction %v", txHash)
 }
 
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
@@ -50,7 +70,6 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Extracted deployed contract addresses: %#v\n", addresses)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
@@ -76,13 +95,13 @@ func updateTendermintLightClient() error {
 	}
 	defer conn.Close()
 
-	fmt.Printf("Getting celestia prover info...\n")
+	fmt.Printf("Requesting celestia-prover StateTransitionVerifierKey...\n")
 	proverClient := proverclient.NewProverClient(conn)
 	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
 	if err != nil {
-		return fmt.Errorf("failed to get celestia prover info %w", err)
+		return fmt.Errorf("failed to get celestia-prover info %w", err)
 	}
-	fmt.Printf("Got celestia prover info with StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
+	fmt.Printf("Received celestia-prover StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
 	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
@@ -90,6 +109,7 @@ func updateTendermintLightClient() error {
 	var verifierKey [32]byte
 	copy(verifierKey[:], verifierKeyDecoded)
 
+	fmt.Printf("Requesting celestia-prover state transition proof...\n")
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -108,6 +128,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
 	}
+	fmt.Printf("Received celestia-prover state transition proof.\n")
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
@@ -123,18 +144,17 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("error packing msg %w", err)
 	}
 
-	fmt.Printf("Invoking icsCore.UpdateClient...\n")
-	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), clientID, encoded)
+	fmt.Printf("Submitting UpdateClient tx to EVM roll-up...\n")
+	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
 	if err != nil {
 		return err
 	}
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		fmt.Printf("receipt %v and logs %v\n", receipt, receipt.Logs)
-		return fmt.Errorf("receipt status want %v, got %v", ethtypes.ReceiptStatusSuccessful, receipt.Status)
+		return fmt.Errorf("receipt status want %v, got %v. logs: %v", ethtypes.ReceiptStatusSuccessful, receipt.Status, receipt.Logs)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
-	fmt.Printf("recvBlockNumber %v\n", recvBlockNumber)
+	fmt.Printf("Submitted UpdateClient tx in block %v with tx hash %v\n", recvBlockNumber, receipt.TxHash.Hex())
 	return nil
 }
 
@@ -188,10 +208,10 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	}
 
 	// Log more details about the receipt
-	fmt.Printf("Transaction hash: %s\n", hash.Hex())
-	fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
-	fmt.Printf("Gas used: %d\n", receipt.GasUsed)
-	fmt.Printf("Logs: %v\n", receipt.Logs)
+	// fmt.Printf("Transaction hash: %s\n", hash.Hex())
+	// fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
+	// fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+	// fmt.Printf("Logs: %v\n", receipt.Logs)
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
 		fmt.Println("Transaction failed. Inspect logs or contract.")
 	}
@@ -208,4 +228,183 @@ func getUpdateClientArguments() (abi.Arguments, error) {
 	}
 
 	return parsed.Methods["updateClient"].Inputs, nil
+}
+
+// relayByTx implements the logic that the relayer would perform directly
+// It processes source transactions, extracts IBC events, generates proofs,
+// and creates an Ethereum transaction to submit to the ICS26Router contract.
+func relayByTx(sourceTxHash string, targetClientID string) error {
+	fmt.Printf("Relaying transaction %s to client %s...\n", sourceTxHash, targetClientID)
+
+	txID, err := hex.DecodeString(strings.TrimPrefix(sourceTxHash, "0x"))
+	if err != nil {
+		return fmt.Errorf("failed to decode source tx hash: %w", err)
+	}
+
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return fmt.Errorf("failed to setup client context: %w", err)
+	}
+	fmt.Printf("Querying transaction and extracting IBC events...\n")
+	simAppTx, err := clientCtx.Client.Tx(context.Background(), txID, true)
+	if err != nil {
+		return fmt.Errorf("failed to query transaction: %w", err)
+	}
+	fmt.Printf("Queried transaction and extracted %v events.\n", len(simAppTx.TxResult.Events))
+
+	// Extract the SendPacket events from the transaction
+	var sendPacketEvents []map[string]interface{}
+	for _, event := range simAppTx.TxResult.Events {
+		// Check if this is a SendPacket event
+		if event.Type == "send_packet" {
+			// Extract the event attributes
+			packetEvent := make(map[string]interface{})
+			for _, attr := range event.Attributes {
+				key := string(attr.Key)
+				value := string(attr.Value)
+
+				switch key {
+				case "packet_src_port", "packet_src_channel", "packet_dst_port", "packet_dst_channel", "packet_data", "packet_sequence", "packet_timeout_timestamp":
+					// Store string values as is
+					packetEvent[key] = value
+				default:
+					// Store any other attributes
+					packetEvent[key] = value
+				}
+			}
+			sendPacketEvents = append(sendPacketEvents, packetEvent)
+		}
+	}
+
+	// Check if we found any SendPacket events
+	if len(sendPacketEvents) == 0 {
+		return fmt.Errorf("no SendPacket events found in transaction")
+	}
+	if len(sendPacketEvents) > 1 {
+		return fmt.Errorf("multiple SendPacket events found in transaction")
+	}
+
+	sendPacketEvent := sendPacketEvents[0]
+	fmt.Printf("Extracted SendPacket event from transaction: %+v\n", sendPacketEvent)
+
+	// Generate a proof for the packet commitment
+	// This would involve:
+	// 1. Determining the key path in the SimApp state tree where the packet commitment is stored
+	// 2. Getting a proof for that key from the prover
+
+	// Parse the packet sequence as uint64
+	packetSequenceStr, ok := sendPacketEvent["packet_sequence"].(string)
+	if !ok {
+		return fmt.Errorf("packet_sequence not found in SendPacket event or not a string")
+	}
+	packetSequence, err := strconv.ParseUint(packetSequenceStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse packet sequence: %w", err)
+	}
+	fmt.Printf("Packet sequence: %d\n", packetSequence)
+
+	// Create the commitment path according to IBC Eureka specification:
+	// - Source client ID bytes
+	// - Marker byte (1 for packet commitment)
+	// - Sequence number in big-endian
+	var packetCommitmentPath []byte
+
+	// TODO: the version of ibc-go that SimApp uses doesn't emit the source client ID in the SendPacket event.
+	// After we upgrade ibc-go, stop hard-coding the simAppClientID and fetch the event from the packet.
+	packetCommitmentPath = append(packetCommitmentPath, []byte(groth16ClientID)...)
+	packetCommitmentPath = append(packetCommitmentPath, byte(1)) // Marker byte for packet commitment
+
+	// Convert sequence to big-endian bytes and append
+	sequenceBytes := make([]byte, 8)
+	// Store sequence in big-endian format (most significant byte first)
+	for i := 7; i >= 0; i-- {
+		sequenceBytes[i] = byte(packetSequence & 0xff)
+		packetSequence >>= 8
+	}
+	packetCommitmentPath = append(packetCommitmentPath, sequenceBytes...)
+	fmt.Printf("Generating proof for packet commitment with path: %x\n", packetCommitmentPath)
+
+	celestiaProverConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("failed to connect to celestia-prover: %w", err)
+	}
+	defer celestiaProverConn.Close()
+	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
+
+	fmt.Printf("Requesting celestia-prover state membership proof...\n")
+	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
+		Height:   simAppTx.Height,
+		KeyPaths: []string{hex.EncodeToString(packetCommitmentPath)},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get state membership proof: %w", err)
+	}
+	fmt.Printf("Received celestia-prover state membership proof with height %v.\n", resp.GetHeight())
+
+	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to create Ethereum client: %w", err)
+	}
+
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return fmt.Errorf("failed to get contract addresses: %w", err)
+	}
+
+	ics26RouterAddr := ethcommon.HexToAddress(addresses.ICS26Router)
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return fmt.Errorf("failed to connect to Ethereum: %w", err)
+	}
+	ics26Router, err := ics26router.NewContract(ics26RouterAddr, ethClient)
+	if err != nil {
+		return err
+	}
+	timeoutTimestamp, err := strconv.ParseUint(sendPacketEvent["packet_timeout_timestamp"].(string), 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse timeout timestamp: %w", err)
+	}
+	payloadData, err := hex.DecodeString(sendPacketEvent["payload_data"].(string))
+	if err != nil {
+		return fmt.Errorf("failed to decode payload data: %w", err)
+	}
+
+	// For some reason this field is named DestClient but it actually expects the packet_dest_channel
+	// destClient := sendPacketEvent["packet_dest_channel"].(string)
+	// fmt.Printf("Destination client: %s\n", destClient)
+
+	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
+		Packet: ics26router.IICS26RouterMsgsPacket{
+			Sequence:         uint32(packetSequence),
+			SourceClient:     groth16ClientID,
+			DestClient:       tendermintClientID,
+			TimeoutTimestamp: timeoutTimestamp,
+			Payloads: []ics26router.IICS26RouterMsgsPayload{
+				{
+					SourcePort: "",                                           // There are no ports in IBC Eureka
+					DestPort:   "",                                           // There are no ports in IBC Eureka
+					Version:    sendPacketEvent["payload_version"].(string),  // ics20-1
+					Encoding:   sendPacketEvent["payload_encoding"].(string), // application/x-solidity-abi
+					Value:      payloadData,
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	fmt.Printf("Created transaction: %v\n", ethTx.Hash().Hex())
+
+	err = ethClient.SendTransaction(context.Background(), ethTx)
+	if err != nil {
+		return fmt.Errorf("failed to send transaction: %w", err)
+	}
+	receipt := getTxReciept(context.Background(), eth, ethTx.Hash())
+	fmt.Printf("Transaction sent to Ethereum, hash: %s, status: %d\n", ethTx.Hash().Hex(), receipt.Status)
+	return nil
 }
