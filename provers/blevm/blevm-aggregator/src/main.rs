@@ -31,9 +31,11 @@ pub fn main() {
     }
 
     // Verify all proofs using their respective verification keys
-    for (values, vk) in public_values.iter().zip(verification_keys.iter()) {
-        let proof_values_hash = Sha256::digest(values);
-        sp1_zkvm::lib::verify::verify_sp1_proof(vk, &proof_values_hash.into());
+    for i in 0..n {
+        let vkey = &verification_keys[i];
+        let public_values = &public_values[i];
+        let public_values_digest = Sha256::digest(public_values);
+        sp1_zkvm::lib::verify::verify_sp1_proof(vkey, &public_values_digest.into());
     }
 
     // Parse all outputs
