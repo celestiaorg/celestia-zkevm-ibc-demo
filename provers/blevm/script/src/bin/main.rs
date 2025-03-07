@@ -14,7 +14,8 @@
 //! ```
 use blevm_common::BlevmOutput;
 use blevm_prover::{
-    AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig,
+    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
+    CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -109,15 +110,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if args.prove {
         println!("Generating proof...");
         let start = Instant::now();
-        let (proof, _) = prover.generate_proof(input).await?;
+        let (proof, vk) = prover.generate_proof(input).await?;
         let duration = start.elapsed();
         println!("Generated proof in {:?}.", duration);
 
-        let proof_bin = bincode::serialize(&proof)?;
-        // Save proof to file
-        println!("Saving proof to proof.bin");
-        fs::write("proof.bin", proof_bin)?;
+        let aggregation_input = AggregationInput { proof, vk };
+        let aggregation_input_bin = bincode::serialize(&aggregation_input)?;
+
+        println!("Saving proof to proof.bin.");
+        fs::write("proof.bin", aggregation_input_bin)?;
         println!("Saved proof.");
+
         return Ok(());
     }
 
