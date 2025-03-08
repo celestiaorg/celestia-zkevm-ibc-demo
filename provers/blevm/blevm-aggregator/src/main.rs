@@ -1,7 +1,7 @@
 //! A SP1 program that takes as input N verification keys and N public values from N blevm proofs.
 //! It then verifies those proofs. It verifies that each proof is for an EVM block immediately
 //! following the previous block. It commits to the EVM header hashes from the first and last
-//! blocks.
+//! blocks. Note that the proofs must be in order of increasing block height.
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 

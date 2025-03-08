@@ -73,8 +73,12 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     RUST_LOG=info cargo run --release -- --prove --mock --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
     # Generate a real proof
     RUST_LOG=info cargo run --release -- --prove --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
+    # (Optional) Copy the proof as aggregation input
+    cp proof.bin input/blevm-aggregator/1/21991679.bin
     # Generate adjacent header proof
     RUST_LOG=info cargo run --release -- --prove --input-path=input/blevm/1/21991680.bin --inclusion-block=4341969
+    # (Optional) Copy the proof as aggregation input
+    cp proof.bin input/blevm-aggregator/1/21991680.bin
     ```
 
 4. Aggregate proofs
