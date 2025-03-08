@@ -34,11 +34,11 @@ pub fn main() {
     }
 
     // // Verify adjacent headers
-    // for i in 0..outputs.len()-1 {
-    //     if outputs[i].header_hash != outputs[i + 1].prev_header_hash {
-    //         panic!("header hash mismatch at position {}", i);
-    //     }
-    // }
+    for i in 1..outputs.len() {
+        if outputs[i].prev_header_hash != outputs[i-1].header_hash  {
+            panic!("header hash mismatch at position {}", i);
+        }
+    }
 
     // Collect all Celestia header hashes
     let celestia_header_hashes: Vec<_> = outputs

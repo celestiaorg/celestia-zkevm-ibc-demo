@@ -73,12 +73,8 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     RUST_LOG=info cargo run --release -- --prove --mock --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
     # Generate a real proof
     RUST_LOG=info cargo run --release -- --prove --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
-    # Generate another real proof
+    # Generate adjacent header proof
     RUST_LOG=info cargo run --release -- --prove --input-path=input/blevm/1/21991680.bin --inclusion-block=4341969
-
-    # (Optional) Copy the real proofs as inputs to the aggregator
-    cp 21991679.bin input/blevm-aggregator/1/21991679.bin
-    cp 21991680.bin input/blevm-aggregator/1/21991680.bin
     ```
 
 4. Aggregate proofs
@@ -89,9 +85,9 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
 
     # Aggregate proofs
     # Execute blevm aggregator
-    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --execute --inputs=input/blevm-aggregator/1/18884864.bin --inputs=input/blevm-aggregator/1/18884865.bin 
+    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --execute --inputs=input/blevm-aggregator/1/21991679.bin --inputs=input/blevm-aggregator/1/21991680.bin
     # Generate aggregation proof
-    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --prove --inputs=input/blevm-aggregator/1/18884864.bin --inputs=input/blevm-aggregator/1/18884865.bin 
+    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --prove --inputs=input/blevm-aggregator/1/21991679.bin --inputs=input/blevm-aggregator/1/21991680.bin
     ```
 
 ### Development
