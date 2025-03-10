@@ -103,21 +103,20 @@ import (
 	icahostkeeper "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/keeper"
 	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/types"
-	"github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	ibctransfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v10/modules/core"
 	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
-	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
+	ibcclienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
-	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
-	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
-	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
-	ibcapi "github.com/cosmos/ibc-go/v10/modules/core/api"
+	ibcchanneltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	ibcchanneltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
+	ibcporttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
-	solomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
-	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
+	ibcsolomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
+	ibctendermint "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 	"github.com/spf13/cast"
 )
 
@@ -229,14 +228,14 @@ func NewSimApp(
 
 	// Register IBC interfaces
 	groth16.RegisterInterfaces(interfaceRegistry)
-	solomachine.RegisterInterfaces(interfaceRegistry)
-	ibctm.RegisterInterfaces(interfaceRegistry)
+	ibcsolomachine.RegisterInterfaces(interfaceRegistry)
+	ibctendermint.RegisterInterfaces(interfaceRegistry)
 	ibctransfertypes.RegisterInterfaces(interfaceRegistry)
 	ibcconnectiontypes.RegisterInterfaces(interfaceRegistry)
 	ibcclienttypes.RegisterInterfaces(interfaceRegistry)
-	clienttypesv2.RegisterInterfaces(interfaceRegistry)
-	channeltypes.RegisterInterfaces(interfaceRegistry)
-	channeltypesv2.RegisterInterfaces(interfaceRegistry)
+	ibcclienttypesv2.RegisterInterfaces(interfaceRegistry)
+	ibcchanneltypes.RegisterInterfaces(interfaceRegistry)
+	ibcchanneltypesv2.RegisterInterfaces(interfaceRegistry)
 
 	txConfig := authtx.NewTxConfig(appCodec, authtx.DefaultSignModes)
 
@@ -400,8 +399,7 @@ func NewSimApp(
 	)
 
 	// Create IBC Router
-	ibcRouter := porttypes.NewRouter()
-	ibcRouterV2 := ibcapi.NewRouter()
+	ibcRouter := ibcporttypes.NewRouter()
 
 	// Middleware Stacks
 
@@ -430,26 +428,25 @@ func NewSimApp(
 	// - Transfer
 
 	// create IBC module from bottom to top of stack
-	var transferStack = transfer.NewIBCModule(app.TransferKeeper)
+	var transferStack = ibctransfer.NewIBCModule(app.TransferKeeper)
 
 	// Add transfer stack to IBC Router
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack)
 
 	// Set the IBC Routers
 	app.IBCKeeper.SetRouter(ibcRouter)
-	app.IBCKeeper.SetRouterV2(ibcRouterV2)
 
 	clientKeeper := app.IBCKeeper.ClientKeeper
 	storeProvider := clientKeeper.GetStoreProvider()
 
-	tmLightClientModule := ibctm.NewLightClientModule(appCodec, storeProvider)
-	clientKeeper.AddRoute(ibctm.ModuleName, &tmLightClientModule)
+	tmLightClientModule := ibctendermint.NewLightClientModule(appCodec, storeProvider)
+	clientKeeper.AddRoute(ibctendermint.ModuleName, &tmLightClientModule)
 
 	groth16LightClientModule := groth16.NewLightClientModule(appCodec, storeProvider)
 	clientKeeper.AddRoute(groth16.ModuleName, &groth16LightClientModule)
 
-	smLightClientModule := solomachine.NewLightClientModule(appCodec, storeProvider)
-	clientKeeper.AddRoute(solomachine.ModuleName, &smLightClientModule)
+	smLightClientModule := ibcsolomachine.NewLightClientModule(appCodec, storeProvider)
+	clientKeeper.AddRoute(ibcsolomachine.ModuleName, &smLightClientModule)
 
 	// create evidence keeper with router
 	evidenceKeeper := evidencekeeper.NewKeeper(
@@ -492,13 +489,13 @@ func NewSimApp(
 
 		// IBC modules
 		ibc.NewAppModule(app.IBCKeeper),
-		transfer.NewAppModule(app.TransferKeeper),
+		ibctransfer.NewAppModule(app.TransferKeeper),
 		ica.NewAppModule(&app.ICAControllerKeeper, &app.ICAHostKeeper),
 
 		// IBC light clients
-		ibctm.NewAppModule(tmLightClientModule),
+		ibctendermint.NewAppModule(tmLightClientModule),
 		groth16.NewAppModule(groth16LightClientModule),
-		solomachine.NewAppModule(smLightClientModule),
+		ibcsolomachine.NewAppModule(smLightClientModule),
 	)
 
 	// BasicModuleManager defines the module BasicManager is in charge of setting up basic,
