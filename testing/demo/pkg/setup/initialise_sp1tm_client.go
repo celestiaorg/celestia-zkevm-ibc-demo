@@ -38,13 +38,11 @@ var (
 
 func InitializeTendermintLightClientOnEVMRollup() error {
 	// First, check if the Simapp node is healthy before proceeding
-	fmt.Println("Checking if simapp node is healthy...")
 	if err := utils.CheckNodeHealth("http://localhost:5123", 10); err != nil {
 		return fmt.Errorf("simapp node is not healthy, please ensure it is running correctly: %w", err)
 	}
 
 	// Check if Ethereum node is healthy
-	fmt.Println("Checking if Ethereum node is healthy...")
 	ethClient, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
 		return fmt.Errorf("failed to connect to ethereum client: %v", err)
