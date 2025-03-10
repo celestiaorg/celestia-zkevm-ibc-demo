@@ -27,8 +27,6 @@ const (
 	tendermintClientID = "07-tendermint-0"
 	// ethPrivateKey is the private key for an account on the EVM roll-up that is funded.
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-	// denom is the denomination of the token on SimApp.
-	denom = "stake"
 )
 
 var (
