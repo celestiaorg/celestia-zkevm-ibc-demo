@@ -34,6 +34,31 @@ var (
 )
 
 func InitializeSp1TendermintLightClientOnReth() error {
+	fmt.Println("--> Creating IBC light clients")
+
+	// First, check if the Simapp node is healthy before proceeding
+	fmt.Println("Checking if simapp node is healthy...")
+	if err := utils.CheckNodeHealth("http://localhost:5123", 10); err != nil {
+		return fmt.Errorf("simapp node is not healthy, please ensure it is running correctly: %w", err)
+	}
+
+	// Check if Ethereum node is healthy
+	fmt.Println("Checking if Ethereum node is healthy...")
+	ethClient, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		return fmt.Errorf("failed to connect to ethereum client: %v", err)
+	}
+
+	// Try to get the latest block to verify the node is working
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = ethClient.BlockByNumber(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("ethereum node is not responding correctly: %v", err)
+	}
+	fmt.Println("Ethereum node is healthy!")
+
+	// Continue with the existing process
 	if err := deployEurekaContracts(); err != nil {
 		return err
 	}
@@ -44,11 +69,6 @@ func InitializeSp1TendermintLightClientOnReth() error {
 	}
 	fmt.Printf("Contract Addresses: \n%v\n", addresses)
 
-	ethClient, err := ethclient.Dial("http://localhost:8545")
-	if err != nil {
-		return fmt.Errorf("failed to connect to ethereum client: %v", err)
-	}
-
 	if err := addClientOnEVMRollUp(addresses, ethClient); err != nil {
 		return err
 	}
@@ -57,7 +77,6 @@ func InitializeSp1TendermintLightClientOnReth() error {
 		return err
 	}
 	return nil
-
 }
 
 // deployEurekaContracts deploys all of the IBC Eureka contracts (including the SP1 ICS07 Tendermint light client contract) on the EVM roll-up.
@@ -117,7 +136,7 @@ func registerCounterpartyOnSimapp() error {
 	}
 
 	fmt.Println("Registering counterparty on simapp...")
-	resp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypesv2.MsgRegisterCounterparty{
+	resp, err := utils.BroadcastMessages(clientCtx, relayer, 500_000, &clienttypesv2.MsgRegisterCounterparty{
 		ClientId:             groth16ClientID,
 		CounterpartyClientId: tendermintClientID,
 		Signer:               relayer,
