@@ -78,10 +78,7 @@ start:
 
 ## setup: Set up the IBC light clients.
 setup:
-# Why do we deploy the Tendermint light client contract here? Go code deploys the IBC Eureka smart contracts and the Tendermint light client from initialize_sp1tm_client.go.
-	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
-	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
-	@echo "--> Creating IBC light clients"
+	@echo "--> Setting up IBC light clients"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
 
