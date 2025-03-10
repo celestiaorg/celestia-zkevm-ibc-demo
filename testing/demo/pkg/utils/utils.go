@@ -274,8 +274,6 @@ func CheckNodeHealth(nodeURI string, maxRetries int) error {
 	backoffDuration := time.Second
 
 	for i := 0; i < maxRetries; i++ {
-		fmt.Printf("Checking node health at %s (attempt %d/%d)...\n", nodeURI, i+1, maxRetries)
-
 		// Create a client with a timeout
 		httpClient := &http.Client{
 			Timeout: time.Second * 5,
@@ -284,7 +282,6 @@ func CheckNodeHealth(nodeURI string, maxRetries int) error {
 		// Make a request to the /status endpoint
 		resp, err := httpClient.Get(fmt.Sprintf("%s/status", nodeURI))
 		if err == nil && resp.StatusCode == http.StatusOK {
-			fmt.Println("Node is healthy!")
 			resp.Body.Close()
 			return nil
 		}
