@@ -110,6 +110,7 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v10/modules/core"
 	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
 	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcapi "github.com/cosmos/ibc-go/v10/modules/core/api"
@@ -222,12 +223,14 @@ func NewSimApp(
 	})
 	appCodec := codec.NewProtoCodec(interfaceRegistry)
 	legacyAmino := codec.NewLegacyAmino()
-	txConfig := authtx.NewTxConfig(appCodec, authtx.DefaultSignModes)
 
 	std.RegisterLegacyAminoCodec(legacyAmino)
 	std.RegisterInterfaces(interfaceRegistry)
 
 	groth16.RegisterInterfaces(interfaceRegistry)
+	clienttypesv2.RegisterInterfaces(interfaceRegistry)
+
+	txConfig := authtx.NewTxConfig(appCodec, authtx.DefaultSignModes)
 
 	// Below we could construct and set an application specific mempool and
 	// ABCI 1.0 PrepareProposal and ProcessProposal handlers. These defaults are
