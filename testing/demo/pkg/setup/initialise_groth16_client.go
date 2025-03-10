@@ -96,17 +96,31 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 		return nil, nil, fmt.Errorf("failed to get genesis block: %v", err)
 	}
 
-	latestBlock, err := ethClient.BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
-	}
-	if latestBlock.Number().Uint64() == 0 {
-		fmt.Println("Latest block is genesis block, waiting for a new block...")
-		time.Sleep(time.Second * 10)
+	// Keep querying for the latest block until we get one with height > 0
+	var latestBlock *ethtypes.Block
+	maxRetries := 30
+	retryCount := 0
+	retryDelay := time.Second * 5
+
+	for {
 		latestBlock, err = ethClient.BlockByNumber(context.Background(), nil)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
 		}
+
+		if latestBlock.Number().Uint64() > 0 {
+			// We found a non-zero height block
+			break
+		}
+
+		retryCount++
+		if retryCount >= maxRetries {
+			return nil, nil, fmt.Errorf("timed out waiting for a block with height > 0 after %d attempts", maxRetries)
+		}
+
+		fmt.Printf("Latest block is still genesis block (height=0), waiting %v and retrying... (attempt %d/%d)\n",
+			retryDelay, retryCount, maxRetries)
+		time.Sleep(retryDelay)
 	}
 
 	return genesisBlock, latestBlock, nil
