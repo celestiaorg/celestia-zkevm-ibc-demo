@@ -13,7 +13,6 @@ import (
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -114,8 +113,18 @@ func updateTendermintLightClient() error {
 	}
 
 	// TODO: figure out how to invoke update client with new contract.
-	encoded, err := arguments.Pack(sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
-		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
+	encoded, err := arguments.Pack(struct {
+		Sp1Proof struct {
+			VKey         [32]byte
+			PublicValues []byte
+			Proof        []byte
+		}
+	}{
+		Sp1Proof: struct {
+			VKey         [32]byte
+			PublicValues []byte
+			Proof        []byte
+		}{
 			VKey:         verifierKey,
 			PublicValues: resp.PublicValues,
 			Proof:        resp.Proof,
