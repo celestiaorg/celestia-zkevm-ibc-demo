@@ -255,38 +255,12 @@
         "send_sequences": [],
         "recv_sequences": [],
         "ack_sequences": [],
-        "next_channel_sequence": "0",
-        "params": {
-          "upgrade_timeout": {
-            "height": {
-              "revision_number": "0",
-              "revision_height": "0"
-            },
-            "timestamp": "600000000000"
-          }
-        }
-      }
-    },
-    "interchainaccounts": {
-      "controller_genesis_state": {
-        "active_channels": [],
-        "interchain_accounts": [],
-        "ports": [],
-        "params": {
-          "controller_enabled": true
-        }
+        "next_channel_sequence": "0"
       },
-      "host_genesis_state": {
-        "active_channels": [],
-        "interchain_accounts": [],
-        "port": "icahost",
-        "params": {
-          "host_enabled": true,
-          "allow_messages": [
-            "*"
-          ]
-        }
-      }
+      "client_v2_genesis": {
+        "counterparty_infos": []
+      },
+      "channel_v2_genesis": {}
     },
     "mint": {
       "minter": {
@@ -338,8 +312,7 @@
         "send_enabled": true,
         "receive_enabled": true
       },
-      "total_escrowed": [],
-      "forwarded_packets": []
+      "total_escrowed": []
     },
     "upgrade": {},
     "vesting": {}
