@@ -72,15 +72,15 @@ check-dependencies:
 .PHONY: check-dependencies
 
 ## start: Start all processes needed for the demo.
-start: 
+start:
 	@docker compose -f docker-compose.rollkit.yml up --detach
 .PHONY: start
 
-## setup: Set up the IBC clients and channels.
+## setup: Set up the IBC light clients.
 setup:
 	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
 	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
-	@echo "--> Creating IBC light clients and channel"
+	@echo "--> Creating IBC light clients"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
 
