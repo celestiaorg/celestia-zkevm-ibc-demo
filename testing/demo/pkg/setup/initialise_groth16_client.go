@@ -57,7 +57,6 @@ func InitializeGroth16LightClientOnSimapp() error {
 
 func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
 	// Query the info endpoint for the state transition verifier key
-	// Membership proofs are currently not supported
 	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
@@ -66,8 +65,16 @@ func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*
 
 	// TODO: Query this from the EVM rollup.
 	codeCommitment := []byte{}
+	stateTransitionVerifierKey := []byte{}
+	stateMembershipVerifierKey := []byte{}
 
-	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, codeCommitment, genesisBlock.Root().Bytes())
+	clientState := groth16.NewClientState(
+		latestBlock.Number().Uint64(),
+		stateTransitionVerifierKey,
+		stateMembershipVerifierKey,
+		codeCommitment,
+		genesisBlock.Root().Bytes(),
+	)
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create client state any: %v", err)

@@ -55,7 +55,6 @@ func InitializeTendermintLightClientOnEVMRollup() error {
 	if err != nil {
 		return fmt.Errorf("ethereum node is not responding correctly: %v", err)
 	}
-	fmt.Println("Ethereum node is healthy!")
 
 	// Continue with the existing process
 	if err := deployEurekaContracts(); err != nil {
