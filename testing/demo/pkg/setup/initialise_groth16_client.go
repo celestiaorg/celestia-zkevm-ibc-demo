@@ -100,6 +100,14 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
 	}
+	if latestBlock.Number().Uint64() == 0 {
+		fmt.Println("Latest block is genesis block, waiting for a new block...")
+		time.Sleep(time.Second * 10)
+		latestBlock, err = ethClient.BlockByNumber(context.Background(), nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
+		}
+	}
 
 	return genesisBlock, latestBlock, nil
 }
