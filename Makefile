@@ -71,7 +71,7 @@ check-dependencies:
 	@echo "All dependencies are installed."
 .PHONY: check-dependencies
 
-## start: Start all processes needed for the demo.
+## start: Start all Docker containers for the demo.
 start:
 	@docker compose -f docker-compose.rollkit.yml up --detach
 .PHONY: start
@@ -98,9 +98,9 @@ relay:
 	go run testing/demo/pkg/relay/main.go
 .PHONY: relay
 
-## stop: Stop all processes and remove the tmp directory.
+## stop: Stop all Docker containers and remove the tmp directory.
 stop:
-	@echo "--> Stopping all processes"
+	@echo "--> Stopping all Docker containers"
 	@docker compose -f docker-compose.rollkit.yml down
 	@docker compose -f docker-compose.rollkit.yml rm
 	@echo "--> Removing the tmp directory"
@@ -206,7 +206,6 @@ markdown-link-check:
 	@echo "--> Running markdown-link-check"
 	@find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
 .PHONY: markdown-link-check
-
 
 ## fmt: Format files per linters golangci-lint and markdownlint.
 fmt:
