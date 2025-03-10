@@ -10,7 +10,10 @@ import (
 	"os/exec"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -27,6 +30,8 @@ const (
 	tendermintClientID = "07-tendermint-0"
 	// ethPrivateKey is the private key for an account on the EVM roll-up that is funded.
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
+	// denom is the denomination of the token on SimApp.
+	denom = "stake"
 )
 
 var (
@@ -133,6 +138,18 @@ func registerCounterpartyOnSimapp() error {
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
+
+	fmt.Printf("Sending bank message...\n")
+	bankResp, err := utils.BroadcastMessages(clientCtx, relayer, 500_000, &banktypes.MsgSend{
+		FromAddress: relayer,
+		ToAddress:   relayer,
+		Amount:      sdk.NewCoins(sdk.NewCoin(denom, math.NewInt(1))),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send bank message: %v", err)
+	}
+	fmt.Printf("Sent bank message\n")
+	fmt.Printf("Bank response: %v\n", bankResp.Logs)
 
 	fmt.Println("Registering counterparty on simapp...")
 	// TODO: this is failing
