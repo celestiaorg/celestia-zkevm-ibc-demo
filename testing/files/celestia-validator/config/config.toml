@@ -47,7 +47,7 @@ db_backend = "goleveldb"
 db_dir = "data"
 
 # Output level for logging, including package level options
-log_level = "info"
+log_level = "debug"
 
 # Output format: 'plain' (colored text) or 'json'
 log_format = "plain"
@@ -96,10 +96,16 @@ laddr = "tcp://0.0.0.0:26657"
 cors_allowed_origins = []
 
 # A list of methods the client is allowed to use with cross-domain requests
-cors_allowed_methods = ["HEAD", "GET", "POST", ]
+cors_allowed_methods = ["HEAD", "GET", "POST"]
 
 # A list of non simple headers the client is allowed to use with cross-domain requests
-cors_allowed_headers = ["Origin", "Accept", "Content-Type", "X-Requested-With", "X-Server-Time", ]
+cors_allowed_headers = [
+    "Origin",
+    "Accept",
+    "Content-Type",
+    "X-Requested-With",
+    "X-Server-Time",
+]
 
 # TCP or UNIX socket address for the gRPC server to listen on
 # NOTE: This server only supports /broadcast_tx_commit
@@ -470,7 +476,7 @@ discard_abci_responses = true
 # 		- When "kv" is chosen "tx.height" and "tx.hash" will always be indexed.
 #   3) "psql" - the indexer services backed by PostgreSQL.
 # When "kv" or "psql" is chosen "tx.height" and "tx.hash" will always be indexed.
-indexer = "null"
+indexer = "kv"
 
 # The PostgreSQL connection configuration, the connection format:
 #   postgresql://<user>:<password>@<host>:<port>/<db>?<opts>
@@ -531,5 +537,13 @@ pyroscope_trace = false
 # pyroscope. Available profile types are: cpu, alloc_objects, alloc_space,
 # inuse_objects, inuse_space, goroutines, mutex_count, mutex_duration,
 # block_count, block_duration.
-pyroscope_profile_types = ["cpu", "alloc_objects", "inuse_objects", "goroutines", "mutex_count", "mutex_duration", "block_count", "block_duration", ]
-
+pyroscope_profile_types = [
+    "cpu",
+    "alloc_objects",
+    "inuse_objects",
+    "goroutines",
+    "mutex_count",
+    "mutex_duration",
+    "block_count",
+    "block_duration",
+]

@@ -30,12 +30,11 @@ const (
 )
 
 var (
-	ethChainId = big.NewInt(80087)
+	ethChainId   = big.NewInt(80087)
+	merklePrefix = [][]byte{[]byte("ibc"), []byte("")}
 )
 
-func InitializeSp1TendermintLightClientOnReth() error {
-	fmt.Println("--> Creating IBC light clients")
-
+func InitializeTendermintLightClientOnEVMRollup() error {
 	// First, check if the Simapp node is healthy before proceeding
 	fmt.Println("Checking if simapp node is healthy...")
 	if err := utils.CheckNodeHealth("http://localhost:5123", 10); err != nil {
@@ -104,7 +103,7 @@ func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclien
 
 	counterpartyInfo := ics26router.IICS02ClientMsgsCounterpartyInfo{
 		ClientId:     groth16ClientID,
-		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
+		MerklePrefix: merklePrefix,
 	}
 	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
 
@@ -136,10 +135,12 @@ func registerCounterpartyOnSimapp() error {
 	}
 
 	fmt.Println("Registering counterparty on simapp...")
+	// TODO: this is failing
 	resp, err := utils.BroadcastMessages(clientCtx, relayer, 500_000, &clienttypesv2.MsgRegisterCounterparty{
-		ClientId:             groth16ClientID,
-		CounterpartyClientId: tendermintClientID,
-		Signer:               relayer,
+		ClientId:                 groth16ClientID,
+		CounterpartyMerklePrefix: merklePrefix,
+		CounterpartyClientId:     tendermintClientID,
+		Signer:                   relayer,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to register counterparty: %v", err)
