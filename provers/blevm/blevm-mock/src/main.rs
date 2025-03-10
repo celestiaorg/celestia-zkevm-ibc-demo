@@ -5,10 +5,6 @@
 sp1_zkvm::entrypoint!(main);
 
 use blevm_common::BlevmOutput;
-use celestia_types::nmt::Namespace;
-use celestia_types::nmt::NamespaceProof;
-use nmt_rs::{simple_merkle::proof::Proof, NamespacedHash, TmSha2Hasher};
-use rsp_client_executor::io::ClientExecutorInput;
 
 pub fn main() {
     // This is a mock proof so it hard-codes all the output values. Note: these values were sourced
@@ -26,8 +22,8 @@ pub fn main() {
             194, 70, 12, 164, 151, 147, 237, 105, 187, 154, 187, 153, 78, 140, 25, 59, 84, 254,
             152, 25, 224, 239, 83, 45, 145, 73, 226, 110, 100, 51, 95, 167,
         ],
-        height: 14900876081506838043,
-        gas_used: 18884864,
+        height: 18884864,
+        gas_used: 14900876081506838043,
         beneficiary: [
             4, 26, 65, 0, 0, 0, 0, 0, 149, 34, 34, 144, 221, 114, 120, 170, 61, 221, 56, 156,
         ],
@@ -40,7 +36,6 @@ pub fn main() {
             144, 215, 85, 206, 228, 192, 183, 123, 79, 244, 136, 195, 212,
         ],
     };
-
     let serialized_output = bincode::serialize(&output).unwrap();
     sp1_zkvm::io::commit(&serialized_output);
 }
