@@ -87,6 +87,7 @@ func updateTendermintLightClient() error {
 	}
 	var verifierKey [32]byte
 	copy(verifierKey[:], verifierKeyDecoded)
+	fmt.Printf("Verifier key: %x\n", verifierKey)
 
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
 	// Get state transition proof from Celestia prover with retry logic
