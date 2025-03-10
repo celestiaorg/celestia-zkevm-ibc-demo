@@ -111,7 +111,6 @@ func updateTendermintLightClient() error {
 		return err
 	}
 
-	// TODO: figure out how to invoke update client with new contract.
 	encoded, err := arguments.Pack(struct {
 		Sp1Proof struct {
 			VKey         [32]byte
