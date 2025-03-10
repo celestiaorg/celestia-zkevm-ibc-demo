@@ -27,8 +27,14 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/gogoproto/proto"
-	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
+	solomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
+	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -67,10 +73,20 @@ func SetupClientContext() (client.Context, error) {
 	})
 	std.RegisterInterfaces(interfaceRegistry)
 	authtypes.RegisterInterfaces(interfaceRegistry)
-	clienttypes.RegisterInterfaces(interfaceRegistry)
 	banktypes.RegisterInterfaces(interfaceRegistry)
+
+	// Register IBC interfaces
 	groth16.RegisterInterfaces(interfaceRegistry)
+	solomachine.RegisterInterfaces(interfaceRegistry)
+	ibctm.RegisterInterfaces(interfaceRegistry)
+	ibctransfertypes.RegisterInterfaces(interfaceRegistry)
+	ibcconnectiontypes.RegisterInterfaces(interfaceRegistry)
+	ibcclienttypes.RegisterInterfaces(interfaceRegistry)
+	clienttypesv2.RegisterInterfaces(interfaceRegistry)
+	channeltypes.RegisterInterfaces(interfaceRegistry)
 	channeltypesv2.RegisterInterfaces(interfaceRegistry)
+
+	// Create codec
 	appCodec := codec.NewProtoCodec(interfaceRegistry)
 
 	kr, err := keyring.New(appName, keyring.BackendTest, homeDir, nil, appCodec)
