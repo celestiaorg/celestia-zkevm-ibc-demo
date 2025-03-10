@@ -122,7 +122,6 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 		return "", fmt.Errorf("failed to parse client id from events: %v", err)
 	}
 
-	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 	return clientId, nil
 }
 

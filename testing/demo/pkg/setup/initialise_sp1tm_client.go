@@ -24,6 +24,11 @@ import (
 const (
 	counterpartyClientId = "channel-0"
 	expectedClientId     = "07-tendermint-0"
+	ethPrivateKey        = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
+)
+
+var (
+	ethChainId = big.NewInt(80087)
 )
 
 var TendermintLightClientID string
@@ -46,7 +51,7 @@ func InitializeSp1TendermintLightClientOnReth() error {
 		return fmt.Errorf("failed to connect to ethereum client: %v", err)
 	}
 
-	if err := createChannelAndCounterpartyOnReth(addresses, ethClient); err != nil {
+	if err := addClientOnEVMRollUp(addresses, ethClient); err != nil {
 		return err
 	}
 	fmt.Println("Created channel and counterparty on reth node.")
@@ -75,15 +80,7 @@ func runDeploymentCommand() error {
 	return nil
 }
 
-func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
-	ethChainId := big.NewInt(80087)
-	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-
-	icsClientContract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
-	if err != nil {
-		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
-	}
-
+func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
 	counterpartyInfo := ics26router.IICS02ClientMsgsCounterpartyInfo{
 		ClientId:     counterpartyClientId,
 		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
@@ -96,14 +93,19 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 		return fmt.Errorf("failed to convert private key: %v", err)
 	}
 
-	fmt.Printf("Adding client to the ICS Client contract on reth node with counterparty clientId %s...\n", counterpartyInfo.ClientId)
-	tx, err := icsClientContract.AddClient(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, counterpartyInfo, tmLightClientAddress)
+	router, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
-		return fmt.Errorf("failed to add channel: %v", err)
+		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
+	}
+
+	fmt.Printf("Adding client to the router contract on EVM roll-up with counterparty clientId %s...\n", counterpartyInfo.ClientId)
+	tx, err := router.AddClient(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, counterpartyInfo, tmLightClientAddress)
+	if err != nil {
+		return fmt.Errorf("failed to add client to router: %v", err)
 	}
 
 	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
-	event, err := GetEvmEvent(receipt, icsClientContract.ParseICS02ClientAdded)
+	event, err := GetEvmEvent(receipt, router.ParseICS02ClientAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
@@ -116,7 +118,7 @@ func createChannelAndCounterpartyOnReth(addresses utils.ContractAddresses, ethCl
 		return fmt.Errorf("expected counterparty clientId %s, got %s", counterpartyClientId, event.CounterpartyInfo.ClientId)
 	}
 
-	fmt.Printf("Added client to the ICS client contract on reth node with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
+	fmt.Printf("Added client to the router contract on EVM roll-up with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
 	TendermintLightClientID = event.CounterpartyInfo.ClientId
 
 	return nil
