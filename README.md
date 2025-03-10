@@ -71,34 +71,18 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make install-dependencies
     ```
 
-1. Start a local development environment
-
-    ```shell
-    make start
-    ```
-
-1. Set up IBC clients and channels:
-
-    - Generate the `contracts/script/genesis.json` file which contains the initialization parameters for the `SP1ICS07Tendermint` light client contract.
-    - Initialize Groth16 light client on SimApp.
-    - Create a channel on SimApp.
-    - Deploy IBC contracts on the Reth node.
-    - Create a channel on the Reth node.
-    - Create a counterparty on the Reth node which points to the groth16 client ID on SimApp.
-    - Create a counterparty on the SimApp which points to the tendermint client ID on Reth.
-
-    ```shell
-    make setup
-    ```
-
 1. Run the demo
 
     ```shell
+    # Start the Docker containers
+    make start
+    # Set up IBC light clients on SimApp and the EVM roll-up.
+    make setup
     # Transfer tokens from SimApp to the EVM roll-up.
     make transfer
     # Relay the token transfer
     make relay
-    # To stop and teardown the test environment (when you're finished)
+    # When you're done, stop the Docker containers
     make stop
     ```
 

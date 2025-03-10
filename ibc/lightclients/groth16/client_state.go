@@ -12,11 +12,11 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
-	commitmenttypes "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
-	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
-	"github.com/cosmos/ibc-go/v9/modules/core/exported"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	commitmenttypes "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
+	commitmenttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types/v2"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 )
 
 const (
@@ -51,7 +51,7 @@ func (cs *ClientState) GetLatestClientHeight() exported.Height {
 }
 
 // status returns the status of the groth16 client.
-func (cs *ClientState) status(_ context.Context, _ storetypes.KVStore, _ codec.BinaryCodec) exported.Status {
+func (cs *ClientState) status(_ sdktypes.Context, _ storetypes.KVStore, _ codec.BinaryCodec) exported.Status {
 	return exported.Active
 }
 
@@ -70,7 +70,7 @@ func (cs *ClientState) ZeroCustomFields() exported.ClientState {
 	}
 }
 
-func (cs *ClientState) initialize(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, initialConsensusState exported.ConsensusState) error {
+func (cs *ClientState) initialize(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, initialConsensusState exported.ConsensusState) error {
 	consensusState, ok := initialConsensusState.(*ConsensusState)
 	if !ok {
 		return sdkerrors.Wrapf(clienttypes.ErrInvalidConsensus, "invalid initial consensus state. expected type: %T, got: %T", &ConsensusState{}, initialConsensusState)
@@ -87,7 +87,7 @@ func (cs *ClientState) initialize(ctx context.Context, cdc codec.BinaryCodec, cl
 // The following are modified methods from the v9 IBC Client interface. The idea is to make
 // it easy to update this client once Celestia moves to v9 of IBC
 func (cs *ClientState) verifyMembership(
-	_ context.Context,
+	_ sdktypes.Context,
 	clientStore storetypes.KVStore,
 	cdc codec.BinaryCodec,
 	height exported.Height,
@@ -128,7 +128,7 @@ func (cs *ClientState) verifyMembership(
 // verifyNonMembership verifies a proof of the absence of a key in the Merkle tree.
 // It's the same as VerifyMembership, but the value is nil.
 func (cs *ClientState) verifyNonMembership(
-	_ context.Context,
+	_ sdktypes.Context,
 	clientStore storetypes.KVStore,
 	cdc codec.BinaryCodec,
 	height exported.Height,
@@ -175,11 +175,11 @@ func (cs *ClientState) getTimestampAtHeight(clientStore storetypes.KVStore, cdc 
 }
 
 // CheckForMisbehaviour is a no-op for groth16
-func (cs *ClientState) CheckForMisbehaviour(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, msg exported.ClientMessage) bool {
+func (cs *ClientState) CheckForMisbehaviour(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, msg exported.ClientMessage) bool {
 	return false
 }
 
-func (cs *ClientState) CheckSubstituteAndUpdateState(ctx context.Context, cdc codec.BinaryCodec, subjectClientStore, substituteClientStore storetypes.KVStore, substituteClient exported.ClientState) error {
+func (cs *ClientState) CheckSubstituteAndUpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, subjectClientStore, substituteClientStore storetypes.KVStore, substituteClient exported.ClientState) error {
 	return sdkerrors.Wrap(clienttypes.ErrUpdateClientFailed, "cannot update groth16 client with a proposal")
 }
 
@@ -198,7 +198,7 @@ func (cs *ClientState) VerifyUpgradeAndUpdateState(
 }
 
 // VerifyClientMessage checks if the clientMessage is of type Header
-func (cs *ClientState) VerifyClientMessage(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) error {
+func (cs *ClientState) VerifyClientMessage(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) error {
 	switch msg := clientMsg.(type) {
 	case *Header:
 		return cs.verifyHeader(ctx, clientStore, cdc, msg)
@@ -207,7 +207,7 @@ func (cs *ClientState) VerifyClientMessage(ctx context.Context, cdc codec.Binary
 	}
 }
 
-func (cs *ClientState) verifyHeader(_ context.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec, header *Header) error {
+func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.KVStore, cdc codec.BinaryCodec, header *Header) error {
 	// get consensus state from clientStore for trusted height
 	_, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
 	if err != nil {
@@ -227,14 +227,14 @@ func (cs *ClientState) verifyHeader(_ context.Context, clientStore storetypes.KV
 	return nil
 }
 
-func (cs *ClientState) UpdateState(ctx context.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) []exported.Height {
+func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) []exported.Height {
 	header, ok := clientMsg.(*Header)
 	if !ok {
 		fmt.Printf("the only support clientMsg type is Header")
 		return []exported.Height{}
 	}
 
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx := sdktypes.UnwrapSDKContext(ctx)
 
 	consensusState, err := GetConsensusState(clientStore, cdc, header.GetHeight())
 	if err != nil {

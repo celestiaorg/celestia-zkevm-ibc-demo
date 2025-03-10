@@ -3,8 +3,8 @@ package groth16
 import (
 	"time"
 
-	commitmenttypes "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types"
-	"github.com/cosmos/ibc-go/v9/modules/core/exported"
+	commitmenttypes "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
