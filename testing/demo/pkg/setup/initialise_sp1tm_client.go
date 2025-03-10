@@ -12,7 +12,6 @@ import (
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
-	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -22,21 +21,20 @@ import (
 )
 
 const (
-	counterpartyClientId = "channel-0"
-	expectedClientId     = "07-tendermint-0"
-	ethPrivateKey        = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
+	// groth16ClientID is for the Ethereum light client on the SimApp.
+	groth16ClientID = "08-groth16-0"
+	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
+	tendermintClientID = "07-tendermint-0"
+	// ethPrivateKey is the private key for an account on the EVM roll-up that is funded.
+	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 )
 
 var (
 	ethChainId = big.NewInt(80087)
 )
 
-var TendermintLightClientID string
-
 func InitializeSp1TendermintLightClientOnReth() error {
-	fmt.Println("Deploying IBC smart contracts on the reth node...")
-
-	if err := runDeploymentCommand(); err != nil {
+	if err := deployEurekaContracts(); err != nil {
 		return err
 	}
 
@@ -54,52 +52,50 @@ func InitializeSp1TendermintLightClientOnReth() error {
 	if err := addClientOnEVMRollUp(addresses, ethClient); err != nil {
 		return err
 	}
-	fmt.Println("Created channel and counterparty on reth node.")
 
-	if err := createCounterpartyOnSimapp(); err != nil {
+	if err := registerCounterpartyOnSimapp(); err != nil {
 		return err
 	}
-
-	fmt.Println("Created counterparty on simapp.")
 	return nil
 
 }
 
-// runDeploymentCommand deploys the SP1 ICS07 Tendermint light client contract on the EVM roll-up.
-func runDeploymentCommand() error {
+// deployEurekaContracts deploys all of the IBC Eureka contracts (including the SP1 ICS07 Tendermint light client contract) on the EVM roll-up.
+func deployEurekaContracts() error {
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
 	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
 	cmd.Dir = "./solidity-ibc-eureka/scripts"
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	fmt.Println("Deploying IBC Eureka smart contracts on the EVM roll-up...")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to deploy contracts: %v", err)
 	}
+	fmt.Println("Deployed IBC Eureka smart contracts on the EVM roll-up.")
 
 	return nil
 }
 
 func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
-	counterpartyInfo := ics26router.IICS02ClientMsgsCounterpartyInfo{
-		ClientId:     counterpartyClientId,
-		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
-	}
-
-	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
-
 	key, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
 	if err != nil {
 		return fmt.Errorf("failed to convert private key: %v", err)
 	}
+
+	counterpartyInfo := ics26router.IICS02ClientMsgsCounterpartyInfo{
+		ClientId:     groth16ClientID,
+		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
+	}
+	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
 
 	router, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
 	}
 
-	fmt.Printf("Adding client to the router contract on EVM roll-up with counterparty clientId %s...\n", counterpartyInfo.ClientId)
-	tx, err := router.AddClient(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, counterpartyInfo, tmLightClientAddress)
+	fmt.Printf("Adding client to the router contract on EVM roll-up...\n")
+	tx, err := router.AddClient(GetTransactOpts(key, ethChainId, ethClient), tendermintClientID, counterpartyInfo, tmLightClientAddress)
 	if err != nil {
 		return fmt.Errorf("failed to add client to router: %v", err)
 	}
@@ -109,42 +105,31 @@ func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclien
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
-
-	if event.ClientId != expectedClientId {
-		return fmt.Errorf("expected clientId %s, got %s", expectedClientId, event.ClientId)
-	}
-
-	if event.CounterpartyInfo.ClientId != counterpartyClientId {
-		return fmt.Errorf("expected counterparty clientId %s, got %s", counterpartyClientId, event.CounterpartyInfo.ClientId)
-	}
-
 	fmt.Printf("Added client to the router contract on EVM roll-up with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
-	TendermintLightClientID = event.CounterpartyInfo.ClientId
 
 	return nil
 }
 
-func createCounterpartyOnSimapp() error {
-	fmt.Println("Creating counterparty on simapp...")
-
+func registerCounterpartyOnSimapp() error {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypesv2.MsgRegisterCounterparty{
-		ClientId:             counterpartyClientId,
-		CounterpartyClientId: TendermintLightClientID,
+	fmt.Println("Registering counterparty on simapp...")
+	resp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypesv2.MsgRegisterCounterparty{
+		ClientId:             groth16ClientID,
+		CounterpartyClientId: tendermintClientID,
 		Signer:               relayer,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to register counterparty: %v", err)
 	}
 
-	if registerCounterPartyResp.Code != 0 {
-		return fmt.Errorf("failed to register counterparty: %v", registerCounterPartyResp.RawLog)
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to register counterparty: %v", resp.RawLog)
 	}
-
+	fmt.Println("Registered counterparty on simapp.")
 	return nil
 }
 
