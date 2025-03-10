@@ -100,6 +100,7 @@ import (
 	ibctransfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	ibctransferv2 "github.com/cosmos/ibc-go/v10/modules/apps/transfer/v2"
 	ibc "github.com/cosmos/ibc-go/v10/modules/core"
 	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcclienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
@@ -107,6 +108,7 @@ import (
 	ibcchanneltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
 	ibcchanneltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
 	ibcporttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
+	ibcapi "github.com/cosmos/ibc-go/v10/modules/core/api"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 	ibcsolomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
@@ -373,6 +375,8 @@ func NewSimApp(
 
 	// Create IBC Router
 	ibcRouter := ibcporttypes.NewRouter()
+	// Create IBC v2 Router
+	ibcRouterV2 := ibcapi.NewRouter()
 
 	// Middleware Stacks
 
@@ -406,8 +410,13 @@ func NewSimApp(
 	// Add transfer stack to IBC Router
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferStack)
 
+	// Add transfer handler to the v2 router
+	transferModuleV2 := ibctransferv2.NewIBCModule(app.TransferKeeper)
+	ibcRouterV2.AddRoute(ibctransfertypes.PortID, transferModuleV2)
+
 	// Set the IBC Routers
 	app.IBCKeeper.SetRouter(ibcRouter)
+	app.IBCKeeper.SetRouterV2(ibcRouterV2)
 
 	clientKeeper := app.IBCKeeper.ClientKeeper
 	storeProvider := clientKeeper.GetStoreProvider()
