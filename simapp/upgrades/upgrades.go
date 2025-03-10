@@ -13,9 +13,9 @@ import (
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	clientkeeper "github.com/cosmos/ibc-go/v10/modules/core/02-client/keeper"
-	"github.com/cosmos/ibc-go/v10/modules/core/exported"
-	ibctmmigrations "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint/migrations"
+	clientkeeper "github.com/cosmos/ibc-go/v9/modules/core/02-client/keeper"
+	"github.com/cosmos/ibc-go/v9/modules/core/exported"
+	ibctmmigrations "github.com/cosmos/ibc-go/v9/modules/light-clients/07-tendermint/migrations"
 )
 
 const (
@@ -23,11 +23,11 @@ const (
 	V7 = "v7"
 	// V7_1 defines the upgrade name for the ibc-go/v7.1 upgrade handler.
 	V7_1 = "v7.1"
-	// V8 defines the upgrade name for the ibc-go/v10 upgrade handler.
+	// V8 defines the upgrade name for the ibc-go/v9 upgrade handler.
 	V8 = "v8"
-	// V8_1 defines the upgrade name for the ibc-go/v10.1 upgrade handler.
+	// V8_1 defines the upgrade name for the ibc-go/v9.1 upgrade handler.
 	V8_1 = "v8.1"
-	// V9 defines the upgrade name for the ibc-go/v10 upgrade handler.
+	// V9 defines the upgrade name for the ibc-go/v9 upgrade handler.
 	V9 = "v9"
 )
 
