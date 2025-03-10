@@ -35,7 +35,7 @@ pub fn main() {
 
     // // Verify adjacent headers
     for i in 1..outputs.len() {
-        if outputs[i].prev_header_hash != outputs[i-1].header_hash  {
+        if outputs[i].prev_header_hash != outputs[i - 1].header_hash {
             panic!("header hash mismatch at position {}", i);
         }
     }
