@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
-	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
+	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -22,16 +21,41 @@ import (
 )
 
 const (
-	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
-	tendermintClientID = "07-tendermint-0"
 	// groth16ClientID is for the Ethereum light client on the SimApp.
 	groth16ClientID = "08-groth16-0"
+	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
+	tendermintClientID = "07-tendermint-0"
+	// ethPrivateKey is the private key for an account on the EVM roll-up that is funded.
+	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 )
 
-func InitializeSp1TendermintLightClientOnReth() error {
-	fmt.Println("Deploying IBC smart contracts on the reth node...")
+var (
+	ethChainId   = big.NewInt(80087)
+	merklePrefix = [][]byte{[]byte("ibc"), []byte("")}
+)
 
-	if err := runDeploymentCommand(); err != nil {
+func InitializeTendermintLightClientOnEVMRollup() error {
+	// First, check if the Simapp node is healthy before proceeding
+	if err := utils.CheckNodeHealth("http://localhost:5123", 10); err != nil {
+		return fmt.Errorf("simapp node is not healthy, please ensure it is running correctly: %w", err)
+	}
+
+	// Check if Ethereum node is healthy
+	ethClient, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		return fmt.Errorf("failed to connect to ethereum client: %v", err)
+	}
+
+	// Try to get the latest block to verify the node is working
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = ethClient.BlockByNumber(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("ethereum node is not responding correctly: %v", err)
+	}
+
+	// Continue with the existing process
+	if err := deployEurekaContracts(); err != nil {
 		return err
 	}
 
@@ -41,99 +65,73 @@ func InitializeSp1TendermintLightClientOnReth() error {
 	}
 	fmt.Printf("Contract Addresses: \n%v\n", addresses)
 
-	ethClient, err := ethclient.Dial("http://localhost:8545")
-	if err != nil {
-		return fmt.Errorf("failed to connect to ethereum client: %v", err)
-	}
-
-	if err := createClientOnReth(addresses, ethClient); err != nil {
+	if err := addClientOnEVMRollUp(addresses, ethClient); err != nil {
 		return err
 	}
-	fmt.Println("Created client on reth node.")
+
 	return nil
 }
 
-func RegisterCounterpartyOnSimapp() error {
-	fmt.Printf("Registering counterparty on simapp...\n")
-	if err := registerCounterpartyOnSimapp(); err != nil {
-		return err
-	}
-	fmt.Println("Registered counterparty on simapp.")
-	return nil
-}
-
-// runDeploymentCommand deploys the SP1 ICS07 Tendermint light client contract on the EVM roll-up.
-func runDeploymentCommand() error {
+// deployEurekaContracts deploys all of the IBC Eureka contracts (including the SP1 ICS07 Tendermint light client contract) on the EVM roll-up.
+func deployEurekaContracts() error {
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
 	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
 	cmd.Dir = "./solidity-ibc-eureka/scripts"
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	fmt.Println("Deploying IBC Eureka smart contracts on the EVM roll-up...")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to deploy contracts: %v", err)
 	}
+	fmt.Println("Deployed IBC Eureka smart contracts on the EVM roll-up.")
 
 	return nil
 }
 
-func createClientOnReth(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
-	ethChainId := big.NewInt(80087)
-	ethPrivateKey := "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-
-	icsClientContract, err := ics02client.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
-	if err != nil {
-		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
-	}
-
-	counterpartyInfo := ics02client.IICS02ClientMsgsCounterpartyInfo{
-		ClientId:     groth16ClientID,
-		MerklePrefix: [][]byte{[]byte("ibc"), []byte("")},
-	}
-
-	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
-
+func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
 	key, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
 	if err != nil {
 		return fmt.Errorf("failed to convert private key: %v", err)
 	}
 
-	fmt.Printf("Adding client to the ICS Client contract on reth node with counterparty clientId %s...\n", counterpartyInfo.ClientId)
-	tx, err := icsClientContract.AddClient(GetTransactOpts(key, ethChainId, ethClient), ibcexported.Tendermint, counterpartyInfo, tmLightClientAddress)
+	counterpartyInfo := ics26router.IICS02ClientMsgsCounterpartyInfo{
+		ClientId:     groth16ClientID,
+		MerklePrefix: merklePrefix,
+	}
+	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
+
+	router, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
-		return fmt.Errorf("failed to add client: %v", err)
+		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
+	}
+
+	fmt.Printf("Adding client to the router contract on EVM roll-up...\n")
+	tx, err := router.AddClient(GetTransactOpts(key, ethChainId, ethClient), tendermintClientID, counterpartyInfo, tmLightClientAddress)
+	if err != nil {
+		return fmt.Errorf("failed to add client to router: %v", err)
 	}
 
 	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
-	event, err := GetEvmEvent(receipt, icsClientContract.ParseICS02ClientAdded)
+	event, err := GetEvmEvent(receipt, router.ParseICS02ClientAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
+	fmt.Printf("Added client to the router contract on EVM roll-up with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
 
-	if event.ClientId != tendermintClientID {
-		return fmt.Errorf("expected clientId %s, got %s", tendermintClientID, event.ClientId)
-	}
-
-	if event.CounterpartyInfo.ClientId != groth16ClientID {
-		return fmt.Errorf("expected counterparty clientId %s, got %s", groth16ClientID, event.CounterpartyInfo.ClientId)
-	}
-
-	fmt.Printf("Added client to the ICS client contract on reth node with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
 	return nil
 }
 
-func registerCounterpartyOnSimapp() error {
-	fmt.Println("Registering counterparty on simapp...")
+func RegisterCounterpartyOnSimapp() error {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
-	merklePathPrefix := [][]byte{[]byte("")}
 
-	// TODO: update ibc-go so that we can use the type MsgRegisterCounterparty
-	registerCounterPartyResp, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypes.MsgRegisterCounterparty{
+	fmt.Println("Registering counterparty on simapp...")
+	resp, err := utils.BroadcastMessages(clientCtx, relayer, 500_000, &clienttypesv2.MsgRegisterCounterparty{
 		ClientId:                 groth16ClientID,
-		CounterpartyMerklePrefix: merklePathPrefix,
+		CounterpartyMerklePrefix: merklePrefix,
 		CounterpartyClientId:     tendermintClientID,
 		Signer:                   relayer,
 	})
@@ -141,10 +139,10 @@ func registerCounterpartyOnSimapp() error {
 		return fmt.Errorf("failed to register counterparty: %v", err)
 	}
 
-	if registerCounterPartyResp.Code != 0 {
-		return fmt.Errorf("failed to register counterparty: %v", registerCounterPartyResp.RawLog)
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to register counterparty: %v", resp.RawLog)
 	}
-
+	fmt.Println("Registered counterparty on simapp.")
 	return nil
 }
 

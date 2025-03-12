@@ -11,7 +11,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = InitializeSp1TendermintLightClientOnReth()
+	err = InitializeTendermintLightClientOnEVMRollup()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -13,13 +13,11 @@ import (
 	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/testvalues"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	"cosmossdk.io/math"
-
-	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/testvalues"
 )
 
 type Ethereum struct {

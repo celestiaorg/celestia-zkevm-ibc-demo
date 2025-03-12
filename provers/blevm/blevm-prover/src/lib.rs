@@ -8,9 +8,10 @@ use celestia_types::{
     ExtendedHeader,
 };
 use rsp_client_executor::io::ClientExecutorInput;
+use serde::{Deserialize, Serialize};
 use sp1_sdk::{
-    ExecutionReport, ProverClient, SP1ProofWithPublicValues, SP1PublicValues, SP1Stdin,
-    SP1VerifyingKey,
+    ExecutionReport, HashableKey, ProverClient, SP1Proof, SP1ProofWithPublicValues,
+    SP1PublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use std::error::Error;
 
@@ -31,6 +32,7 @@ pub struct AggregatorConfig {
 }
 
 /// Input for proof aggregation
+#[derive(Serialize, Deserialize)]
 pub struct AggregationInput {
     pub proof: SP1ProofWithPublicValues,
     pub vk: SP1VerifyingKey,
@@ -153,7 +155,41 @@ impl BlockProver {
         Ok(stdin)
     }
 
-    pub async fn execute(
+    async fn get_aggregate_stdin(
+        &self,
+        inputs: Vec<AggregationInput>,
+    ) -> Result<SP1Stdin, Box<dyn Error>> {
+        assert!(inputs.len() > 1, "aggregation requires at least 2 proofs");
+
+        // Create stdin for the aggregator
+        let mut stdin = SP1Stdin::new();
+
+        // Write the verification keys.
+        let vkeys = inputs
+            .iter()
+            .map(|input| input.vk.hash_u32())
+            .collect::<Vec<_>>();
+        stdin.write::<Vec<[u32; 8]>>(&vkeys);
+
+        // Write the public values.
+        let public_values = inputs
+            .iter()
+            .map(|input| input.proof.public_values.to_vec())
+            .collect::<Vec<_>>();
+        stdin.write::<Vec<Vec<u8>>>(&public_values);
+
+        // Write the proofs
+        for input in &inputs {
+            let SP1Proof::Compressed(ref proof) = input.proof.proof else {
+                panic!()
+            };
+            stdin.write_proof(*proof.clone(), input.vk.vk.clone());
+        }
+
+        Ok(stdin)
+    }
+
+    pub async fn execute_generate_proof(
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
@@ -175,8 +211,22 @@ impl BlockProver {
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
         let (pk, vk) = client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
-        let proof = client.prove(&pk, &stdin).groth16().run()?;
+        let proof = client.prove(&pk, &stdin).compressed().run()?;
         Ok((proof, vk))
+    }
+
+    pub async fn execute_aggregate_proofs(
+        &self,
+        inputs: Vec<AggregationInput>,
+    ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
+        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        let stdin = self.get_aggregate_stdin(inputs).await?;
+        let (public_values, execution_report) = client
+            .execute(self.aggregator_config.elf_bytes, &stdin)
+            .run()
+            .unwrap();
+
+        Ok((public_values, execution_report))
     }
 
     /// Aggregates multiple proofs into a single proof
@@ -184,28 +234,8 @@ impl BlockProver {
         &self,
         inputs: Vec<AggregationInput>,
     ) -> Result<AggregationOutput, Box<dyn Error>> {
-        if inputs.len() < 2 {
-            return Err("Must provide at least 2 proofs to aggregate".into());
-        }
-
-        // Create stdin for the aggregator
-        let mut stdin = SP1Stdin::new();
-
-        // Write number of proofs
-        stdin.write(&inputs.len());
-
-        // Write all verification keys first
-        for input in &inputs {
-            stdin.write(&input.vk);
-        }
-
-        // Then write all public values
-        for input in &inputs {
-            stdin.write_vec(input.proof.public_values.to_vec());
-        }
-
+        let stdin = self.get_aggregate_stdin(inputs).await?;
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
-
         // Generate the aggregated proof
         let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
         let proof = client.prove(&pk, &stdin).groth16().run()?;

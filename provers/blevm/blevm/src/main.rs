@@ -110,8 +110,7 @@ pub fn main() {
         state_root: header.state_root.into(),
         celestia_header_hash: celestia_header_hash.as_bytes().try_into().unwrap(),
     };
-    let serialized_output = bincode::serialize(&output).unwrap();
-    sp1_zkvm::io::commit(&serialized_output);
+    sp1_zkvm::io::commit(&output);
 
     println!(
         "cycle-tracker-end: hashing the block header, and commiting its fields as public values"

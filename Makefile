@@ -71,16 +71,18 @@ check-dependencies:
 	@echo "All dependencies are installed."
 .PHONY: check-dependencies
 
-## start: Start all processes needed for the demo.
-start: 
+## start: Start all Docker containers for the demo.
+start:
 	@docker compose -f docker-compose.rollkit.yml up --detach
 .PHONY: start
 
-## setup: Set up the IBC clients and channels.
+## setup: Set up the IBC light clients.
 setup:
+# TODO: de-duplicate this. Currently, we deploy the Tendermint light client twice
+# once in `just deploy-sp1-ics07` and once in deployEurekaContracts.
 	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
 	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
-	@echo "--> Creating IBC light clients and channel"
+	@echo "--> Setting up IBC light clients"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
 
@@ -97,9 +99,9 @@ relay:
 	go run testing/demo/pkg/relay/main.go
 .PHONY: relay
 
-## stop: Stop all processes and remove the tmp directory.
+## stop: Stop all Docker containers and remove the tmp directory.
 stop:
-	@echo "--> Stopping all processes"
+	@echo "--> Stopping all Docker containers"
 	@docker compose -f docker-compose.rollkit.yml down
 	@docker compose -f docker-compose.rollkit.yml rm
 	@echo "--> Removing the tmp directory"
@@ -205,7 +207,6 @@ markdown-link-check:
 	@echo "--> Running markdown-link-check"
 	@find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
 .PHONY: markdown-link-check
-
 
 ## fmt: Format files per linters golangci-lint and markdownlint.
 fmt:

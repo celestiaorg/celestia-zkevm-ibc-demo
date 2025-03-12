@@ -13,18 +13,15 @@ import (
 	"time"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/ics02client"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
-	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -75,7 +72,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	icsClient, err := ics02client.NewContract(ethcommon.HexToAddress(addresses.ICS02Client), ethClient)
+	icsRouter, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
 		return err
 	}
@@ -108,6 +105,7 @@ func updateTendermintLightClient() error {
 	}
 	var verifierKey [32]byte
 	copy(verifierKey[:], verifierKeyDecoded)
+	fmt.Printf("Verifier key: %x\n", verifierKey)
 
 	fmt.Printf("Requesting celestia-prover state transition proof...\n")
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
@@ -133,8 +131,19 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	encoded, err := arguments.Pack(sp1ics07tendermint.IUpdateClientMsgsMsgUpdateClient{
-		Sp1Proof: sp1ics07tendermint.ISP1MsgsSP1Proof{
+
+	encoded, err := arguments.Pack(struct {
+		Sp1Proof struct {
+			VKey         [32]byte
+			PublicValues []byte
+			Proof        []byte
+		}
+	}{
+		Sp1Proof: struct {
+			VKey         [32]byte
+			PublicValues []byte
+			Proof        []byte
+		}{
 			VKey:         verifierKey,
 			PublicValues: resp.PublicValues,
 			Proof:        resp.Proof,
@@ -145,7 +154,7 @@ func updateTendermintLightClient() error {
 	}
 
 	fmt.Printf("Submitting UpdateClient tx to EVM roll-up...\n")
-	tx, err := icsClient.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
+	tx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
 	if err != nil {
 		return err
 	}
@@ -380,7 +389,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet: ics26router.IICS26RouterMsgsPacket{
-			Sequence:         uint32(packetSequence),
+			Sequence:         packetSequence,
 			SourceClient:     groth16ClientID,
 			DestClient:       tendermintClientID,
 			TimeoutTimestamp: timeoutTimestamp,

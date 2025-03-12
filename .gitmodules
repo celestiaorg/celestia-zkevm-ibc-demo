@@ -1,3 +1,4 @@
 [submodule "solidity-ibc-eureka"]
 	path = solidity-ibc-eureka
-	url = https://github.com/cosmos/solidity-ibc-eureka
+	url = https://github.com/rootulp/solidity-ibc-eureka
+	branch = rp/update-ibc-go

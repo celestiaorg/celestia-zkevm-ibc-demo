@@ -1,7 +1,7 @@
 //! A SP1 program that takes as input N verification keys and N public values from N blevm proofs.
 //! It then verifies those proofs. It verifies that each proof is for an EVM block immediately
 //! following the previous block. It commits to the EVM header hashes from the first and last
-//! blocks.
+//! blocks. Note that the proofs must be in order of increasing block height.
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 
@@ -11,41 +11,31 @@ use buffer::Buffer;
 use sha2::{Digest, Sha256};
 
 pub fn main() {
-    // Read the number of proofs
-    let n: usize = sp1_zkvm::io::read();
+    // Read the verification keys.
+    let vkeys = sp1_zkvm::io::read::<Vec<[u32; 8]>>();
 
-    if n < 2 {
-        panic!("must provide at least 2 proofs");
-    }
+    // Read the public values.
+    let public_values = sp1_zkvm::io::read::<Vec<Vec<u8>>>();
 
-    // Read all verification keys first
-    let mut verification_keys: Vec<[u32; 8]> = Vec::with_capacity(n);
-    for _ in 0..n {
-        verification_keys.push(sp1_zkvm::io::read());
-    }
-
-    // Read all public values
-    let mut public_values: Vec<Vec<u8>> = Vec::with_capacity(n);
-    for _ in 0..n {
-        public_values.push(sp1_zkvm::io::read());
-    }
-
-    // Verify all proofs using their respective verification keys
-    for (values, vk) in public_values.iter().zip(verification_keys.iter()) {
-        let proof_values_hash = Sha256::digest(values);
-        sp1_zkvm::lib::verify::verify_sp1_proof(vk, &proof_values_hash.into());
+    // Verify the proofs.
+    assert_eq!(vkeys.len(), public_values.len());
+    for i in 0..vkeys.len() {
+        let vkey = &vkeys[i];
+        let public_values = &public_values[i];
+        let public_values_digest = Sha256::digest(public_values);
+        sp1_zkvm::lib::verify::verify_sp1_proof(vkey, &public_values_digest.into());
     }
 
     // Parse all outputs
-    let mut outputs: Vec<BlevmOutput> = Vec::with_capacity(n);
+    let mut outputs: Vec<BlevmOutput> = vec![];
     for values in &public_values {
         let mut buffer = Buffer::from(values);
         outputs.push(buffer.read::<BlevmOutput>());
     }
 
-    // Verify block sequence
-    for i in 1..n {
-        if outputs[i - 1].header_hash != outputs[i].prev_header_hash {
+    // // Verify adjacent headers
+    for i in 1..outputs.len() {
+        if outputs[i].prev_header_hash != outputs[i - 1].header_hash {
             panic!("header hash mismatch at position {}", i);
         }
     }
@@ -58,11 +48,11 @@ pub fn main() {
 
     // Create aggregate output using first and last blocks
     let agg_output = BlevmAggOutput {
-        newest_header_hash: outputs[n - 1].header_hash,
+        newest_header_hash: outputs[vkeys.len() - 1].header_hash,
         oldest_header_hash: outputs[0].header_hash,
         celestia_header_hashes,
-        newest_state_root: outputs[n - 1].state_root,
-        newest_height: outputs[n - 1].height,
+        newest_state_root: outputs[vkeys.len() - 1].state_root,
+        newest_height: outputs[vkeys.len() - 1].height,
     };
 
     sp1_zkvm::io::commit(&agg_output);

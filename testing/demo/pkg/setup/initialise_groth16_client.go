@@ -11,14 +11,12 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
-	commitmenttypesv2 "github.com/cosmos/ibc-go/v9/modules/core/23-commitment/types/v2"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -52,17 +50,13 @@ func InitializeGroth16LightClientOnSimapp() error {
 	if err != nil {
 		return err
 	}
-
-	if err := createChannelOnSimapp(clientCtx, clientId); err != nil {
-		return err
-	}
+	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 
 	return nil
 }
 
 func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
 	// Query the info endpoint for the state transition verifier key
-	// Membership proofs are currently not supported
 	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
@@ -71,8 +65,16 @@ func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*
 
 	// TODO: Query this from the EVM rollup.
 	codeCommitment := []byte{}
+	stateTransitionVerifierKey := []byte{}
+	stateMembershipVerifierKey := []byte{}
 
-	clientState := groth16.NewClientState(latestBlock.Number().Uint64(), []byte{}, []byte{}, codeCommitment, genesisBlock.Root().Bytes())
+	clientState := groth16.NewClientState(
+		latestBlock.Number().Uint64(),
+		stateTransitionVerifierKey,
+		stateMembershipVerifierKey,
+		codeCommitment,
+		genesisBlock.Root().Bytes(),
+	)
 	clientStateAny, err := cdctypes.NewAnyWithValue(clientState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create client state any: %v", err)
@@ -94,9 +96,31 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 		return nil, nil, fmt.Errorf("failed to get genesis block: %v", err)
 	}
 
-	latestBlock, err := ethClient.BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
+	// Keep querying for the latest block until we get one with height > 0
+	var latestBlock *ethtypes.Block
+	maxRetries := 30
+	retryCount := 0
+	retryDelay := time.Second * 5
+
+	for {
+		latestBlock, err = ethClient.BlockByNumber(context.Background(), nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get latest block: %v", err)
+		}
+
+		if latestBlock.Number().Uint64() > 0 {
+			// We found a non-zero height block
+			break
+		}
+
+		retryCount++
+		if retryCount >= maxRetries {
+			return nil, nil, fmt.Errorf("timed out waiting for a block with height > 0 after %d attempts", maxRetries)
+		}
+
+		fmt.Printf("Latest block is still genesis block (height=0), waiting %v and retrying... (attempt %d/%d)\n",
+			retryDelay, retryCount, maxRetries)
+		time.Sleep(retryDelay)
 	}
 
 	return genesisBlock, latestBlock, nil
@@ -127,27 +151,7 @@ func createClientOnSimapp(clientCtx client.Context, clientState, consensusState 
 		return "", fmt.Errorf("failed to parse client id from events: %v", err)
 	}
 
-	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 	return clientId, nil
-}
-
-func createChannelOnSimapp(clientCtx client.Context, clientId string) error {
-	cosmosMerklePathPrefix := commitmenttypesv2.NewMerklePath([]byte("simd"))
-	msg := channeltypesv2.MsgCreateChannel{
-		ClientId:         clientId,
-		MerklePathPrefix: cosmosMerklePathPrefix,
-		Signer:           relayer,
-	}
-	response, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &msg)
-	if err != nil {
-		return fmt.Errorf("failed to create channel: %v", err)
-	}
-	if response.Code != 0 {
-		return fmt.Errorf("failed to create channel: %v", response.RawLog)
-	}
-
-	fmt.Println("Created channel on simapp.")
-	return nil
 }
 
 // parseClientIDFromEvents parses events emitted from a MsgCreateClient and

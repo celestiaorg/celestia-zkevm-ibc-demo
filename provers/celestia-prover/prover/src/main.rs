@@ -68,7 +68,7 @@ impl Prover for ProverService {
         &self,
         request: Request<ProveStateTransitionRequest>,
     ) -> Result<Response<ProveStateTransitionResponse>, Status> {
-        println!("Got state transition request: {:?}", request);
+        println!("Got state transition request.");
         let inner_request = request.into_inner();
 
         let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {

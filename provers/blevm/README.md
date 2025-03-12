@@ -66,13 +66,32 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     cd celestia-zkevm-ibc-demo/provers/blevm/script
 
     # Execute blevm mock
-    RUST_LOG=info cargo run --release -- --execute --mock
+    RUST_LOG=info cargo run --release -- --execute --mock --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
     # Execute blevm
-    RUST_LOG=info cargo run --release -- --execute
+    RUST_LOG=info cargo run --release -- --execute --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
     # Generate a mock proof
-    RUST_LOG=info cargo run --release -- --prove --mock
+    RUST_LOG=info cargo run --release -- --prove --mock --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
     # Generate a real proof
-    RUST_LOG=info cargo run --release -- --prove
+    RUST_LOG=info cargo run --release -- --prove --input-path=input/blevm/1/21991679.bin --inclusion-block=4341967
+    # (Optional) Copy the proof as aggregation input
+    cp proof.bin input/blevm-aggregator/1/21991679.bin
+    # Generate adjacent header proof
+    RUST_LOG=info cargo run --release -- --prove --input-path=input/blevm/1/21991680.bin --inclusion-block=4341969
+    # (Optional) Copy the proof as aggregation input
+    cp proof.bin input/blevm-aggregator/1/21991680.bin
+    ```
+
+4. Aggregate proofs
+
+    ```shell
+    # Change to the correct directory
+    cd celestia-zkevm-ibc-demo/provers/blevm/script
+
+    # Aggregate proofs
+    # Execute blevm aggregator
+    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --execute --inputs=input/blevm-aggregator/1/21991679.bin --inputs=input/blevm-aggregator/1/21991680.bin
+    # Generate aggregation proof
+    RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --prove --inputs=input/blevm-aggregator/1/21991679.bin --inputs=input/blevm-aggregator/1/21991680.bin
     ```
 
 ### Development

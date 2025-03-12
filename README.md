@@ -38,7 +38,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     -  RUST_LOG=info cargo run --bin operator --release -- genesis -o scripts/genesis.json
     +  RUST_LOG=info cargo run --bin operator --release -- genesis --proof-type groth16 -o scripts/genesis.json
     +  @echo "--> Setting the verifier key in scripts/genesis.json"
-    +  @sed -i '' 's|"updateClientVkey": "0x00b272e343194d68c33f1421ed09a30efaed2927c4943a1ad2f24fe54d52c984"|"updateClientVkey": "0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25"|' scripts/genesis.json
+    +  @sed -i '' 's|"updateClientVkey": "[^"]*"|"updateClientVkey": "0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25"|' scripts/genesis.json
     +  @echo "--> Set the verifier key to 0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25."
     ```
 
@@ -71,34 +71,18 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     make install-dependencies
     ```
 
-1. Start a local development environment
-
-    ```shell
-    make start
-    ```
-
-1. Set up IBC clients and channels:
-
-    - Generate the `contracts/script/genesis.json` file which contains the initialization parameters for the `SP1ICS07Tendermint` light client contract.
-    - Initialize Groth16 light client on SimApp.
-    - Create a channel on SimApp.
-    - Deploy IBC contracts on the Reth node.
-    - Create a channel on the Reth node.
-    - Create a counterparty on the Reth node which points to the groth16 client ID on SimApp.
-    - Create a counterparty on the SimApp which points to the tendermint client ID on Reth.
-
-    ```shell
-    make setup
-    ```
-
 1. Run the demo
 
     ```shell
+    # Start the Docker containers
+    make start
+    # Set up IBC light clients on SimApp and the EVM roll-up.
+    make setup
     # Transfer tokens from SimApp to the EVM roll-up.
     make transfer
     # Relay the token transfer
     make relay
-    # To stop and teardown the test environment (when you're finished)
+    # When you're done, stop the Docker containers
     make stop
     ```
 

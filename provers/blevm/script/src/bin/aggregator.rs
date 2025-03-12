@@ -1,21 +1,6 @@
-//! This script generates a blevm or blevm-mock proof.
-//!
-//! You can run this script using the following command:
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --execute
-//! ```
-//! or
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --prove
-//! ```
-//! and you can use blevm-mock in execute or prove mode:
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --prove --mock
-//! ```
-use blevm_common::BlevmOutput;
+use blevm_common::BlevmAggOutput;
 use blevm_prover::{
-    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
-    CelestiaConfig, ProverConfig,
+    AggregationInput, AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
@@ -41,10 +26,7 @@ struct Args {
     mock: bool,
 
     #[clap(long)]
-    input_path: String,
-
-    #[clap(long)]
-    inclusion_block: u64,
+    inputs: Vec<String>,
 }
 
 #[tokio::main]
@@ -86,17 +68,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
     let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
-    let input = BlockProverInput {
-        block_height: args.inclusion_block,
-        l2_block_data: fs::read(args.input_path).expect("failed to read input file"),
-    };
+    let mut aggregation_inputs: Vec<AggregationInput> = vec![];
+    for input in args.inputs {
+        let input_bin = fs::read(input)?;
+        let aggregation_input = bincode::deserialize(&input_bin)?;
+        aggregation_inputs.push(aggregation_input);
+    }
+
+    println!("aggregation_inputs.len(): {}", aggregation_inputs.len());
 
     if args.execute {
         println!("Executing...");
-        let (public_values, execution_report) = prover.execute_generate_proof(input).await?;
+        let (public_values, execution_report) =
+            prover.execute_aggregate_proofs(aggregation_inputs).await?;
         println!("Program executed successfully.");
 
-        let output: BlevmOutput = bincode::deserialize(public_values.as_slice()).unwrap();
+        let output: BlevmAggOutput = bincode::deserialize(public_values.as_slice()).unwrap();
         println!("{:?}", output);
         println!(
             "Number of cycles: {}",
@@ -108,17 +95,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if args.prove {
         println!("Generating proof...");
         let start = Instant::now();
-        let (proof, vk) = prover.generate_proof(input).await?;
+        let aggregation_output = prover.aggregate_proofs(aggregation_inputs).await?;
         let duration = start.elapsed();
         println!("Generated proof in {:?}.", duration);
 
-        let aggregation_input = AggregationInput { proof, vk };
-        let aggregation_input_bin = bincode::serialize(&aggregation_input)?;
-
-        println!("Saving proof to proof.bin.");
-        fs::write("proof.bin", aggregation_input_bin)?;
+        let proof_bin = bincode::serialize(&aggregation_output.proof)?;
+        // Save proof to file
+        println!("Saving proof to proof.bin");
+        fs::write("proof.bin", proof_bin)?;
         println!("Saved proof.");
-
         return Ok(());
     }
 
