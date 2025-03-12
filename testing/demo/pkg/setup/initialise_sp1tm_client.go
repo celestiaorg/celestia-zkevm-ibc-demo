@@ -132,7 +132,6 @@ func registerCounterpartyOnSimapp() error {
 	}
 
 	fmt.Println("Registering counterparty on simapp...")
-	// TODO: this is failing
 	resp, err := utils.BroadcastMessages(clientCtx, relayer, 500_000, &clienttypesv2.MsgRegisterCounterparty{
 		ClientId:                 groth16ClientID,
 		CounterpartyMerklePrefix: merklePrefix,
