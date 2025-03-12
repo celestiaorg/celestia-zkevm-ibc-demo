@@ -38,7 +38,7 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     -  RUST_LOG=info cargo run --bin operator --release -- genesis -o scripts/genesis.json
     +  RUST_LOG=info cargo run --bin operator --release -- genesis --proof-type groth16 -o scripts/genesis.json
     +  @echo "--> Setting the verifier key in scripts/genesis.json"
-    +  @sed -i '' 's|"updateClientVkey": "0x00b272e343194d68c33f1421ed09a30efaed2927c4943a1ad2f24fe54d52c984"|"updateClientVkey": "0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25"|' scripts/genesis.json
+    +  @sed -i '' 's|"updateClientVkey": "[^"]*"|"updateClientVkey": "0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25"|' scripts/genesis.json
     +  @echo "--> Set the verifier key to 0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25."
     ```
 
