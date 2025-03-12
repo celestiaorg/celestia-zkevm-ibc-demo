@@ -15,6 +15,8 @@ const (
 	simappRPC = "http://localhost:5123"
 	// ethereumRPC is the URI for the ethereum node.
 	ethereumRPC = "http://localhost:8545"
+	// celestiaProverRPC is the URI for the celestia prover.
+	celestiaProverRPC = "localhost:50052"
 )
 
 var (

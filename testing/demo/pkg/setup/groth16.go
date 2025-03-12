@@ -4,17 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"slices"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
-	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cosmos/cosmos-sdk/client"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -22,49 +17,60 @@ import (
 
 // CreateGroth16LightClient creates the Groth16 light client on simapp.
 func CreateGroth16LightClient() error {
-	fmt.Println("Creating the Groth16 light client on simapp...")
-
-	ethClient, err := ethclient.Dial("http://localhost:8545")
-	if err != nil {
-		return fmt.Errorf("failed to connect to Ethereum client: %v", err)
-	}
-
-	genesisBlock, latestBlock, err := getGenesisAndLatestBlock(ethClient)
-	if err != nil {
-		return err
-	}
-
-	clientState, consensusState, err := createClientAndConsensusState(genesisBlock, latestBlock)
-	if err != nil {
-		return err
-	}
-
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
 	}
-
-	clientId, err := createClientOnSimapp(clientCtx, clientState, consensusState)
+	clientState, consensusState, err := createClientAndConsensusState()
 	if err != nil {
 		return err
+	}
+
+	fmt.Println("Creating the Groth16 light client on simapp...")
+	createClientMsgResponse, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, &clienttypes.MsgCreateClient{
+		ClientState:    clientState,
+		ConsensusState: consensusState,
+		Signer:         relayer,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create Groth16 light client on simapp: %v", err)
+	}
+	if createClientMsgResponse.Code != 0 {
+		return fmt.Errorf("failed to create Groth16 light client on simapp: %v", createClientMsgResponse.RawLog)
+	}
+
+	clientId, err := parseClientIDFromEvents(createClientMsgResponse.Events)
+	if err != nil {
+		return fmt.Errorf("failed to parse client id from events: %v", err)
 	}
 	fmt.Printf("Created Groth16 light client on simapp with clientId %v.\n", clientId)
 
 	return nil
 }
 
-func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*cdctypes.Any, *cdctypes.Any, error) {
-	// Query the info endpoint for the state transition verifier key
-	conn, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+func createClientAndConsensusState() (*cdctypes.Any, *cdctypes.Any, error) {
+	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
+		return nil, nil, fmt.Errorf("failed to connect to Ethereum client: %v", err)
 	}
-	defer conn.Close()
 
-	// TODO: Query this from the EVM rollup.
-	codeCommitment := []byte{}
+	genesisBlock, latestBlock, err := getGenesisAndLatestBlock(ethClient)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: Query the stateTransitionVerifierKey and stateMembershipVerifierKey from the EVM prover.
+	// Query the celestia prover info endpoint for the state transition verifier key
+	// conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// if err != nil {
+	// 	return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
+	// }
+	// defer conn.Close()
 	stateTransitionVerifierKey := []byte{}
 	stateMembershipVerifierKey := []byte{}
+
+	// TODO: Query the codeCommitment from the EVM rollup.
+	codeCommitment := []byte{}
 
 	clientState := groth16.NewClientState(
 		latestBlock.Number().Uint64(),
@@ -83,6 +89,10 @@ func createClientAndConsensusState(genesisBlock, latestBlock *ethtypes.Block) (*
 	consensusStateAny, err := cdctypes.NewAnyWithValue(consensusState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create consensus state any: %v", err)
+	}
+
+	if clientState.ClientType() != consensusState.ClientType() {
+		fmt.Println("Client and consensus state client types do not match")
 	}
 
 	return clientStateAny, consensusStateAny, nil
@@ -122,54 +132,4 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 	}
 
 	return genesisBlock, latestBlock, nil
-}
-
-func createClientOnSimapp(clientCtx client.Context, clientState, consensusState *cdctypes.Any) (clientId string, err error) {
-	createClientMsg := &clienttypes.MsgCreateClient{
-		ClientState:    clientState,
-		ConsensusState: consensusState,
-		Signer:         relayer,
-	}
-
-	if clientState.GetCachedValue().(*groth16.ClientState).ClientType() != consensusState.GetCachedValue().(*groth16.ConsensusState).ClientType() {
-		fmt.Println("Client and consensus state client types do not match")
-	}
-
-	createClientMsgResponse, err := utils.BroadcastMessages(clientCtx, relayer, 200_000, createClientMsg)
-	if err != nil {
-		return "", fmt.Errorf("failed to broadcast the initial client creation message: %v", err)
-	}
-
-	if createClientMsgResponse.Code != 0 {
-		return "", fmt.Errorf("failed to create client: %v", createClientMsgResponse.RawLog)
-	}
-
-	clientId, err = parseClientIDFromEvents(createClientMsgResponse.Events)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse client id from events: %v", err)
-	}
-
-	return clientId, nil
-}
-
-// parseClientIDFromEvents parses events emitted from a MsgCreateClient and
-// returns the client identifier.
-func parseClientIDFromEvents(events []abci.Event) (string, error) {
-	for _, event := range events {
-		if event.Type == clienttypes.EventTypeCreateClient {
-			if attribute, isFound := getAttributeByKey(event.Attributes, clienttypes.AttributeKeyClientID); isFound {
-				return attribute.Value, nil
-			}
-		}
-	}
-	return "", fmt.Errorf("client identifier event attribute not found")
-}
-
-// getAttributeByKey returns the first event attribute with the given key.
-func getAttributeByKey(attributes []abci.EventAttribute, key string) (ea abci.EventAttribute, isFound bool) {
-	idx := slices.IndexFunc(attributes, func(a abci.EventAttribute) bool { return a.Key == key })
-	if idx == -1 {
-		return abci.EventAttribute{}, false
-	}
-	return attributes[idx], true
 }
