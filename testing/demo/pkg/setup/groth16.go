@@ -20,10 +20,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// relayer is the address registered on simapp
-const relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
-
-func InitializeGroth16LightClientOnSimapp() error {
+// CreateGroth16LightClient creates the Groth16 light client on simapp.
+func CreateGroth16LightClient() error {
 	fmt.Println("Creating the Groth16 light client on simapp...")
 
 	ethClient, err := ethclient.Dial("http://localhost:8545")

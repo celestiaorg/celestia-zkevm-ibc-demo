@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -20,21 +19,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-const (
-	// groth16ClientID is for the Ethereum light client on the SimApp.
-	groth16ClientID = "08-groth16-0"
-	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
-	tendermintClientID = "07-tendermint-0"
-	// ethPrivateKey is the private key for an account on the EVM roll-up that is funded.
-	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-)
-
-var (
-	ethChainId   = big.NewInt(80087)
-	merklePrefix = [][]byte{[]byte("ibc"), []byte("")}
-)
-
-func InitializeTendermintLightClientOnEVMRollup() error {
+// CreateTendermintLightClient creates the Tendermint light client on the EVM roll-up.
+func CreateTendermintLightClient() error {
 	// First, check if the Simapp node is healthy before proceeding
 	if err := utils.CheckNodeHealth("http://localhost:5123", 10); err != nil {
 		return fmt.Errorf("simapp node is not healthy, please ensure it is running correctly: %w", err)
@@ -119,30 +105,6 @@ func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclien
 	}
 	fmt.Printf("Added client to the router contract on EVM roll-up with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
 
-	return nil
-}
-
-func RegisterCounterpartyOnSimapp() error {
-	clientCtx, err := utils.SetupClientContext()
-	if err != nil {
-		return fmt.Errorf("failed to setup client context: %v", err)
-	}
-
-	fmt.Println("Registering counterparty on simapp...")
-	resp, err := utils.BroadcastMessages(clientCtx, relayer, 500_000, &clienttypesv2.MsgRegisterCounterparty{
-		ClientId:                 groth16ClientID,
-		CounterpartyMerklePrefix: merklePrefix,
-		CounterpartyClientId:     tendermintClientID,
-		Signer:                   relayer,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to register counterparty: %v", err)
-	}
-
-	if resp.Code != 0 {
-		return fmt.Errorf("failed to register counterparty: %v", resp.RawLog)
-	}
-	fmt.Println("Registered counterparty on simapp.")
 	return nil
 }
 
