@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"cosmossdk.io/x/tx/signing"
@@ -23,9 +25,16 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	txmodule "github.com/cosmos/cosmos-sdk/x/auth/tx/config"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/gogoproto/proto"
-	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
-	channeltypesv2 "github.com/cosmos/ibc-go/v9/modules/core/04-channel/v2/types"
+	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	clienttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/02-client/v2/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
+	channeltypes "github.com/cosmos/ibc-go/v10/modules/core/04-channel/types"
+	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
+	solomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
+	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -45,6 +54,11 @@ func SetupClientContext() (client.Context, error) {
 	grpcAddr := "localhost:9190"                                           // gRPC endpoint
 	homeDir := filepath.Join(home, "testing", "files", "simapp-validator") // Path to the keyring directory
 
+	// Check if the node is healthy
+	if err := CheckNodeHealth(cometNodeURI, 10); err != nil {
+		return client.Context{}, fmt.Errorf("node health check failed: %w", err)
+	}
+
 	// Initialise codec with the necessary registerers
 	interfaceRegistry, _ := cdctypes.NewInterfaceRegistryWithOptions(cdctypes.InterfaceRegistryOptions{
 		ProtoFiles: proto.HybridResolver,
@@ -59,9 +73,20 @@ func SetupClientContext() (client.Context, error) {
 	})
 	std.RegisterInterfaces(interfaceRegistry)
 	authtypes.RegisterInterfaces(interfaceRegistry)
-	clienttypes.RegisterInterfaces(interfaceRegistry)
+	banktypes.RegisterInterfaces(interfaceRegistry)
+
+	// Register IBC interfaces
 	groth16.RegisterInterfaces(interfaceRegistry)
+	solomachine.RegisterInterfaces(interfaceRegistry)
+	ibctm.RegisterInterfaces(interfaceRegistry)
+	ibctransfertypes.RegisterInterfaces(interfaceRegistry)
+	ibcconnectiontypes.RegisterInterfaces(interfaceRegistry)
+	ibcclienttypes.RegisterInterfaces(interfaceRegistry)
+	clienttypesv2.RegisterInterfaces(interfaceRegistry)
+	channeltypes.RegisterInterfaces(interfaceRegistry)
 	channeltypesv2.RegisterInterfaces(interfaceRegistry)
+
+	// Create codec
 	appCodec := codec.NewProtoCodec(interfaceRegistry)
 
 	kr, err := keyring.New(appName, keyring.BackendTest, homeDir, nil, appCodec)
@@ -160,15 +185,16 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 	factoryOptions := txFactory.WithGas(gas)
 	factory, err := GetFactory(clientContext, user, factoryOptions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get factory: %v", err)
 	}
 
 	buffer := &bytes.Buffer{}
 	clientContext.Output = buffer
 	clientContext.WithOutput(buffer)
 
+	fmt.Printf("Broadcasting message of type %T with gas %d...\n", msgs[0], gas)
 	if err := tx.BroadcastTx(clientContext, factory, msgs...); err != nil {
-		return &sdk.TxResponse{}, err
+		return &sdk.TxResponse{}, fmt.Errorf("failed to broadcast tx: %v", err)
 	}
 
 	if buffer.Len() == 0 {
@@ -179,6 +205,8 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 	if err := clientContext.Codec.UnmarshalJSON(buffer.Bytes(), &txResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
+
+	fmt.Printf("Transaction broadcast complete. TxHash: %s\n", txResp.TxHash)
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -192,13 +220,16 @@ type User interface {
 // has been included in a block.
 func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
 	var resp sdk.TxResponse
-	err := WaitForCondition(time.Second*60, time.Second*5, func() (bool, error) {
+	fmt.Printf("Waiting for transaction %s to be confirmed...\n", txHash)
+	err := WaitForCondition(time.Second*300, time.Second*15, func() (bool, error) {
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
 		if err != nil {
+			fmt.Printf("Still waiting for tx %s... (Error: %v)\n", txHash, err)
 			return false, err
 		}
 
 		resp = *fullyPopulatedTxResp
+		fmt.Printf("Transaction %s confirmed with status code: %d\n", txHash, resp.Code)
 		return true, nil
 	})
 	return &resp, err
@@ -211,19 +242,78 @@ func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bo
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutAfter)
 	defer cancel()
 
+	maxRetries := 5
+	backoffDuration := time.Second
+
 	for {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("failed waiting for condition after %f seconds", timeoutAfter.Seconds())
 		case <-time.After(pollingInterval):
-			reachedCondition, err := fn()
-			if err != nil {
-				return fmt.Errorf("error occurred while waiting for condition: %s", err)
+			// Add retry logic with exponential backoff for connection errors
+			var lastErr error
+			for retries := 0; retries < maxRetries; retries++ {
+				reachedCondition, err := fn()
+				if err == nil {
+					if reachedCondition {
+						return nil
+					}
+					break // No error but condition not reached, break retry loop and continue outer polling loop
+				}
+
+				lastErr = err
+				// Check if error is connection-related
+				if strings.Contains(err.Error(), "EOF") ||
+					strings.Contains(err.Error(), "connection") ||
+					strings.Contains(err.Error(), "Post") {
+					fmt.Printf("Connection error detected, retrying in %v (attempt %d/%d): %v\n",
+						backoffDuration, retries+1, maxRetries, err)
+					time.Sleep(backoffDuration)
+					backoffDuration *= 2 // Exponential backoff
+					continue
+				} else {
+					// Not a connection error, return immediately
+					return fmt.Errorf("error occurred while waiting for condition: %s", err)
+				}
 			}
 
-			if reachedCondition {
-				return nil
+			if lastErr != nil {
+				return fmt.Errorf("error occurred while waiting for condition: %s", lastErr)
 			}
 		}
 	}
+}
+
+// CheckNodeHealth verifies that the Comet node is up and running
+func CheckNodeHealth(nodeURI string, maxRetries int) error {
+	var lastErr error
+	backoffDuration := time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		// Create a client with a timeout
+		httpClient := &http.Client{
+			Timeout: time.Second * 5,
+		}
+
+		// Make a request to the /status endpoint
+		resp, err := httpClient.Get(fmt.Sprintf("%s/status", nodeURI))
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			return nil
+		}
+
+		if err != nil {
+			lastErr = err
+			fmt.Printf("Node health check failed: %v. Retrying in %v...\n", err, backoffDuration)
+		} else {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("node returned status code %d", resp.StatusCode)
+			fmt.Printf("Node health check failed: %v. Retrying in %v...\n", lastErr, backoffDuration)
+		}
+
+		time.Sleep(backoffDuration)
+		backoffDuration *= 2 // Exponential backoff
+	}
+
+	return fmt.Errorf("node health check failed after %d attempts: %v", maxRetries, lastErr)
 }
