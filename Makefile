@@ -92,13 +92,6 @@ transfer:
 	@go run ./testing/demo/pkg/transfer/
 .PHONY: transfer
 
-## relay: Relay the token transfer from simapp to the EVM roll-up.
-relay:
-# Note: this is split out from transfer to speed up local development. This
-# command can be merged into transfer to make the demo fewer steps to run.
-	go run testing/demo/pkg/relay/main.go
-.PHONY: relay
-
 ## stop: Stop all Docker containers and remove the tmp directory.
 stop:
 	@echo "--> Stopping all Docker containers"
@@ -233,5 +226,4 @@ demo:
 	@make start
 	@make setup
 	@make transfer
-	@make relay
 .PHONY: demo

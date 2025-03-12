@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -26,42 +25,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const (
-	// ethereumRPC is the Reth RPC endpoint.
-	ethereumRPC = "http://localhost:8545/"
-	// ethPrivateKey is the private key for ethereumAddress.
-	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
-	// tendermintClientID is for the SP1 Tendermint light client on the EVM roll-up.
-	tendermintClientID = "07-tendermint-0"
-	// groth16ClientID is for the Ethereum light client on the SimApp.
-	groth16ClientID = "08-groth16-0"
-
-	// ethereumAddress is an address on the EVM chain.
-	// ethereumAddress = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
-)
-
-func main() {
-	fmt.Printf("Updating Tendermint light client on EVM roll-up...\n")
-	err := updateTendermintLightClient()
-	if err != nil {
-		log.Fatalf("Failed to update Tendermint light client: %v\n", err)
-	}
-	fmt.Printf("Updated Tendermint light client on EVM roll-up.\n")
-
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <transaction_hash>\n", os.Args[0])
-		os.Exit(1)
-	}
-	txHash := os.Args[1]
-	fmt.Printf("Relaying IBC transaction %v...\n", txHash)
-	err = relayByTx(txHash, tendermintClientID)
-	if err != nil {
-		log.Fatalf("Failed to relay transaction: %v", err)
-	}
-	fmt.Printf("Relayed IBC transaction %v", txHash)
-}
-
-// updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light client on the EVM roll-up.
+// updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light
+// client on the EVM roll-up.
 func updateTendermintLightClient() error {
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
