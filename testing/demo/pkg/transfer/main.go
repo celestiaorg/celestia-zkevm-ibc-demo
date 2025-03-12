@@ -26,7 +26,7 @@ func main() {
 	fmt.Printf("Relaying IBC transaction %v...\n", txHash)
 	err = relayByTx(txHash, tendermintClientID)
 	if err != nil {
-		log.Fatalf("Failed to relay transaction: %v", err)
+		log.Fatalf("Failed to relay IBC transaction: %v", err)
 	}
 	fmt.Printf("Relayed IBC transaction %v", txHash)
 }
