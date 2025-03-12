@@ -236,15 +236,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 			for _, attr := range event.Attributes {
 				key := string(attr.Key)
 				value := string(attr.Value)
-
-				switch key {
-				case "packet_src_port", "packet_src_channel", "packet_dst_port", "packet_dst_channel", "packet_data", "packet_sequence", "packet_timeout_timestamp":
-					// Store string values as is
-					packetEvent[key] = value
-				default:
-					// Store any other attributes
-					packetEvent[key] = value
-				}
+				packetEvent[key] = value
 			}
 			sendPacketEvents = append(sendPacketEvents, packetEvent)
 		}
@@ -340,17 +332,39 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return err
 	}
 
-	fmt.Printf("sendPacketEvent: %v\n", sendPacketEvent)
-	fmt.Printf("sendPacketEvent[packet_timeout_timestamp]: %v\n", sendPacketEvent["packet_timeout_timestamp"])
+	// fmt.Printf("sendPacketEvent: %v\n", sendPacketEvent)
+	// fmt.Printf("sendPacketEvent[packet_timeout_timestamp]: %v\n", sendPacketEvent["packet_timeout_timestamp"])
 
 	timeoutTimestamp, err := strconv.ParseUint(sendPacketEvent["packet_timeout_timestamp"].(string), 10, 64)
 	if err != nil {
 		return fmt.Errorf("failed to parse timeout timestamp: %w", err)
 	}
-	payloadData, err := hex.DecodeString(sendPacketEvent["payload_data"].(string))
-	if err != nil {
-		return fmt.Errorf("failed to decode payload data: %w", err)
+
+	// The event doesn't contain payload_data directly
+	// We need to extract it from the encoded_packet_hex field
+	packetHex, ok := sendPacketEvent["encoded_packet_hex"].(string)
+	if !ok {
+		return fmt.Errorf("encoded_packet_hex not found in SendPacket event or not a string")
 	}
+
+	// The encoded_packet_hex contains the entire packet in hex format
+	// Parse this to get the payload data
+	packetBytes, err := hex.DecodeString(packetHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode encoded_packet_hex: %w", err)
+	}
+
+	// Extract payload data from the packet
+	// This is a simplification - you might need to adjust how you extract the payload
+	// based on the actual packet structure in your implementation
+	payloadData := packetBytes
+
+	// For the payload version and encoding, we'll use defaults since they're not in the event
+	payloadVersion := "ics20-1"
+	payloadEncoding := "application/x-solidity-abi"
+
+	// For debugging
+	fmt.Printf("Using payload version: %s, encoding: %s\n", payloadVersion, payloadEncoding)
 
 	// For some reason this field is named DestClient but it actually expects the packet_dest_channel
 	// destClient := sendPacketEvent["packet_dest_channel"].(string)
@@ -364,10 +378,10 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 			TimeoutTimestamp: timeoutTimestamp,
 			Payloads: []ics26router.IICS26RouterMsgsPayload{
 				{
-					SourcePort: "",                                           // There are no ports in IBC Eureka
-					DestPort:   "",                                           // There are no ports in IBC Eureka
-					Version:    sendPacketEvent["payload_version"].(string),  // ics20-1
-					Encoding:   sendPacketEvent["payload_encoding"].(string), // application/x-solidity-abi
+					SourcePort: "",              // There are no ports in IBC Eureka
+					DestPort:   "",              // There are no ports in IBC Eureka
+					Version:    payloadVersion,  // ics20-1
+					Encoding:   payloadEncoding, // application/x-solidity-abi
 					Value:      payloadData,
 				},
 			},

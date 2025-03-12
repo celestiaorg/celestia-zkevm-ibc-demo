@@ -191,7 +191,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 	clientContext.Output = buffer
 	clientContext.WithOutput(buffer)
 
-	fmt.Printf("Broadcasting message of type %T with gas %d...\n", msgs[0], gas)
 	if err := tx.BroadcastTx(clientContext, factory, msgs...); err != nil {
 		return &sdk.TxResponse{}, fmt.Errorf("failed to broadcast tx: %v", err)
 	}
@@ -205,7 +204,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
 
-	fmt.Printf("Transaction broadcast complete. TxHash: %s\n", txResp.TxHash)
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -219,7 +217,7 @@ type User interface {
 // has been included in a block.
 func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
 	var resp sdk.TxResponse
-	fmt.Printf("Waiting for transaction %s to be confirmed...\n", txHash)
+
 	err := WaitForCondition(time.Second*300, time.Second*15, func() (bool, error) {
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
 		if err != nil {
@@ -228,16 +226,16 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 		}
 
 		resp = *fullyPopulatedTxResp
-		fmt.Printf("Transaction %s confirmed with status code: %d\n", txHash, resp.Code)
 		return true, nil
 	})
 	return &resp, err
 }
 
-// WaitForCondition periodically executes the given function fn based on the provided pollingInterval.
-// The function fn should return true of the desired condition is met. If the function never returns true within the timeoutAfter
+// WaitForCondition periodically executes the given function fn based on the
+// provided pollingInterval. The function fn should return true if the desired
+// condition is met. If the function never returns true within the timeoutAfter
 // period, or fn returns an error, the condition will not have been met.
-func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bool, error)) error {
+func WaitForCondition(timeoutAfter time.Duration, pollingInterval time.Duration, fn func() (bool, error)) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutAfter)
 	defer cancel()
 
