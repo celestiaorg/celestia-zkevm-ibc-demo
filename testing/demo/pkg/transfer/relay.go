@@ -339,6 +339,10 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("sendPacketEvent: %v\n", sendPacketEvent)
+	fmt.Printf("sendPacketEvent[packet_timeout_timestamp]: %v\n", sendPacketEvent["packet_timeout_timestamp"])
+
 	timeoutTimestamp, err := strconv.ParseUint(sendPacketEvent["packet_timeout_timestamp"].(string), 10, 64)
 	if err != nil {
 		return fmt.Errorf("failed to parse timeout timestamp: %w", err)
