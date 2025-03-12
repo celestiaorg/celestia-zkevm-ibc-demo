@@ -21,26 +21,16 @@ import (
 
 // CreateTendermintLightClient creates the Tendermint light client on the EVM roll-up.
 func CreateTendermintLightClient() error {
-	// First, check if the Simapp node is healthy before proceeding
-	if err := utils.CheckNodeHealth("http://localhost:5123", 10); err != nil {
+	err := utils.CheckSimappNodeHealth(simappRPC, 10)
+	if err != nil {
 		return fmt.Errorf("simapp node is not healthy, please ensure it is running correctly: %w", err)
 	}
 
-	// Check if Ethereum node is healthy
-	ethClient, err := ethclient.Dial("http://localhost:8545")
+	err = utils.CheckEthereumNodeHealth(ethereumRPC)
 	if err != nil {
-		return fmt.Errorf("failed to connect to ethereum client: %v", err)
+		return fmt.Errorf("ethereum node is not healthy, please ensure it is running correctly: %w", err)
 	}
 
-	// Try to get the latest block to verify the node is working
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, err = ethClient.BlockByNumber(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("ethereum node is not responding correctly: %v", err)
-	}
-
-	// Continue with the existing process
 	if err := deployEurekaContracts(); err != nil {
 		return err
 	}
@@ -49,16 +39,16 @@ func CreateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Contract Addresses: \n%v\n", addresses)
 
-	if err := addClientOnEVMRollUp(addresses, ethClient); err != nil {
+	if err := addClientToRouter(addresses); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// deployEurekaContracts deploys all of the IBC Eureka contracts (including the SP1 ICS07 Tendermint light client contract) on the EVM roll-up.
+// deployEurekaContracts deploys all of the IBC Eureka contracts (including the
+// SP1 ICS07 Tendermint light client contract) on the EVM roll-up.
 func deployEurekaContracts() error {
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
 	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
@@ -66,16 +56,24 @@ func deployEurekaContracts() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	fmt.Println("Deploying IBC Eureka smart contracts on the EVM roll-up...")
+	fmt.Printf("Deploying IBC Eureka smart contracts on the EVM roll-up...\n")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to deploy contracts: %v", err)
 	}
-	fmt.Println("Deployed IBC Eureka smart contracts on the EVM roll-up.")
+	fmt.Println("Deployed IBC Eureka smart contracts on the EVM roll-up.\n")
+
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Contract Addresses: \n%v\n", addresses)
 
 	return nil
 }
 
-func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclient.Client) error {
+// addClientToRouter adds the Tendermint light client to the router contract on
+// the EVM roll-up.
+func addClientToRouter(addresses utils.ContractAddresses) error {
 	key, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
 	if err != nil {
 		return fmt.Errorf("failed to convert private key: %v", err)
@@ -87,28 +85,32 @@ func addClientOnEVMRollUp(addresses utils.ContractAddresses, ethClient *ethclien
 	}
 	tmLightClientAddress := ethcommon.HexToAddress(addresses.ICS07Tendermint)
 
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return fmt.Errorf("failed to connect to ethereum client: %v", err)
+	}
+
 	router, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
-		return fmt.Errorf("failed to instantiate ICS Core contract: %v", err)
+		return fmt.Errorf("failed to instantiate ICS router contract: %v", err)
 	}
 
-	fmt.Printf("Adding client to the router contract on EVM roll-up...\n")
-	tx, err := router.AddClient(GetTransactOpts(key, ethChainId, ethClient), tendermintClientID, counterpartyInfo, tmLightClientAddress)
+	fmt.Printf("Adding Tendermint light client to the router contract on EVM roll-up...\n")
+	tx, err := router.AddClient(getTransactOpts(key, ethChainId, ethClient), tendermintClientID, counterpartyInfo, tmLightClientAddress)
 	if err != nil {
-		return fmt.Errorf("failed to add client to router: %v", err)
+		return fmt.Errorf("failed to add Tendermint light client to router: %v", err)
 	}
 
-	receipt := GetTxReceipt(context.Background(), ethClient, tx.Hash())
-	event, err := GetEvmEvent(receipt, router.ParseICS02ClientAdded)
+	receipt := getTxReceipt(context.Background(), ethClient, tx.Hash())
+	event, err := getEvmEvent(receipt, router.ParseICS02ClientAdded)
 	if err != nil {
 		return fmt.Errorf("failed to get event: %v", err)
 	}
-	fmt.Printf("Added client to the router contract on EVM roll-up with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
-
+	fmt.Printf("Added Tendermint lightclient to the router contract on EVM roll-up with clientId %s and counterparty clientId %s\n", event.ClientId, event.CounterpartyInfo.ClientId)
 	return nil
 }
 
-func GetTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclient.Client) *bind.TransactOpts {
+func getTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclient.Client) *bind.TransactOpts {
 	fromAddress := crypto.PubkeyToAddress(key.PublicKey)
 	nonce, err := ethClient.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
@@ -131,7 +133,7 @@ func GetTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclie
 	return txOpts
 }
 
-func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
+func getTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) *ethtypes.Receipt {
 	var receipt *ethtypes.Receipt
 	var err error
 	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
@@ -147,8 +149,8 @@ func GetTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcomm
 	return receipt
 }
 
-// GetEvmEvent parses the logs in the given receipt and returns the first event that can be parsed
-func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log) (*T, error)) (event *T, err error) {
+// getEvmEvent parses the logs in the given receipt and returns the first event that can be parsed
+func getEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log) (*T, error)) (event *T, err error) {
 	for _, l := range receipt.Logs {
 		event, err = parseFn(*l)
 		if err == nil && event != nil {

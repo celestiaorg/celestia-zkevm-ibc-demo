@@ -24,7 +24,6 @@ func RegisterCounterparty() error {
 	if err != nil {
 		return fmt.Errorf("failed to register counterparty on simapp: %v", err)
 	}
-
 	if resp.Code != 0 {
 		return fmt.Errorf("failed to register counterparty on simapp: %v", resp.RawLog)
 	}

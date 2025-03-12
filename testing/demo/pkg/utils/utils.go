@@ -35,6 +35,7 @@ import (
 	channeltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
 	solomachine "github.com/cosmos/ibc-go/v10/modules/light-clients/06-solomachine"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -55,7 +56,7 @@ func SetupClientContext() (client.Context, error) {
 	homeDir := filepath.Join(home, "testing", "files", "simapp-validator") // Path to the keyring directory
 
 	// Check if the node is healthy
-	if err := CheckNodeHealth(cometNodeURI, 10); err != nil {
+	if err := CheckSimappNodeHealth(cometNodeURI, 10); err != nil {
 		return client.Context{}, fmt.Errorf("node health check failed: %w", err)
 	}
 
@@ -284,8 +285,8 @@ func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bo
 	}
 }
 
-// CheckNodeHealth verifies that the Comet node is up and running
-func CheckNodeHealth(nodeURI string, maxRetries int) error {
+// CheckSimappNodeHealth verifies that the SimApp node is up and running.
+func CheckSimappNodeHealth(nodeURI string, maxRetries int) error {
 	var lastErr error
 	backoffDuration := time.Second
 
@@ -316,4 +317,22 @@ func CheckNodeHealth(nodeURI string, maxRetries int) error {
 	}
 
 	return fmt.Errorf("node health check failed after %d attempts: %v", maxRetries, lastErr)
+}
+
+func CheckEthereumNodeHealth(ethereumRPC string) error {
+	// Check if Ethereum node is healthy
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return fmt.Errorf("failed to connect to ethereum client: %v", err)
+	}
+
+	// Try to get the latest block to verify the node is working
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = ethClient.BlockByNumber(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("ethereum node is not responding correctly: %v", err)
+	}
+
+	return nil
 }

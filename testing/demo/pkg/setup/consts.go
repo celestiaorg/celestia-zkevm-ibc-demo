@@ -11,6 +11,10 @@ const (
 	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 	// relayer is the address registered on simapp
 	relayer = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
+	// simappRPC is the URI for the simapp node.
+	simappRPC = "http://localhost:5123"
+	// ethereumRPC is the URI for the ethereum node.
+	ethereumRPC = "http://localhost:8545"
 )
 
 var (
