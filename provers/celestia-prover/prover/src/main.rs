@@ -176,6 +176,7 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        println!("Generating proof with key_proofs: {:?}", key_proofs);
         let proof = self.membership_prover.generate_proof(
             trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
