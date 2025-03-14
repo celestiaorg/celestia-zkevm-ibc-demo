@@ -205,7 +205,8 @@ lint:
 ## markdown-link-check: Check all markdown links.
 markdown-link-check:
 	@echo "--> Running markdown-link-check"
-	@find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check
+# Skip the solidity-ibc-eureka directory because we don't want to fix their broken links.
+	@find . -name \*.md -not -path "./solidity-ibc-eureka/*" -print0 | xargs -0 -n1 markdown-link-check
 .PHONY: markdown-link-check
 
 ## fmt: Format files per linters golangci-lint and markdownlint.

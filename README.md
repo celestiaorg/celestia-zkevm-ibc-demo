@@ -7,7 +7,7 @@ This repo exists to showcase transferring tokens to and from a Cosmos SDK chain 
 
 ![mvp-zk-accounts](./docs/images/mvp-zk-accounts.png)
 
-For more information refer to the [architecture document](./ARCHITECTURE.md). Note that the design is subject to change.
+For more information refer to the [architecture](./docs/ARCHITECTURE.md). Note that the design is subject to change.
 
 ## Usage
 
