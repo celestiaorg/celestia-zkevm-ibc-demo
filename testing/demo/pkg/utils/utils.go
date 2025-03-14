@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +54,7 @@ func SetupClientContext() (client.Context, error) {
 	homeDir := filepath.Join(home, "testing", "files", "simapp-validator") // Path to the keyring directory
 
 	// Check if the node is healthy
-	if err := CheckNodeHealth(cometNodeURI, 10); err != nil {
+	if err := CheckSimappNodeHealth(cometNodeURI, 10); err != nil {
 		return client.Context{}, fmt.Errorf("node health check failed: %w", err)
 	}
 
@@ -192,7 +191,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 	clientContext.Output = buffer
 	clientContext.WithOutput(buffer)
 
-	fmt.Printf("Broadcasting message of type %T with gas %d...\n", msgs[0], gas)
 	if err := tx.BroadcastTx(clientContext, factory, msgs...); err != nil {
 		return &sdk.TxResponse{}, fmt.Errorf("failed to broadcast tx: %v", err)
 	}
@@ -206,7 +204,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
 
-	fmt.Printf("Transaction broadcast complete. TxHash: %s\n", txResp.TxHash)
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -220,7 +217,7 @@ type User interface {
 // has been included in a block.
 func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
 	var resp sdk.TxResponse
-	fmt.Printf("Waiting for transaction %s to be confirmed...\n", txHash)
+
 	err := WaitForCondition(time.Second*300, time.Second*15, func() (bool, error) {
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
 		if err != nil {
@@ -229,16 +226,16 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 		}
 
 		resp = *fullyPopulatedTxResp
-		fmt.Printf("Transaction %s confirmed with status code: %d\n", txHash, resp.Code)
 		return true, nil
 	})
 	return &resp, err
 }
 
-// WaitForCondition periodically executes the given function fn based on the provided pollingInterval.
-// The function fn should return true of the desired condition is met. If the function never returns true within the timeoutAfter
+// WaitForCondition periodically executes the given function fn based on the
+// provided pollingInterval. The function fn should return true if the desired
+// condition is met. If the function never returns true within the timeoutAfter
 // period, or fn returns an error, the condition will not have been met.
-func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bool, error)) error {
+func WaitForCondition(timeoutAfter time.Duration, pollingInterval time.Duration, fn func() (bool, error)) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutAfter)
 	defer cancel()
 
@@ -282,38 +279,4 @@ func WaitForCondition(timeoutAfter, pollingInterval time.Duration, fn func() (bo
 			}
 		}
 	}
-}
-
-// CheckNodeHealth verifies that the Comet node is up and running
-func CheckNodeHealth(nodeURI string, maxRetries int) error {
-	var lastErr error
-	backoffDuration := time.Second
-
-	for i := 0; i < maxRetries; i++ {
-		// Create a client with a timeout
-		httpClient := &http.Client{
-			Timeout: time.Second * 5,
-		}
-
-		// Make a request to the /status endpoint
-		resp, err := httpClient.Get(fmt.Sprintf("%s/status", nodeURI))
-		if err == nil && resp.StatusCode == http.StatusOK {
-			resp.Body.Close()
-			return nil
-		}
-
-		if err != nil {
-			lastErr = err
-			fmt.Printf("Node health check failed: %v. Retrying in %v...\n", err, backoffDuration)
-		} else {
-			resp.Body.Close()
-			lastErr = fmt.Errorf("node returned status code %d", resp.StatusCode)
-			fmt.Printf("Node health check failed: %v. Retrying in %v...\n", lastErr, backoffDuration)
-		}
-
-		time.Sleep(backoffDuration)
-		backoffDuration *= 2 // Exponential backoff
-	}
-
-	return fmt.Errorf("node health check failed after %d attempts: %v", maxRetries, lastErr)
 }
