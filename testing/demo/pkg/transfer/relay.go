@@ -143,7 +143,6 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	if err != nil {
 		nonce = 0
 	}
-	fmt.Printf("Using nonce: %d for address: %s\n", nonce, fromAddress.Hex())
 
 	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
 	if err != nil {
@@ -157,14 +156,6 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	txOpts.Nonce = big.NewInt(int64(nonce))
 	txOpts.GasPrice = gasPrice
 	txOpts.GasLimit = 3_000_000
-
-	// Check if there are any pending transactions for this address
-	pending, err := ethClient.PendingTransactionCount(context.Background())
-	if err != nil {
-		fmt.Printf("Warning: Could not check pending transactions: %v\n", err)
-	} else if pending > 0 {
-		fmt.Printf("Warning: There are %d pending transactions in the mempool\n", pending)
-	}
 
 	return txOpts
 }
@@ -399,14 +390,14 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
-	fmt.Printf("Created transaction with hash: %v\n", ethTx.Hash().Hex())
-	fmt.Printf("Transaction parameters - Nonce: %v, GasPrice: %v, GasLimit: %v\n",
-		ethTx.Nonce(), ethTx.GasPrice().String(), ethTx.Gas())
+	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", ethTx.Hash().Hex(), ethTx.Nonce())
 
 	// Check if transaction is already in the mempool
 	_, isPending, err := ethClient.TransactionByHash(context.Background(), ethTx.Hash())
-	if err == nil && isPending {
-		fmt.Printf("Transaction %v is already pending in the mempool\n", ethTx.Hash().Hex())
+	if err != nil {
+		return fmt.Errorf("failed to check if transaction is already in the mempool: %w", err)
+	}
+	if isPending {
 		return fmt.Errorf("transaction already pending in mempool")
 	}
 
