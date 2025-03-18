@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/big"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -25,9 +28,64 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const (
+	proofCacheDir = "proof_cache"
+	maxProofAge   = 1 * time.Hour
+)
+
+type CachedProof struct {
+	Timestamp int64
+	Data      []byte
+	Height    int64
+}
+
+func ensureProofCacheDir() error {
+	return os.MkdirAll(proofCacheDir, 0755)
+}
+
+func getCachedProof(clientID string, proofType string) (*CachedProof, error) {
+	filename := filepath.Join(proofCacheDir, fmt.Sprintf("%s_%s.json", clientID, proofType))
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var proof CachedProof
+	if err := json.Unmarshal(data, &proof); err != nil {
+		return nil, err
+	}
+
+	// Check if proof is too old
+	if time.Since(time.Unix(proof.Timestamp, 0)) > maxProofAge {
+		return nil, fmt.Errorf("proof is too old")
+	}
+
+	return &proof, nil
+}
+
+func cacheProof(clientID string, proofType string, data []byte, height int64) error {
+	proof := CachedProof{
+		Timestamp: time.Now().Unix(),
+		Data:      data,
+		Height:    height,
+	}
+
+	jsonData, err := json.Marshal(proof)
+	if err != nil {
+		return err
+	}
+
+	filename := filepath.Join(proofCacheDir, fmt.Sprintf("%s_%s.json", clientID, proofType))
+	return os.WriteFile(filename, jsonData, 0644)
+}
+
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light
 // client on the EVM roll-up.
 func updateTendermintLightClient() error {
+	if err := ensureProofCacheDir(); err != nil {
+		return fmt.Errorf("failed to create proof cache directory: %w", err)
+	}
+
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
@@ -72,25 +130,39 @@ func updateTendermintLightClient() error {
 	copy(verifierKey[:], verifierKeyDecoded)
 	fmt.Printf("Verifier key: %x\n", verifierKey)
 
-	fmt.Printf("Requesting celestia-prover state transition proof...\n")
-	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
-	// Get state transition proof from Celestia prover with retry logic
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	// Try to get cached state transition proof
 	var resp *proverclient.ProveStateTransitionResponse
-	for retries := 0; retries < 3; retries++ {
-		resp, err = proverClient.ProveStateTransition(ctx, request)
-		if err == nil {
-			break
+	cachedProof, err := getCachedProof(addresses.ICS07Tendermint, "state_transition")
+	if err == nil {
+		fmt.Printf("Using cached state transition proof from height %d\n", cachedProof.Height)
+		resp = &proverclient.ProveStateTransitionResponse{
+			PublicValues: cachedProof.Data,
+			Proof:        cachedProof.Data,
 		}
-		if ctx.Err() != nil {
-			return fmt.Errorf("context cancelled while getting state transition proof: %w", ctx.Err())
+	} else {
+		fmt.Printf("Generating new state transition proof...\n")
+		request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		for retries := 0; retries < 3; retries++ {
+			resp, err = proverClient.ProveStateTransition(ctx, request)
+			if err == nil {
+				break
+			}
+			if ctx.Err() != nil {
+				return fmt.Errorf("context cancelled while getting state transition proof: %w", ctx.Err())
+			}
+			time.Sleep(time.Second * time.Duration(retries+1))
 		}
-		time.Sleep(time.Second * time.Duration(retries+1))
+		if err != nil {
+			return fmt.Errorf("failed to get state transition proof after retries: %w", err)
+		}
+		// Cache the new proof
+		if err := cacheProof(addresses.ICS07Tendermint, "state_transition", resp.PublicValues, 0); err != nil {
+			fmt.Printf("Warning: failed to cache state transition proof: %v\n", err)
+		}
 	}
-	if err != nil {
-		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
-	}
+
 	fmt.Printf("Received celestia-prover state transition proof.\n")
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
@@ -206,6 +278,10 @@ func getUpdateClientArguments() (abi.Arguments, error) {
 // It processes source transactions, extracts IBC events, generates proofs,
 // and creates an Ethereum transaction to submit to the ICS26Router contract.
 func relayByTx(sourceTxHash string, targetClientID string) error {
+	if err := ensureProofCacheDir(); err != nil {
+		return fmt.Errorf("failed to create proof cache directory: %w", err)
+	}
+
 	fmt.Printf("Relaying transaction %s to client %s...\n", sourceTxHash, targetClientID)
 
 	txID, err := hex.DecodeString(strings.TrimPrefix(sourceTxHash, "0x"))
@@ -251,11 +327,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	sendPacketEvent := sendPacketEvents[0]
 	fmt.Printf("Extracted SendPacket event from transaction: %+v\n", sendPacketEvent)
 
-	// Generate a proof for the packet commitment
-	// This would involve:
-	// 1. Determining the key path in the SimApp state tree where the packet commitment is stored
-	// 2. Getting a proof for that key from the prover
-
 	// Parse the packet sequence as uint64
 	packetSequenceStr, ok := sendPacketEvent["packet_sequence"].(string)
 	if !ok {
@@ -288,20 +359,35 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	packetCommitmentPath = append(packetCommitmentPath, sequenceBytes...)
 	fmt.Printf("Generating proof for packet commitment with path: %x\n", packetCommitmentPath)
 
-	celestiaProverConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return fmt.Errorf("failed to connect to celestia-prover: %w", err)
-	}
-	defer celestiaProverConn.Close()
-	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
+	// Try to get cached membership proof
+	var resp *proverclient.ProveStateMembershipResponse
+	cachedProof, err := getCachedProof(fmt.Sprintf("%s_%d", groth16ClientID, packetSequence), "membership")
+	if err == nil {
+		fmt.Printf("Using cached membership proof from height %d\n", cachedProof.Height)
+		resp = &proverclient.ProveStateMembershipResponse{
+			Proof:  cachedProof.Data,
+			Height: int64(cachedProof.Height),
+		}
+	} else {
+		celestiaProverConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return fmt.Errorf("failed to connect to celestia-prover: %w", err)
+		}
+		defer celestiaProverConn.Close()
+		celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
 
-	fmt.Printf("Requesting celestia-prover state membership proof...\n")
-	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		Height:   simAppTx.Height,
-		KeyPaths: []string{hex.EncodeToString(packetCommitmentPath)},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get state membership proof: %w", err)
+		fmt.Printf("Requesting celestia-prover state membership proof...\n")
+		resp, err = celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
+			Height:   simAppTx.Height,
+			KeyPaths: []string{hex.EncodeToString(packetCommitmentPath)},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get state membership proof: %w", err)
+		}
+		// Cache the new proof
+		if err := cacheProof(fmt.Sprintf("%s_%d", groth16ClientID, packetSequence), "membership", resp.Proof, resp.Height); err != nil {
+			fmt.Printf("Warning: failed to cache membership proof: %v\n", err)
+		}
 	}
 	fmt.Printf("Received celestia-prover state membership proof with height %v.\n", resp.GetHeight())
 
