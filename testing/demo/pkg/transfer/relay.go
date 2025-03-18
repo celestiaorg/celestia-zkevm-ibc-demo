@@ -139,7 +139,7 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	}
 
 	fromAddress := crypto.PubkeyToAddress(key.PublicKey)
-	nonce, err := ethClient.NonceAt(context.Background(), fromAddress, nil)
+	nonce, err := ethClient.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		nonce = 0
 	}
@@ -149,10 +149,6 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	if err != nil {
 		panic(err)
 	}
-	// Increase gas price by 20% to help transaction get mined faster
-	gasPrice = new(big.Int).Mul(gasPrice, big.NewInt(120))
-	gasPrice = new(big.Int).Div(gasPrice, big.NewInt(100))
-	fmt.Printf("Using gas price: %s wei\n", gasPrice.String())
 
 	txOpts, err := bind.NewKeyedTransactorWithChainID(key, chain.ChainID)
 	if err != nil {
