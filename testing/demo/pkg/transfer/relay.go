@@ -139,15 +139,20 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	}
 
 	fromAddress := crypto.PubkeyToAddress(key.PublicKey)
-	nonce, err := ethClient.PendingNonceAt(context.Background(), fromAddress)
+	nonce, err := ethClient.NonceAt(context.Background(), fromAddress, nil)
 	if err != nil {
 		nonce = 0
 	}
+	fmt.Printf("Using nonce: %d for address: %s\n", nonce, fromAddress.Hex())
 
 	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
 	if err != nil {
 		panic(err)
 	}
+	// Increase gas price by 20% to help transaction get mined faster
+	gasPrice = new(big.Int).Mul(gasPrice, big.NewInt(120))
+	gasPrice = new(big.Int).Div(gasPrice, big.NewInt(100))
+	fmt.Printf("Using gas price: %s wei\n", gasPrice.String())
 
 	txOpts, err := bind.NewKeyedTransactorWithChainID(key, chain.ChainID)
 	if err != nil {
@@ -155,9 +160,15 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
 	txOpts.GasPrice = gasPrice
+	txOpts.GasLimit = 3_000_000
 
-	// Set a specific gas limit
-	txOpts.GasLimit = 3000000 // Example gas limit; adjust as needed
+	// Check if there are any pending transactions for this address
+	pending, err := ethClient.PendingTransactionCount(context.Background())
+	if err != nil {
+		fmt.Printf("Warning: Could not check pending transactions: %v\n", err)
+	} else if pending > 0 {
+		fmt.Printf("Warning: There are %d pending transactions in the mempool\n", pending)
+	}
 
 	return txOpts
 }
@@ -364,33 +375,44 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	payloadEncoding := "application/x-solidity-abi"
 
 	// For debugging
-	fmt.Printf("Using payload version: %s, encoding: %s\n", payloadVersion, payloadEncoding)
+	fmt.Printf("Using payload version: %s, payload encoding: %s\n", payloadVersion, payloadEncoding)
 
-	// For some reason this field is named DestClient but it actually expects the packet_dest_channel
-	// destClient := sendPacketEvent["packet_dest_channel"].(string)
-	// fmt.Printf("Destination client: %s\n", destClient)
-
-	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), ics26router.IICS26RouterMsgsMsgRecvPacket{
-		Packet: ics26router.IICS26RouterMsgsPacket{
-			Sequence:         packetSequence,
-			SourceClient:     groth16ClientID,
-			DestClient:       tendermintClientID,
-			TimeoutTimestamp: timeoutTimestamp,
-			Payloads: []ics26router.IICS26RouterMsgsPayload{
-				{
-					SourcePort: "",              // There are no ports in IBC Eureka
-					DestPort:   "",              // There are no ports in IBC Eureka
-					Version:    payloadVersion,  // ics20-1
-					Encoding:   payloadEncoding, // application/x-solidity-abi
-					Value:      payloadData,
+	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth),
+		ics26router.IICS26RouterMsgsMsgRecvPacket{
+			Packet: ics26router.IICS26RouterMsgsPacket{
+				Sequence:         packetSequence,
+				SourceClient:     groth16ClientID,
+				DestClient:       tendermintClientID,
+				TimeoutTimestamp: timeoutTimestamp,
+				Payloads: []ics26router.IICS26RouterMsgsPayload{
+					{
+						SourcePort: "",              // There are no ports in IBC Eureka
+						DestPort:   "",              // There are no ports in IBC Eureka
+						Version:    payloadVersion,  // ics20-1
+						Encoding:   payloadEncoding, // application/x-solidity-abi
+						Value:      payloadData,
+					},
 				},
 			},
-		},
-	})
+			ProofCommitment: resp.Proof,
+			ProofHeight: ics26router.IICS02ClientMsgsHeight{
+				RevisionNumber: 0,
+				RevisionHeight: uint32(resp.Height),
+			},
+		})
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
-	fmt.Printf("Created transaction: %v\n", ethTx.Hash().Hex())
+	fmt.Printf("Created transaction with hash: %v\n", ethTx.Hash().Hex())
+	fmt.Printf("Transaction parameters - Nonce: %v, GasPrice: %v, GasLimit: %v\n",
+		ethTx.Nonce(), ethTx.GasPrice().String(), ethTx.Gas())
+
+	// Check if transaction is already in the mempool
+	_, isPending, err := ethClient.TransactionByHash(context.Background(), ethTx.Hash())
+	if err == nil && isPending {
+		fmt.Printf("Transaction %v is already pending in the mempool\n", ethTx.Hash().Hex())
+		return fmt.Errorf("transaction already pending in mempool")
+	}
 
 	err = ethClient.SendTransaction(context.Background(), ethTx)
 	if err != nil {
