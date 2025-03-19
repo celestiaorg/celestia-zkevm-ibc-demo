@@ -111,7 +111,7 @@ The `blevm-tools` binary can be used to generate the blob that is submitted to C
 
     ```shell
      cd celestia-zkevm-ibc-demo/provers/blevm/
-     RUST_LOG=info cargo run --bin blevm-tools -- --cmd dump-header --input script/input/blevm/1/18884864.bin --output script/blob/blevm/1/18884864.bin
+     RUST_LOG=info cargo run --bin blevm-tools -- --cmd dump-block --input script/input/blevm/1/18884864.bin --output script/blob/blevm/1/18884864.bin
     ```
 
     The resulting blob is included in Celestia block number 2988873, see:
