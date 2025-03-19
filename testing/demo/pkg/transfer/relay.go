@@ -132,17 +132,6 @@ func updateTendermintLightClient() error {
 	return nil
 }
 
-func getUpdateClientArguments() (abi.Arguments, error) {
-	var updateClientABI = "[{\"type\":\"function\",\"name\":\"updateClient\",\"stateMutability\":\"pure\",\"inputs\":[{\"name\":\"o3\",\"type\":\"tuple\",\"internalType\":\"struct IUpdateClientMsgs.MsgUpdateClient\",\"components\":[{\"name\":\"sp1Proof\",\"type\":\"tuple\",\"internalType\":\"struct ISP1Msgs.SP1Proof\",\"components\":[{\"name\":\"vKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"publicValues\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]}],\"outputs\":[]}]"
-
-	parsed, err := abi.JSON(strings.NewReader(updateClientABI))
-	if err != nil {
-		return nil, err
-	}
-
-	return parsed.Methods["updateClient"].Inputs, nil
-}
-
 // relayByTx implements the logic that the relayer would perform directly
 // It processes source transactions, extracts IBC events, generates proofs,
 // and creates an Ethereum transaction to submit to the ICS26Router contract.
@@ -266,22 +255,9 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
 	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", ethTx.Hash().Hex(), ethTx.Nonce())
-
-	// Check if transaction is already in the mempool
-	_, isPending, err := ethClient.TransactionByHash(context.Background(), ethTx.Hash())
-	if err != nil {
-		return fmt.Errorf("failed to check if transaction is already in the mempool: %w", err)
-	}
-	if isPending {
-		return fmt.Errorf("transaction already pending in mempool")
-	}
-
-	err = ethClient.SendTransaction(context.Background(), ethTx)
-	if err != nil {
-		return fmt.Errorf("failed to send transaction: %w", err)
-	}
 	receipt := getTxReciept(context.Background(), eth, ethTx.Hash())
 	fmt.Printf("Transaction sent to Ethereum, hash: %s, status: %d\n", ethTx.Hash().Hex(), receipt.Status)
+
 	return nil
 }
 
@@ -426,4 +402,15 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	}
 
 	return receipt
+}
+
+func getUpdateClientArguments() (abi.Arguments, error) {
+	var updateClientABI = "[{\"type\":\"function\",\"name\":\"updateClient\",\"stateMutability\":\"pure\",\"inputs\":[{\"name\":\"o3\",\"type\":\"tuple\",\"internalType\":\"struct IUpdateClientMsgs.MsgUpdateClient\",\"components\":[{\"name\":\"sp1Proof\",\"type\":\"tuple\",\"internalType\":\"struct ISP1Msgs.SP1Proof\",\"components\":[{\"name\":\"vKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"publicValues\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]}],\"outputs\":[]}]"
+
+	parsed, err := abi.JSON(strings.NewReader(updateClientABI))
+	if err != nil {
+		return nil, err
+	}
+
+	return parsed.Methods["updateClient"].Inputs, nil
 }
