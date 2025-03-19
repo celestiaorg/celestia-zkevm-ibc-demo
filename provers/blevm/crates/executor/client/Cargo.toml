@@ -1,0 +1,66 @@
+[package]
+name = "rsp-client-executor"
+description = ""
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+serde_with = "3.12.0"
+itertools = "0.13.0"
+
+# workspace
+rsp-mpt.workspace = true
+rsp-primitives.workspace = true
+
+# reth
+reth-consensus.workspace = true
+reth-ethereum-consensus.workspace = true
+reth-ethereum-primitives = { workspace = true, features = ["serde-bincode-compat"] }
+reth-execution-types.workspace = true
+reth-primitives.workspace = true
+reth-primitives-traits.workspace = true
+reth-trie.workspace = true
+reth-evm.workspace = true
+reth-evm-ethereum.workspace = true
+reth-optimism-evm = { workspace = true, optional = true }
+reth-optimism-consensus = { workspace = true, optional = true }
+reth-optimism-chainspec = { workspace = true, optional = true }
+reth-optimism-primitives = { workspace = true, optional = true, features = ["serde", "serde-bincode-compat"]}
+reth-errors.workspace = true
+reth-chainspec.workspace = true
+
+# revm
+revm.workspace = true
+revm-primitives.workspace = true
+
+# alloy
+alloy-evm.workspace = true
+alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-network.workspace = true
+alloy-rpc-types.workspace = true
+
+# op
+op-alloy-network = { workspace = true, optional = true }
+op-alloy-rpc-types = { workspace = true, optional = true }
+
+
+[features]
+optimism = [
+    "rsp-primitives/optimism",
+    "dep:op-alloy-network",
+    "dep:op-alloy-rpc-types",
+    "dep:reth-optimism-evm",
+    "reth-optimism-consensus",
+    "dep:reth-optimism-chainspec",
+    "dep:reth-optimism-primitives",
+]

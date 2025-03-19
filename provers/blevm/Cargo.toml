@@ -5,33 +5,145 @@ edition = "2021"
 
 [workspace.package]
 version = "0.1.0"
+repository = "https://github.com/celestiaorg/celestia-zkevm-ibc-demo"
+homepage = "https://github.com/celestiaorg/celestia-zkevm-ibc-demo"
 edition = "2021"
 license = "MIT"
 rust-version = "1.85.0"
 
 [workspace.dependencies]
+alloy = { version = "0.9.2", features = ["providers"] }
+alloy-consensus = { version = "0.11.1", default-features = false, features = ["serde", "serde-bincode-compat"] }
+alloy-chains = { version = "0.1.59", default-features = false }
+alloy-evm = { version = "0.1", default-features = false }
+alloy-op-evm = { version = "0.1", default-features = false }
+alloy-genesis = { version = "0.11.1", default-features = false }
+alloy-network = { version = "0.11.1", default-features = false }
+alloy-json-rpc = { version = "0.11.1", default-features = false }
+alloy-primitives = { version = "0.8.15", default-features = false, features = ["sha3-keccak", "map-foldhash"] }
+alloy-provider = { version = "0.9.2", features = ["default"] }
+alloy-rlp = "0.3.10"
+alloy-rpc-types = { version = "0.11.1", default-features = false, features = [
+    "eth",
+] }
+alloy-sol-types = { version = "0.8.0", default-features = false }
+alloy-trie = "0.7"
+alloy-transport = { version = "0.11.1", default-features = false }
+alloy-transport-http = { version = "0.11.1", features = [
+    "reqwest-rustls-tls",
+], default-features = false }
+alloy-transport-ws = { version = "0.11.1" }
+alloy-rpc-client = { version = "0.11.1", default-features = false }
+bincode = "1.3.3"
+ethers = { version = "2.0", features = ["ws", "rustls"] }
+futures = "0.3"
+hex-literal = "0.4.1"
+ibc-client-tendermint-types = "0.56"
+ibc-core-commitment-types = "0.56"
+ibc-proto = { version = "0.51", features = ["client"] }
+ibc-proto-eureka = { package = "ibc-proto", git = "https://github.com/srdtrk/ibc-proto-rs", rev = "9f550f7a582f09ee82bdf58a416631715e15bad7", default-features = false }
+nmt-rs = "*"
+prost = "0.13"
+rayon = "1.10.0"
+reqwest = { version = "0.12", features = ["json"] }
+rlp = "0.5.2"
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
-alloy-sol-types = "0.7.7"
-rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", rev = "c01149568a2ed4d3e766756e8b847c870a0b1e4e" }
-reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-20240830", default-features = false, features = [
+serde_json = "1.0.94"
+sp1-sdk = { version = "4.0.1", default-features = false }
+tendermint-rpc = "0.40"
+tendermint = "0.40.1"
+tendermint-proto = "*"
+thiserror = "1.0.61"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tonic = { version = "0.12", features = ["transport", "codegen", "prost"] }
+tonic-build = "0.12"
+tonic-reflection = "0.12"
+tracing = { version = "0.1", default-features = false }
+url = "2.3"
+
+sp1-helper = "4.0.1"
+celestia-rpc = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
+celestia-types = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
+
+op-alloy-network = "0.10.0"
+op-alloy-rpc-types = "0.10.0"
+
+# reth
+# the rev 6b602f433ed7a67c8c2e255569f262c044601c53 contains the following commit that allow to `Send` block execution strategy factory:
+# https://github.com/paradigmxyz/reth/commit/1e48668bf23dabd4aa697e7dced5935374043232
+reth-primitives = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false, features = [
     "alloy-compat",
-    "optimism",
     "std",
 ] }
-celestia-types = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
-celestia-rpc = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
-tendermint-proto = "*"
-tendermint = "*"
-bincode = "1.3.3"
-nmt-rs = "*"
+reth-primitives-traits = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-codecs = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-consensus = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-evm = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-optimism-evm = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-optimism-primitives = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-storage-errors = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-trie = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-trie-common = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-optimism-chainspec = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-execution-errors = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-db = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-errors = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-ethereum-consensus = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-ethereum-primitives = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-optimism-consensus = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
+reth-optimism-forks = { git = "https://github.com/paradigmxyz/reth", rev = "6b602f433ed7a67c8c2e255569f262c044601c53", default-features = false }
 
-sp1-sdk = "4.1.2"
+# revm
+revm = { version = "20.0.0-alpha.1", features = [
+    "serde",
+    "kzg-rs",
+], default-features = false }
+revm-primitives = { version = "16.0.0-alpha.1", features = [
+    "serde",
+], default-features = false }
+revm-bytecode = { version = "1.0.0-alpha.1", default-features = false }
+revm-interpreter = { version = "16.0.0-alpha.1", default-features = false }
+revm-precompile = { version = "17.0.0-alpha.1", default-features = false }
+revm-database-interface = { version = "1.0.0-alpha.1", default-features = false }
+revm-optimism = { version = "1.0.0-alpha.1", default-features = false }
+revm-state = { version = "1.0.0-alpha.1", default-features = false }
+revm-inspectors = "0.15"
+
+rsp-rpc-db = { path = "./crates/storage/rpc-db" }
+rsp-witness-db = { path = "./crates/storage/witness-db" }
+rsp-client-executor = { path = "./crates/executor/client" }
+rsp-host-executor = { path = "./crates/executor/host" }
+rsp-mpt = { path = "./crates/mpt" }
+rsp-primitives = { path = "./crates/primitives" }
+rsp-provider = { path = "./crates/provider" }
+
+sp1-prover = { git = "https://github.com/succinctlabs/sp1", rev = "cbb59b41515e23d991d5e601c345a7276c96531e"}
+
+# The rev in the following dependencies should match the commit used by the
+# solidity-ibc-eureka submodule in this repo.
+sp1-ics07-tendermint-prover = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "b241dc76", default-features = false }
+sp1-ics07-tendermint-utils = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "b241dc76", default-features = false }
+ibc-eureka-solidity-types = { git = "https://github.com/cosmos/solidity-ibc-eureka.git", rev = "b241dc76", default-features = false }
+
 sp1-zkvm = "4.1.2"
-sp1-helper = "4.1.2"
 sp1-build = "4.1.2"
 
+[workspace.lints]
+rust.missing_debug_implementations = "warn"
+rust.unreachable_pub = "warn"
+rust.unused_must_use = "deny"
+rust.rust_2018_idioms = { level = "deny", priority = -1 }
+rustdoc.all = "warn"
+
 [patch.crates-io]
-ecdsa-core = { git = "https://github.com/sp1-patches/signatures", package = "ecdsa", tag = "patch-0.16.9-sp1-4.0.0" }
-sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-sp1-4.0.0" }
-crypto-bigint = { git = "https://github.com/sp1-patches/RustCrypto-bigint", tag = "patch-0.5.5-sp1-4.0.0" }
-tiny-keccak = { git = "https://github.com/sp1-patches/tiny-keccak", tag = "patch-2.0.2-sp1-4.0.0" }
+alloy-evm = { git = "https://github.com/alloy-rs/evm", rev = "04fa394" }
+alloy-op-evm = { git = "https://github.com/alloy-rs/evm", rev = "04fa394" }
+# TODO: Needed to use an existing Moongate server, remove when SP1 4.1.4 is out
+sp1-build = { git = "https://github.com/succinctlabs/sp1", rev = "cbb59b41515e23d991d5e601c345a7276c96531e"}
+sp1-core-executor = { git = "https://github.com/succinctlabs/sp1", rev = "cbb59b41515e23d991d5e601c345a7276c96531e"}
+sp1-prover = { git = "https://github.com/succinctlabs/sp1", rev = "cbb59b41515e23d991d5e601c345a7276c96531e"}
+sp1-sdk = { git = "https://github.com/succinctlabs/sp1", rev = "cbb59b41515e23d991d5e601c345a7276c96531e"}
