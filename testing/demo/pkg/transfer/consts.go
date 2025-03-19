@@ -19,11 +19,6 @@ const (
 	ethereumRPC = "http://localhost:8545/"
 	// celestiaProverRPC is the RPC endpoint for the Celestia prover.
 	celestiaProverRPC = "localhost:50051"
-
-	// payloadVersion is the version of the payload.
-	payloadVersion = "ics20-1"
-	// payloadEncoding is the encoding of the payload.
-	payloadEncoding = "application/x-solidity-abi"
 )
 
 // ethereumAddress is an address on the EVM chain.

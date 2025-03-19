@@ -15,6 +15,7 @@ import (
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -227,7 +228,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to decode encoded_packet_hex: %w", err)
 	}
 
-	fmt.Printf("Using payload version: %s, payload encoding: %s\n", payloadVersion, payloadEncoding)
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth),
 		ics26router.IICS26RouterMsgsMsgRecvPacket{
 			Packet: ics26router.IICS26RouterMsgsPacket{
@@ -237,10 +237,10 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 				TimeoutTimestamp: timeoutTimestamp,
 				Payloads: []ics26router.IICS26RouterMsgsPayload{
 					{
-						SourcePort: "",              // There are no ports in IBC Eureka
-						DestPort:   "",              // There are no ports in IBC Eureka
-						Version:    payloadVersion,  // ics20-1
-						Encoding:   payloadEncoding, // application/x-solidity-abi
+						SourcePort: transfertypes.PortID,      // transfer
+						DestPort:   transfertypes.PortID,      // transfer
+						Version:    transfertypes.V1,          // ics20-1
+						Encoding:   transfertypes.EncodingABI, // application/x-solidity-abi
 						Value:      payloadData,
 					},
 				},
