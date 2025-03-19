@@ -257,7 +257,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", ethTx.Hash().Hex(), ethTx.Nonce())
 	receipt := getTxReciept(context.Background(), eth, ethTx.Hash())
 	fmt.Printf("Transaction sent to Ethereum, hash: %s, status: %d\n", ethTx.Hash().Hex(), receipt.Status)
-
 	return nil
 }
 
@@ -368,7 +367,7 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
 	txOpts.GasPrice = gasPrice
-	txOpts.GasLimit = 3_000_000
+	txOpts.GasLimit = 5_000_000
 
 	return txOpts
 }
@@ -388,17 +387,18 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 
 		return receipt != nil, nil
 	})
+
 	if err != nil {
 		log.Fatalf("Failed to fetch receipt: %v", err)
 	}
 
 	// Log more details about the receipt
-	// fmt.Printf("Transaction hash: %s\n", hash.Hex())
-	// fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
-	// fmt.Printf("Gas used: %d\n", receipt.GasUsed)
-	// fmt.Printf("Logs: %v\n", receipt.Logs)
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		fmt.Println("Transaction failed. Inspect logs or contract.")
+		fmt.Printf("Transaction status: %v\n", receipt.Status)
+		fmt.Printf("Transaction hash: %s\n", hash.Hex())
+		fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
+		fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+		fmt.Printf("Logs: %v\n", receipt.Logs)
 	}
 
 	return receipt
