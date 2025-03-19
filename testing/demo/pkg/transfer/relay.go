@@ -26,11 +26,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const (
-	payloadVersion  = "ics20-1"
-	payloadEncoding = "application/x-solidity-abi"
-)
-
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light
 // client on the EVM roll-up.
 func updateTendermintLightClient() error {
@@ -57,7 +52,7 @@ func updateTendermintLightClient() error {
 	}
 
 	// Connect to the Celestia prover
-	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to prover: %w", err)
 	}
