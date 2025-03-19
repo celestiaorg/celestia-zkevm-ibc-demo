@@ -94,6 +94,29 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
     RUST_LOG=info cargo run --release --bin blevm-aggregator-script -- --prove --inputs=input/blevm-aggregator/1/21991679.bin --inputs=input/blevm-aggregator/1/21991680.bin
     ```
 
+### Other uses
+
+The `blevm-tools` binary can be used to generate the blob that is submitted to Celestia.
+
+1. (Optional) Generate client executor input for the block e.g. 18884864 using [rsp](https://github.com/succinctlabs/rsp)
+
+    ```shell
+    cd rsp
+    RUST_LOG=info cargo run --release --bin rsp -- --block-number 18884864 --chain-id 1 --rpc-url $ETH_RPC_URL --cache-dir=cache
+    ```
+
+    The resulting serialized client executor input is included at `script/input/blevm/1/18884864.bin`
+
+2. Dump the serialized bytes from the client executor input into a blob
+
+    ```shell
+     cd celestia-zkevm-ibc-demo/provers/blevm/
+     RUST_LOG=info cargo run --bin blevm-tools -- --cmd dump-header --input script/input/blevm/1/18884864.bin --output script/blob/blevm/1/18884864.bin
+    ```
+
+    The resulting blob is included in Celestia block number 2988873, see:
+    https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w=&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8=&height=2988873
+
 ### Development
 
 While developing SP1 programs (i.e. `blevm`, `blevm-mock`, `blevm-aggregate`) it is helpful to generate [development builds](https://docs.succinct.xyz/docs/sp1/writing-programs/compiling#development-builds):
