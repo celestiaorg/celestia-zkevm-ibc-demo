@@ -227,30 +227,31 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to decode encoded_packet_hex: %w", err)
 	}
-
-	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth),
-		ics26router.IICS26RouterMsgsMsgRecvPacket{
-			Packet: ics26router.IICS26RouterMsgsPacket{
-				Sequence:         packetSequence,
-				SourceClient:     groth16ClientID,
-				DestClient:       tendermintClientID,
-				TimeoutTimestamp: timeoutTimestamp,
-				Payloads: []ics26router.IICS26RouterMsgsPayload{
-					{
-						SourcePort: transfertypes.PortID,      // transfer
-						DestPort:   transfertypes.PortID,      // transfer
-						Version:    transfertypes.V1,          // ics20-1
-						Encoding:   transfertypes.EncodingABI, // application/x-solidity-abi
-						Value:      payloadData,
-					},
+	msgRecvPacket := ics26router.IICS26RouterMsgsMsgRecvPacket{
+		Packet: ics26router.IICS26RouterMsgsPacket{
+			Sequence:         packetSequence,
+			SourceClient:     groth16ClientID,
+			DestClient:       tendermintClientID,
+			TimeoutTimestamp: timeoutTimestamp,
+			Payloads: []ics26router.IICS26RouterMsgsPayload{
+				{
+					SourcePort: transfertypes.PortID,      // transfer
+					DestPort:   transfertypes.PortID,      // transfer
+					Version:    transfertypes.V1,          // ics20-1
+					Encoding:   transfertypes.EncodingABI, // application/x-solidity-abi
+					Value:      payloadData,
 				},
 			},
-			ProofCommitment: resp.Proof,
-			ProofHeight: ics26router.IICS02ClientMsgsHeight{
-				RevisionNumber: 0,
-				RevisionHeight: uint32(resp.Height),
-			},
-		})
+		},
+		ProofCommitment: resp.Proof,
+		ProofHeight: ics26router.IICS02ClientMsgsHeight{
+			RevisionNumber: 0,
+			RevisionHeight: uint32(resp.Height),
+		},
+	}
+	fmt.Printf("msgRecvPacket: %+v\n", msgRecvPacket)
+
+	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), msgRecvPacket)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
