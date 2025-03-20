@@ -36,6 +36,5 @@ pub fn main() {
             144, 215, 85, 206, 228, 192, 183, 123, 79, 244, 136, 195, 212,
         ],
     };
-    let serialized_output = bincode::serialize(&output).unwrap();
-    sp1_zkvm::io::commit(&serialized_output);
+    sp1_zkvm::io::commit(&output);
 }
