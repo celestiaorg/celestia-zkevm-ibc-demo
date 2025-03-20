@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install git and build dependencies
 RUN apk add --no-cache git make gcc libc-dev
