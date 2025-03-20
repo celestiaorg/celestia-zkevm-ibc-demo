@@ -96,7 +96,7 @@ The `script` binary will generate an SP1 proof but it depends on a DA node. You 
 
 ### Other uses
 
-The `blevm-tools` binary can be used to generate the blob that is submitted to Celestia.
+The `blevm-tools` binary can be used to re-create the serialized evm block that is submitted to Celestia by the rollup sequencer.
 
 1. (Optional) Generate client executor input for the block e.g. 18884864 using [rsp](https://github.com/succinctlabs/rsp)
 
@@ -107,7 +107,7 @@ The `blevm-tools` binary can be used to generate the blob that is submitted to C
 
     The resulting serialized client executor input is included at `script/input/blevm/1/18884864.bin`
 
-2. Dump the serialized bytes from the client executor input into a blob
+2. Dump the serialized evm block bytes from the client executor input into a blob
 
     ```shell
      cd celestia-zkevm-ibc-demo/provers/blevm/
@@ -116,6 +116,9 @@ The `blevm-tools` binary can be used to generate the blob that is submitted to C
 
     The resulting blob is included in Celestia block number 2988873, see:
     https://celenium.io/blob?commitment=eUbPUo7ddF77JSASRuZH1arKP7Ur8PYGtpW0qwvTP0w=&hash=AAAAAAAAAAAAAAAAAAAAAAAAAA8PDw8PDw8PDw8=&height=2988873
+
+    The inclusion of this blob in Celestia will be verified by the `blevm` sp1 program before verifying the execution of the EVM block. This
+    allows us to verify that the correct EVM block was included in the data square and simultaneously verify the correct execution of the EVM block.
 
 ### Development
 
