@@ -149,7 +149,7 @@ services:
     container_name: eth-celestia-indexer
     restart: unless-stopped
     volumes:
-      - indexer-data:/data
+      - ./.tmp/indexer-data:/data
     ports:
       - "8080:8080"
     environment:

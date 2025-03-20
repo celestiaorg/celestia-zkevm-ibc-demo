@@ -6,7 +6,7 @@ require (
 	github.com/celestiaorg/celestia-openrpc v0.5.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/gorilla/mux v1.8.1
-	github.com/rollkit/rollkit v0.14.1
+	github.com/rollkit/rollkit v0.13.6
 	go.etcd.io/bbolt v1.4.0
 )
 

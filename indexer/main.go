@@ -15,11 +15,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/celestiaorg/celestia-openrpc/types/share"
 	client "github.com/celestiaorg/celestia-openrpc"
+	"github.com/celestiaorg/celestia-openrpc/types/header"
+	"github.com/celestiaorg/celestia-openrpc/types/share"
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/rollkit/rollkit/types/pb/rollkit"
 	"github.com/gorilla/mux"
+	pb "github.com/rollkit/rollkit/types/pb/rollkit"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -72,7 +73,7 @@ func getEnvInt(key string, defaultValue int) int {
 	if strValue == "" {
 		return defaultValue
 	}
-	
+
 	intValue, err := strconv.Atoi(strValue)
 	if err != nil {
 		log.Printf("Warning: Could not parse %s as integer, using default value %d", key, defaultValue)
@@ -95,7 +96,7 @@ func setupDB() error {
 		if err != nil {
 			return fmt.Errorf("could not create height mappings bucket: %v", err)
 		}
-		
+
 		_, err = tx.CreateBucketIfNotExists([]byte(metaBucket))
 		if err != nil {
 			return fmt.Errorf("could not create metadata bucket: %v", err)
@@ -107,48 +108,48 @@ func setupDB() error {
 }
 
 // storeMapping saves an Ethereum block number to Celestia height mapping
-func storeMapping(ethBlockNum uint16, celestiaHeight int64) error {
+func storeMapping(ethBlockNum uint16, celestiaHeight uint64) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
-		
+
 		// Convert ethBlockNum to bytes
 		key := make([]byte, 2)
 		binary.LittleEndian.PutUint16(key, ethBlockNum)
-		
+
 		// Convert celestiaHeight to bytes
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, uint64(celestiaHeight))
-		
+
 		return b.Put(key, value)
 	})
 }
 
 // updateLastProcessedHeight updates the last processed Celestia height
-func updateLastProcessedHeight(height int64) error {
+func updateLastProcessedHeight(height uint64) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(metaBucket))
-		value := strconv.FormatInt(height, 10)
+		value := strconv.FormatUint(height, 10)
 		return b.Put([]byte(lastProcessed), []byte(value))
 	})
 }
 
 // getLastProcessedHeight retrieves the last processed Celestia height
-func getLastProcessedHeight() (int64, error) {
-	var height int64 = 0
-	
+func getLastProcessedHeight() (uint64, error) {
+	var height uint64 = 0
+
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(metaBucket))
 		v := b.Get([]byte(lastProcessed))
-		
+
 		if v == nil {
 			return nil // No last processed height found
 		}
-		
+
 		var err error
-		height, err = strconv.ParseInt(string(v), 10, 64)
+		height, err = strconv.ParseUint(string(v), 10, 64)
 		return err
 	})
-	
+
 	return height, err
 }
 
@@ -156,25 +157,25 @@ func getLastProcessedHeight() (int64, error) {
 func getCelestiaHeight(ethBlockNum uint16) (int64, bool, error) {
 	var celestiaHeight int64
 	var found bool
-	
+
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
-		
+
 		// Convert ethBlockNum to bytes
 		key := make([]byte, 2)
 		binary.LittleEndian.PutUint16(key, ethBlockNum)
-		
+
 		v := b.Get(key)
 		if v == nil {
 			found = false
 			return nil
 		}
-		
+
 		found = true
 		celestiaHeight = int64(binary.LittleEndian.Uint64(v))
 		return nil
 	})
-	
+
 	return celestiaHeight, found, err
 }
 
@@ -193,48 +194,48 @@ func decodeEthBlockNumber(data []byte) (uint16, error) {
 	if len(data) < 2 {
 		return 0, fmt.Errorf("insufficient data: need at least 2 bytes, got %d", len(data))
 	}
-	
+
 	return binary.LittleEndian.Uint16(data[:2]), nil
 }
 
 // startIndexer starts the indexing service that listens for new Celestia blocks and extracts Ethereum block numbers
 func startIndexer(ctx context.Context, config Config) {
+	// Add to wait group before any possible returns
 	wg.Add(1)
-	defer wg.Done()
+
+	nsBytes, err := hex.DecodeString(config.CelestiaNamespace)
+	if err != nil {
+		panic(err)
+	}
+
+	namespace, err := share.NewBlobNamespaceV0(nsBytes)
+	if err != nil {
+		panic(err)
+	}
 
 	log.Println("Starting indexer service...")
-	
+
 	// Function to create and establish connection
-	connectClient := func() (*client.Client, <-chan *share.ExtendedHeader, error) {
+	connectClient := func() (*client.Client, <-chan *header.ExtendedHeader, error) {
 		c, err := client.NewClient(ctx, config.CelestiaNodeURL, config.CelestiaAuthToken)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create client: %v", err)
 		}
-		
-		nsBytes, err := hex.DecodeString(config.CelestiaNamespace)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode namespace: %v", err)
-		}
-		
-		namespace, err := share.NewBlobNamespaceV0(nsBytes)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create namespace: %v", err)
-		}
-		
+
 		// Get the last processed height to start from
 		lastHeight, err := getLastProcessedHeight()
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get last processed height: %v", err)
 		}
-		
+
 		// Subscribe to new headers
 		headerChan, err := c.Header.Subscribe(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to subscribe: %v", err)
 		}
-		
+
 		log.Printf("Connected to Celestia node, resuming from height %d", lastHeight)
-		
+
 		// If we have a last processed height, process any blocks we missed
 		if lastHeight > 0 {
 			go func() {
@@ -244,26 +245,26 @@ func startIndexer(ctx context.Context, config Config) {
 					log.Printf("Error getting latest height: %v", err)
 					return
 				}
-				
+
 				latestHeight := latestHeader.Height()
-				
+
 				// Process any missed blocks (up to a reasonable limit)
-				maxBackfill := int64(100) // Limit how far back we'll go
+				maxBackfill := uint64(100) // Limit how far back we'll go
 				startHeight := lastHeight + 1
-				
+
 				if latestHeight-startHeight > maxBackfill {
 					startHeight = latestHeight - maxBackfill
 					log.Printf("Too many missed blocks, limiting backfill to %d blocks", maxBackfill)
 				}
-				
+
 				log.Printf("Backfilling missed blocks from %d to %d", startHeight, latestHeight)
-				
+
 				for h := startHeight; h <= latestHeight; h++ {
 					processHeight(ctx, c, namespace, h)
 				}
 			}()
 		}
-		
+
 		return c, headerChan, nil
 	}
 
@@ -271,6 +272,7 @@ func startIndexer(ctx context.Context, config Config) {
 	c, headerChan, err := connectClient()
 	if err != nil {
 		log.Printf("Initial connection failed: %v", err)
+		// Don't quit on initial connection failure, the reconnect loop will try again
 	}
 
 	for {
@@ -300,17 +302,17 @@ func startIndexer(ctx context.Context, config Config) {
 				headerChan = nil
 				continue
 			}
-			
+
 			height := header.Height()
 			log.Printf("Processing new block at height %d", height)
-			
+
 			// Process the height
-			processHeight(ctx, c, share.Namespace{NamespaceVersion: 0, NamespaceID: []byte(config.CelestiaNamespace)}, height)
-			
+			processHeight(ctx, c, namespace, height)
+
 		case <-ctx.Done():
 			log.Println("Context canceled, shutting down indexer...")
 			return
-			
+
 		case <-shutdownCh:
 			log.Println("Shutting down indexer...")
 			return
@@ -319,41 +321,41 @@ func startIndexer(ctx context.Context, config Config) {
 }
 
 // processHeight processes blobs at a specific Celestia height
-func processHeight(ctx context.Context, c *client.Client, namespace share.Namespace, height int64) {
+func processHeight(ctx context.Context, c *client.Client, namespace share.Namespace, height uint64) {
 	// Create a timeout context for this operation
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	// Fetch all blobs at the specified height
 	blobs, err := c.Blob.GetAll(timeoutCtx, height, []share.Namespace{namespace})
 	if err != nil {
 		log.Printf("Error fetching blobs at height %d: %v", height, err)
 		return
 	}
-	
+
 	log.Printf("Found %d blobs at height %d", len(blobs), height)
-	
+
 	for _, blob := range blobs {
 		block, err := decodeRollkitBlock(blob.Blob.Data)
 		if err != nil {
 			log.Printf("Error decoding block at height %d: %v", height, err)
 			continue
 		}
-		
+
 		if len(block.Data.Txs) < 1 {
 			log.Printf("No payload transaction found in block at height %d", height)
 			continue
 		}
-		
+
 		data := block.Data.Txs[0]
 		ethBlockNum, err := decodeEthBlockNumber(data)
 		if err != nil {
 			log.Printf("Error decoding Ethereum block number at height %d: %v", height, err)
 			continue
 		}
-		
+
 		log.Printf("Found Ethereum block %d at Celestia height %d", ethBlockNum, height)
-		
+
 		// Store the mapping
 		err = storeMapping(ethBlockNum, height)
 		if err != nil {
@@ -361,7 +363,7 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 			continue
 		}
 	}
-	
+
 	// Update the last processed height
 	err = updateLastProcessedHeight(height)
 	if err != nil {
@@ -371,53 +373,53 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 
 // startAPI starts the HTTP API server
 func startAPI(config Config) {
+	// Add to wait group before any possible returns
 	wg.Add(1)
-	defer wg.Done()
-	
+
 	router := mux.NewRouter()
-	
+
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}).Methods("GET")
-	
+
 	// Get Celestia height for Ethereum block
 	router.HandleFunc("/inclusion_height/{eth_block_number}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		ethBlockNumStr := vars["eth_block_number"]
-		
+
 		// Parse Ethereum block number
 		ethBlockNum64, err := strconv.ParseUint(ethBlockNumStr, 10, 16)
 		if err != nil {
 			http.Error(w, "Invalid Ethereum block number", http.StatusBadRequest)
 			return
 		}
-		
+
 		ethBlockNum := uint16(ethBlockNum64)
-		
+
 		// Get mapping from database
 		celestiaHeight, found, err := getCelestiaHeight(ethBlockNum)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 			return
 		}
-		
+
 		if !found {
 			http.Error(w, "Ethereum block not found", http.StatusNotFound)
 			return
 		}
-		
+
 		// Return the Celestia height
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"eth_block_number": %d, "celestia_height": %d}`, ethBlockNum, celestiaHeight)
 	}).Methods("GET")
-	
+
 	// Get all mappings endpoint
 	router.HandleFunc("/mappings", func(w http.ResponseWriter, r *http.Request) {
 		mappings := make(map[string]int64)
-		
+
 		err := db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(bucketName))
 			return b.ForEach(func(k, v []byte) error {
@@ -427,12 +429,12 @@ func startAPI(config Config) {
 				return nil
 			})
 		})
-		
+
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Build a simple JSON response
 		response := strings.Builder{}
 		response.WriteString("{")
@@ -445,12 +447,12 @@ func startAPI(config Config) {
 			first = false
 		}
 		response.WriteString("}")
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(response.String()))
 	}).Methods("GET")
-	
+
 	// Status endpoint
 	router.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		lastHeight, err := getLastProcessedHeight()
@@ -458,12 +460,12 @@ func startAPI(config Config) {
 			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"last_processed_celestia_height": %d}`, lastHeight)
 	}).Methods("GET")
-	
+
 	// Start the server
 	server := &http.Server{
 		Addr:         ":" + config.APIPort,
@@ -471,60 +473,72 @@ func startAPI(config Config) {
 		ReadTimeout:  config.HTTPTimeout,
 		WriteTimeout: config.HTTPTimeout,
 	}
-	
+
 	// Handle graceful shutdown
 	go func() {
 		<-shutdownCh
 		log.Println("Shutting down API server...")
-		
+
 		// Create a timeout context for shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		
+
 		if err := server.Shutdown(ctx); err != nil {
 			log.Printf("Error shutting down server: %v", err)
 		}
 	}()
-	
+
 	log.Printf("API server listening on port %s", config.APIPort)
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Printf("API server error: %v", err)
+		// Make sure we signal the waitgroup even on error
+		wg.Done()
+		return
 	}
+
+	// This is needed to ensure wg.Done() is called when server.Shutdown() succeeds
+	wg.Done()
 }
 
 func main() {
-	log.Println("Starting Ethereum to Celestia block height indexer...")
-	
 	// Load configuration
 	config := loadConfig()
-	
+
 	// Setup the database
 	if err := setupDB(); err != nil {
 		log.Fatalf("Failed to setup database: %v", err)
 	}
 	defer db.Close()
-	
+
 	// Set up context for the indexer
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
+	// Initialize shutdown channel
+	shutdownCh = make(chan struct{})
+
 	// Handle interrupt signals
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	
+
 	go func() {
 		sig := <-sigCh
 		log.Printf("Received signal: %v", sig)
 		close(shutdownCh)
 		cancel()
 	}()
-	
-	// Start the indexer
-	go startIndexer(ctx, config)
-	
-	// Start the API
+
+	// Start the API service
 	go startAPI(config)
-	
+	log.Println("API service started")
+
+	// Start the indexer service
+	go startIndexer(ctx, config)
+	log.Println("Indexer service started")
+
+	// Add a ready signal
+	log.Println("All services started successfully, running...")
+
 	// Wait for services to finish
 	wg.Wait()
 	log.Println("All services have shut down. Exiting.")

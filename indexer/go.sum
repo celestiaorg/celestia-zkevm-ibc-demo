@@ -321,8 +321,8 @@ github.com/raulk/go-watchdog v1.3.0 h1:oUmdlHxdkXRJlwfG0O9omj8ukerm8MEQavSiDTEtB
 github.com/raulk/go-watchdog v1.3.0/go.mod h1:fIvOnLbF0b0ZwkB9YU4mOW9Did//4vPZtDqv66NfsMU=
 github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
-github.com/rollkit/rollkit v0.14.1 h1:YijAxNWa+Qy7u9EaFzRRX7lOU5bhKqZrzcJpoSn9Cps=
-github.com/rollkit/rollkit v0.14.1/go.mod h1:f9p7jooXjJYIndjXkaTU13jBGTlqk2Y2OL9UoxADY20=
+github.com/rollkit/rollkit v0.13.6 h1:ZdIBG5D5RuQvnnJSY8s3m46dR3A3F6jHN+01zX+Avt0=
+github.com/rollkit/rollkit v0.13.6/go.mod h1:clM4aPsWDJk/IN/SqCBsA+ab0/8gdh+5O4hRkLWKB7s=
 github.com/sasha-s/go-deadlock v0.3.1 h1:sqv7fDNShgjcaxkO0JNcOAlr8B9+cV5Ey/OB71efZx0=
 github.com/sasha-s/go-deadlock v0.3.1/go.mod h1:F73l+cr82YSh10GxyRI6qZiCgK64VaZjwesgfQ1/iLM=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
