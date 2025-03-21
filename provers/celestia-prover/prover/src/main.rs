@@ -1,4 +1,5 @@
 use alloy_sol_types::SolType;
+use celestia_prover::prover::KeyValueProof;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
 use sp1_sdk::HashableKey;
 use std::env;
@@ -184,7 +185,10 @@ impl Prover for ProverService {
         let start_time = Instant::now();
         let proof = self.membership_prover.generate_proof(
             trusted_block.signed_header.header.app_hash.as_bytes(),
-            key_proofs,
+            key_proofs
+                .into_iter()
+                .map(|(path, value, proof)| KeyValueProof { path, value, proof })
+                .collect(),
         );
         let elapsed = start_time.elapsed();
 

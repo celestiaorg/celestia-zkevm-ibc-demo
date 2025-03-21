@@ -9,6 +9,7 @@ use ibc_core_commitment_types::merkle::MerkleProof;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::{
     ClientState as SolClientState, ConsensusState as SolConsensusState,
 };
+use ibc_eureka_solidity_types::sp1_ics07::IMembershipMsgs::KVPair;
 use ibc_proto::{ibc::lightclients::tendermint::v1::Header as RawHeader, Protobuf};
 use sp1_sdk::{
     EnvProver, ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
@@ -33,6 +34,17 @@ pub struct SP1ICS07TendermintProver<T: SP1Program> {
 pub enum SupportedProofType {
     /// Groth16 proof.
     Groth16,
+}
+
+/// A struct representing a single key-value proof
+#[derive(Debug)]
+pub struct KeyValueProof {
+    /// The key path components
+    pub path: Vec<Vec<u8>>,
+    /// The value being proven
+    pub value: Vec<u8>,
+    /// The Merkle proof for this key-value pair
+    pub proof: MerkleProof,
 }
 
 impl<T: SP1Program> SP1ICS07TendermintProver<T> {
@@ -116,23 +128,35 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
 impl SP1ICS07TendermintProver<MembershipProgram> {
     /// Generate a proof of (non)membership for multiple key-value pairs.
     ///
+    /// # Arguments
+    /// * `commitment_root` - The root hash to prove membership against
+    /// * `proofs` - Vector of key-value proofs to verify
+    ///
     /// # Panics
-    /// Panics if the proof cannot be generated or the proof is invalid.
+    /// Panics if:
+    /// * No proofs are provided
+    /// * Too many proofs are provided (more than 255)
+    /// * Proof serialization fails
     #[must_use]
     pub fn generate_proof(
         &self,
         commitment_root: &[u8],
-        kv_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)>,
+        proofs: Vec<KeyValueProof>,
     ) -> SP1ProofWithPublicValues {
-        assert!(!kv_proofs.is_empty(), "No key-value pairs to prove");
-        let len = u8::try_from(kv_proofs.len()).expect("too many key-value pairs");
+        assert!(!proofs.is_empty(), "No key-value pairs to prove");
+        let len =
+            u16::try_from(proofs.len()).expect("too many key-value pairs (maximum 255 supported)");
 
         let mut stdin = SP1Stdin::new();
         stdin.write_slice(commitment_root);
-        stdin.write_vec(vec![len]);
-        for (path, value, proof) in kv_proofs {
-            stdin.write_vec(bincode::serialize(&path).unwrap());
-            stdin.write_vec(value);
+        stdin.write_slice(&u16::to_le_bytes(len));
+        for KeyValueProof { path, value, proof } in proofs {
+            let pair = KVPair {
+                path: path.iter().map(|v| v.clone().into()).collect(),
+                value: value.into(),
+            };
+            let encoded_pair = KVPair::abi_encode(&pair);
+            stdin.write_vec(encoded_pair);
             stdin.write_vec(proof.encode_vec());
         }
 
