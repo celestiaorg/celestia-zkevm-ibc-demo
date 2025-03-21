@@ -9,9 +9,11 @@ pub struct UpdateClientProgram;
 pub struct MembershipProgram;
 
 impl SP1Program for UpdateClientProgram {
-    const ELF: &'static [u8] = include_bytes!("../../elf/mock-update-client-elf");
+    const ELF: &'static [u8] =
+        include_bytes!("../../../../solidity-ibc-eureka/target/elf-compilation/riscv32im-succinct-zkvm-elf/release/sp1-ics07-tendermint-update-client");
 }
 
 impl SP1Program for MembershipProgram {
-    const ELF: &'static [u8] = include_bytes!("../../elf/mock-membership-elf");
+    const ELF: &'static [u8] =
+        include_bytes!("../../../../solidity-ibc-eureka/target/elf-compilation/riscv32im-succinct-zkvm-elf/release/sp1-ics07-tendermint-membership");
 }

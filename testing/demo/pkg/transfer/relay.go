@@ -120,12 +120,52 @@ func updateTendermintLightClient() error {
 	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", tx.Hash().Hex(), tx.Nonce())
 
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
+
+	// Always print transaction details and logs
+	fmt.Printf("\nTransaction details:\n")
+	fmt.Printf("Status: %v\n", receipt.Status)
+	fmt.Printf("Transaction hash: %s\n", tx.Hash().Hex())
+	fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
+	fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+	fmt.Printf("Contract address: %s\n", addresses.ICS26Router)
+	fmt.Printf("Number of logs: %d\n", len(receipt.Logs))
+
+	// Print detailed information about each log
+	for i, log := range receipt.Logs {
+		fmt.Printf("\nLog %d:\n", i)
+		fmt.Printf("  Address: %s\n", log.Address.Hex())
+
+		// Check if this log is from our contract
+		if log.Address.Hex() == addresses.ICS26Router {
+			fmt.Printf("  This is a log from our contract\n")
+		}
+
+		// The first topic is the event signature hash
+		if len(log.Topics) > 0 {
+			fmt.Printf("  Event signature hash: %x\n", log.Topics[0])
+			// You can look up this hash in your contract's events to identify which event was emitted
+		}
+
+		// Print all topics (including indexed parameters)
+		fmt.Printf("  Topics:\n")
+		for j, topic := range log.Topics {
+			fmt.Printf("    Topic %d: %x\n", j, topic)
+		}
+
+		// Print the event data (non-indexed parameters)
+		fmt.Printf("  Event data: %x\n", log.Data)
+
+		// Print other log details
+		fmt.Printf("  Block number: %d\n", log.BlockNumber)
+		fmt.Printf("  Tx hash: %s\n", log.TxHash.Hex())
+		fmt.Printf("  Tx index: %d\n", log.TxIndex)
+		fmt.Printf("  Block hash: %s\n", log.BlockHash.Hex())
+		fmt.Printf("  Index: %d\n", log.Index)
+		fmt.Printf("  Removed: %v\n", log.Removed)
+	}
+
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		fmt.Printf("Transaction failed with status: %v\n", receipt.Status)
-		fmt.Printf("Transaction hash: %s\n", tx.Hash().Hex())
-		fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
-		fmt.Printf("Gas used: %d\n", receipt.GasUsed)
-		fmt.Printf("Logs: %v\n", receipt.Logs)
+		return fmt.Errorf("transaction failed with status %v", receipt.Status)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
 	fmt.Printf("Submitted UpdateClient tx in block %v with tx hash %v\n", recvBlockNumber, receipt.TxHash.Hex())

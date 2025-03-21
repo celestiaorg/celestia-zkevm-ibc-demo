@@ -9,7 +9,7 @@ use ibc_core_commitment_types::merkle::MerkleProof;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::{
     ClientState as SolClientState, ConsensusState as SolConsensusState,
 };
-use ibc_proto::Protobuf;
+use ibc_proto::{ibc::lightclients::tendermint::v1::Header as RawHeader, Protobuf};
 use sp1_sdk::{
     EnvProver, ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
 };
@@ -97,7 +97,9 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
         // Encode the inputs into our program.
         let encoded_1 = client_state.abi_encode();
         let encoded_2 = trusted_consensus_state.abi_encode();
-        let encoded_3 = serde_cbor::to_vec(proposed_header).unwrap();
+        let mut encoded_3 = vec![];
+        <Header as Protobuf<RawHeader>>::encode(proposed_header.clone(), &mut encoded_3)
+            .expect("Failed to encode header");
         let encoded_4 = time.to_le_bytes().into();
 
         // Write the encoded inputs to stdin.
