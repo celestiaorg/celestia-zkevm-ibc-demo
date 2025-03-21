@@ -59,40 +59,29 @@ func updateTendermintLightClient() error {
 	}
 	defer conn.Close()
 
-	fmt.Printf("Requesting celestia-prover StateTransitionVerifierKey...\n")
+	fmt.Printf("Requesting celestia-prover state transition verifier key...\n")
 	proverClient := proverclient.NewProverClient(conn)
 	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
 	if err != nil {
 		return fmt.Errorf("failed to get celestia-prover info %w", err)
 	}
-	fmt.Printf("Received celestia-prover StateTransitionVerifierKey: %v\n", info.StateTransitionVerifierKey)
+	fmt.Printf("Received celestia-prover state transition verifier key: %v\n", info.StateTransitionVerifierKey)
 	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
 	}
 	var verifierKey [32]byte
 	copy(verifierKey[:], verifierKeyDecoded)
+	fmt.Printf("verifierKey: %x\n", verifierKey)
 
-	var resp *proverclient.ProveStateTransitionResponse
-	fmt.Printf("Generating new state transition proof...\n")
+	fmt.Printf("Requesting celestia-prover state transition proof...\n")
 	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-	for retries := 0; retries < 3; retries++ {
-		resp, err = proverClient.ProveStateTransition(ctx, request)
-		if err == nil {
-			break
-		}
-		if ctx.Err() != nil {
-			return fmt.Errorf("context cancelled while getting state transition proof: %w", ctx.Err())
-		}
-		time.Sleep(time.Second * time.Duration(retries+1))
-	}
+	resp, err := proverClient.ProveStateTransition(context.Background(), request)
 	if err != nil {
-		return fmt.Errorf("failed to get state transition proof after retries: %w", err)
+		return fmt.Errorf("failed to get state transition proof: %w", err)
 	}
-
 	fmt.Printf("Received celestia-prover state transition proof.\n")
+
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return err
@@ -133,8 +122,8 @@ func updateTendermintLightClient() error {
 	return nil
 }
 
-// relayByTx implements the logic that the relayer would perform directly
-// It processes source transactions, extracts IBC events, generates proofs,
+// relayByTx implements the logic of an IBC relayer.
+// It processes source tx, extracts IBC events, generates proofs,
 // and creates an Ethereum transaction to submit to the ICS26Router contract.
 func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Relaying transaction %s to client %s...\n", sourceTxHash, targetClientID)
@@ -173,7 +162,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Packet sequence: %d\n", packetSequence)
 
 	var resp *proverclient.ProveStateMembershipResponse
-	celestiaProverConn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to celestia-prover: %w", err)
 	}
