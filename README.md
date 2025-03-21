@@ -30,18 +30,6 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
-1. Apply this diff to the `solidity-ibc-eureka/justfile`:
-
-    ```diff
-    genesis-sp1-ics07: build-sp1-programs
-    @echo "Generating the genesis file..."
-    -  RUST_LOG=info cargo run --bin operator --release -- genesis -o scripts/genesis.json
-    +  RUST_LOG=info cargo run --bin operator --release -- genesis --proof-type groth16 -o scripts/genesis.json
-    +  @echo "--> Setting the verifier key in scripts/genesis.json"
-    +  @sed -i '' 's|"updateClientVkey": "[^"]*"|"updateClientVkey": "0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25"|' scripts/genesis.json
-    +  @echo "--> Set the verifier key to 0x001b34e32d4edc192d412adba46f71919b0991694bf70f93dc613dbedce0eb25."
-    ```
-
 1. Create and populate the `.env` file
 
     ```shell
