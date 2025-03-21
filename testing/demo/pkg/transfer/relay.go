@@ -109,13 +109,23 @@ func updateTendermintLightClient() error {
 	}
 
 	fmt.Printf("Submitting UpdateClient tx to EVM roll-up...\n")
+	fmt.Printf("Client ID: %s\n", tendermintClientID)
+	fmt.Printf("Encoded message length: %d bytes\n", len(encoded))
+	fmt.Printf("Encoded message: %x\n", encoded)
+
 	tx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create transaction: %w", err)
 	}
+	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", tx.Hash().Hex(), tx.Nonce())
+
 	receipt := getTxReciept(context.Background(), eth, tx.Hash())
 	if ethtypes.ReceiptStatusSuccessful != receipt.Status {
-		return fmt.Errorf("receipt status want %v, got %v. logs: %v", ethtypes.ReceiptStatusSuccessful, receipt.Status, receipt.Logs)
+		fmt.Printf("Transaction failed with status: %v\n", receipt.Status)
+		fmt.Printf("Transaction hash: %s\n", tx.Hash().Hex())
+		fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
+		fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+		fmt.Printf("Logs: %v\n", receipt.Logs)
 	}
 	recvBlockNumber := receipt.BlockNumber.Uint64()
 	fmt.Printf("Submitted UpdateClient tx in block %v with tx hash %v\n", recvBlockNumber, receipt.TxHash.Hex())
