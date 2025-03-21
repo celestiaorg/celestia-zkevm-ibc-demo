@@ -128,10 +128,6 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
 impl SP1ICS07TendermintProver<MembershipProgram> {
     /// Generate a proof of (non)membership for multiple key-value pairs.
     ///
-    /// # Arguments
-    /// * `commitment_root` - The root hash to prove membership against
-    /// * `proofs` - Vector of key-value proofs to verify
-    ///
     /// # Panics
     /// Panics if:
     /// * No proofs are provided
