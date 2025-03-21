@@ -78,10 +78,8 @@ start:
 
 ## setup: Set up the IBC light clients.
 setup:
-# TODO: de-duplicate this. Currently, we deploy the Tendermint light client twice
-# once in `just deploy-sp1-ics07` and once in deployEurekaContracts.
-	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
-	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
+	@echo "--> Creating genesis.json for tendermint light client"
+	@cd ./solidity-ibc-eureka && just genesis-sp1-ics07
 	@echo "--> Setting up IBC light clients"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
