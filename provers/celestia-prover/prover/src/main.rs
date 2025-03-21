@@ -28,6 +28,7 @@ use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
 use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
+use std::time::Instant;
 use tendermint_rpc::HttpClient;
 
 pub struct ProverService {
@@ -130,18 +131,21 @@ impl Prover for ProverService {
             &header.height().revision_height()
         );
 
+        let start_time = Instant::now();
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
             &trusted_consensus_state,
             &header,
             now,
         );
+        let elapsed = start_time.elapsed();
 
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
         };
-        println!("Generated state transition proof.");
+
+        println!("Generated state transition proof in {:.2?}", elapsed);
 
         Ok(Response::new(response))
     }
@@ -177,14 +181,17 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         println!("Generating proof with key_proofs: {:?}", key_proofs);
+        let start_time = Instant::now();
         let proof = self.membership_prover.generate_proof(
             trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs,
         );
+        let elapsed = start_time.elapsed();
 
         println!(
-            "Generated membership proof for height: {:?}",
-            trusted_block.signed_header.header.height.value() as i64
+            "Generated membership proof for height: {:?} in {:.2?}",
+            trusted_block.signed_header.header.height.value() as i64,
+            elapsed
         );
 
         let response = ProveStateMembershipResponse {
