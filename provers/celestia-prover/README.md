@@ -63,3 +63,12 @@ Push new image to GHCR:
 ```shell
 make publish-celestia-prover-docker
 ```
+
+## Benchmarks
+
+How long does it take to generate a proof?
+
+| Proof            | Time       | Cycles |
+|------------------|------------|--------|
+| State Transition | 80s - 235s | TBD    |
+| Membership       | 105s       | TBD    |
