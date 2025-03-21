@@ -121,7 +121,7 @@ jobs:
           just-version: "1.40.0"
 
       - name: Build SP1 programs in solidity-ibc-eureka
-        run: cd ./solidity-ibc-eureka && just build-sp1-programs
+        run: just build-sp1-programs
         working-directory: ./solidity-ibc-eureka
 
       - name: Build celestia prover
