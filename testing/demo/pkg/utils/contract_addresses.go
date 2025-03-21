@@ -12,11 +12,12 @@ type ContractAddresses struct {
 	ICS07Tendermint string `json:"ics07Tendermint"`
 	ICS20Transfer   string `json:"ics20Transfer"`
 	ICS26Router     string `json:"ics26Router"`
+	// TODO: Add IBCERC20 address but it doesn't show up in run-latest returns block.
+	// IBCERC20        string `json:"ibcERC20"`
 }
 
 func (c ContractAddresses) String() string {
-	return fmt.Sprintf("ERC20: %s\nICS07Tendermint: %s\nICS20Transfer: %s\nICS26Router: %s\n",
-		c.ERC20, c.ICS07Tendermint, c.ICS20Transfer, c.ICS26Router)
+	return fmt.Sprintf("ERC20: %s\nICS07Tendermint: %s\nICS20Transfer: %s\nICS26Router: %s\n", c.ERC20, c.ICS07Tendermint, c.ICS20Transfer, c.ICS26Router)
 }
 
 func ExtractDeployedContractAddresses() (ContractAddresses, error) {
