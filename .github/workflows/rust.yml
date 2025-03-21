@@ -111,6 +111,11 @@ jobs:
           ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
+
+      - name: Build SP1 programs in solidity-ibc-eureka
+        run: just build-sp1-programs
+        working-directory: ./solidity-ibc-eureka
+
       - name: Build
         run: cargo build --release --locked
         working-directory: ./provers/celestia-prover/
