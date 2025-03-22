@@ -2,14 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
-	"log"
-	"math/big"
 	"strconv"
 	"strings"
-	"time"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
@@ -18,7 +14,6 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -27,117 +22,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light
-// client on the EVM roll-up.
-func updateTendermintLightClient() error {
-	fmt.Printf("Updating Tendermint light client on EVM roll-up...\n")
-
-	addresses, err := utils.ExtractDeployedContractAddresses()
-	if err != nil {
-		return err
-	}
-	ethClient, err := ethclient.Dial(ethereumRPC)
-	if err != nil {
-		return err
-	}
-	icsRouter, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
-	if err != nil {
-		return err
-	}
-	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
-	if err != nil {
-		return err
-	}
-	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, faucet)
-	if err != nil {
-		return err
-	}
-
-	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return fmt.Errorf("failed to connect to prover: %w", err)
-	}
-	defer celestiaProverConn.Close()
-
-	proverClient := proverclient.NewProverClient(celestiaProverConn)
-
-	fmt.Printf("Requesting celestia-prover state transition verifier key...\n")
-	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
-	if err != nil {
-		return fmt.Errorf("failed to get celestia-prover info %w", err)
-	}
-	fmt.Printf("Received celestia-prover state transition verifier key: %v\n", info.StateTransitionVerifierKey)
-
-	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
-	if err != nil {
-		return fmt.Errorf("failed to decode verifier key %w", err)
-	}
-	var verifierKey [32]byte
-	copy(verifierKey[:], verifierKeyDecoded)
-	fmt.Printf("verifierKey: %x\n", verifierKey)
-
-	fmt.Printf("Requesting celestia-prover state transition proof...\n")
-	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
-	resp, err := proverClient.ProveStateTransition(context.Background(), request)
-	if err != nil {
-		return fmt.Errorf("failed to get state transition proof: %w", err)
-	}
-	fmt.Printf("Received celestia-prover state transition proof.\n")
-
-	arguments, err := getUpdateClientArguments()
-	if err != nil {
-		return err
-	}
-
-	encoded, err := arguments.Pack(struct {
-		Sp1Proof struct {
-			VKey         [32]byte
-			PublicValues []byte
-			Proof        []byte
-		}
-	}{
-		Sp1Proof: struct {
-			VKey         [32]byte
-			PublicValues []byte
-			Proof        []byte
-		}{
-			VKey:         verifierKey,
-			PublicValues: resp.PublicValues,
-			Proof:        resp.Proof,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("error packing msg %w", err)
-	}
-
-	fmt.Printf("Submitting UpdateClient tx to %v on EVM roll-up with encoded message: %x...\n", tendermintClientID, encoded)
-
-	tx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
-	if err != nil {
-		return fmt.Errorf("failed to create transaction: %w", err)
-	}
-
-	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", tx.Hash().Hex(), tx.Nonce())
-	receipt, err := getTxReciept(context.Background(), eth, tx.Hash())
-	if err != nil {
-		return fmt.Errorf("failed to get transaction receipt: %w", err)
-	}
-
-	fmt.Printf("Submitted UpdateClient tx in block %v with tx hash %v\n", receipt.BlockNumber.Uint64(), receipt.TxHash.Hex())
-
-	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		return fmt.Errorf("UpdateClient tx failed with status %v", receipt.Status)
-	}
-
-	fmt.Printf("Updated Tendermint light client on EVM roll-up.\n")
-	return nil
-}
-
 // relayByTx implements the logic of an IBC relayer.
 // It processes source tx, extracts IBC events, generates proofs,
 // and creates an Ethereum transaction to submit to the ICS26Router contract.
 func relayByTx(sourceTxHash string, targetClientID string) error {
-	fmt.Printf("Relaying transaction %s to client %s...\n", sourceTxHash, targetClientID)
+	fmt.Printf("Relaying IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
 
 	txID, err := hex.DecodeString(strings.TrimPrefix(sourceTxHash, "0x"))
 	if err != nil {
@@ -255,16 +144,15 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
-	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", ethTx.Hash().Hex(), ethTx.Nonce())
-
 	receipt, err := getTxReciept(context.Background(), eth, ethTx.Hash())
 	if err != nil {
 		return fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		return fmt.Errorf("failed to update client on EVM roll-up. Transaction status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
+		return fmt.Errorf("RecvPacket failed with status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
 	}
-	fmt.Printf("Updated Tendermint light client on EVM roll-up in block %v, tx hash: %s, status: %d\n", receipt.BlockNumber.Uint64(), receipt.TxHash.Hex(), receipt.Status)
+	fmt.Printf("RecvPacket success in block %v\n", receipt.BlockNumber.Uint64())
+	fmt.Printf("Relayed IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
 	return nil
 }
 
@@ -350,57 +238,6 @@ func getSendPacketEvent(simAppTx *coretypes.ResultTx) (map[string]interface{}, e
 	sendPacketEvent := sendPacketEvents[0]
 	fmt.Printf("Extracted SendPacket event from transaction: %+v\n", sendPacketEvent)
 	return sendPacketEvent, nil
-}
-
-func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.TransactOpts {
-	ethClient, err := ethclient.Dial(chain.RPC)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fromAddress := crypto.PubkeyToAddress(key.PublicKey)
-	nonce, err := ethClient.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		nonce = 0
-	}
-
-	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
-	if err != nil {
-		panic(err)
-	}
-
-	txOpts, err := bind.NewKeyedTransactorWithChainID(key, chain.ChainID)
-	if err != nil {
-		log.Fatal(err)
-	}
-	txOpts.Nonce = big.NewInt(int64(nonce))
-	txOpts.GasPrice = gasPrice
-	txOpts.GasLimit = 5_000_000
-
-	return txOpts
-}
-
-func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.Hash) (*ethtypes.Receipt, error) {
-	ethClient, err := ethclient.Dial(chain.RPC)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to Ethereum: %w", err)
-	}
-
-	var receipt *ethtypes.Receipt
-	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
-		receipt, err = ethClient.TransactionReceipt(ctx, hash)
-		if err != nil {
-			return false, nil
-		}
-
-		return receipt != nil, nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch receipt: %v", err)
-	}
-
-	return receipt, nil
 }
 
 func getUpdateClientArguments() (abi.Arguments, error) {

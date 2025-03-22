@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -21,10 +20,8 @@ func main() {
 		log.Fatalf("Failed to update Tendermint light client: %v\n", err)
 	}
 
-	fmt.Printf("Relaying IBC transaction %v...\n", txHash)
 	err = relayByTx(txHash, tendermintClientID)
 	if err != nil {
 		log.Fatalf("Failed to relay IBC transaction: %v", err)
 	}
-	fmt.Printf("Relayed IBC transaction %v", txHash)
 }
