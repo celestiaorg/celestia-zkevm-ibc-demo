@@ -65,36 +65,20 @@ func updateTendermintLightClient() error {
 }
 
 func getUpdateMsg() (updateMsg []byte, err error) {
-	addresses, err := utils.ExtractDeployedContractAddresses()
-	if err != nil {
-		return nil, err
-	}
-
 	verifierKey, err := getProverSTFKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get prover state transition verifier key: %w", err)
 	}
-
-	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	resp, err := getProofResponse()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to prover: %w", err)
+		return nil, fmt.Errorf("failed to get proof response: %w", err)
 	}
-	defer celestiaProverConn.Close()
-	proverClient := proverclient.NewProverClient(celestiaProverConn)
-
-	fmt.Printf("Requesting celestia-prover state transition proof...\n")
-	resp, err := proverClient.ProveStateTransition(context.Background(), &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
-	}
-	fmt.Printf("Received celestia-prover state transition proof.\n")
-
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
 		return nil, err
 	}
 
-	encoded, err := arguments.Pack(struct {
+	updateMsg, err = arguments.Pack(struct {
 		Sp1Proof struct {
 			VKey         [32]byte
 			PublicValues []byte
@@ -114,7 +98,7 @@ func getUpdateMsg() (updateMsg []byte, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("error packing msg %w", err)
 	}
-	return encoded, nil
+	return updateMsg, nil
 }
 
 func getUpdateClientArguments() (abi.Arguments, error) {
@@ -126,4 +110,27 @@ func getUpdateClientArguments() (abi.Arguments, error) {
 	}
 
 	return parsed.Methods["updateClient"].Inputs, nil
+}
+
+func getProofResponse() (resp *proverclient.ProveStateTransitionResponse, err error) {
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return nil, err
+	}
+
+	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to prover: %w", err)
+	}
+	defer celestiaProverConn.Close()
+	proverClient := proverclient.NewProverClient(celestiaProverConn)
+
+	fmt.Printf("Requesting celestia-prover state transition proof...\n")
+
+	resp, err = proverClient.ProveStateTransition(context.Background(), &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
+	}
+	fmt.Printf("Received celestia-prover state transition proof.\n")
+	return resp, nil
 }
