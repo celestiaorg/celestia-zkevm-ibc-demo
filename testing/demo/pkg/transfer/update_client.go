@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
-	"strings"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
@@ -44,32 +42,20 @@ func updateTendermintLightClient() error {
 		return err
 	}
 
+	verifierKey, err := getProverSTFKey()
+	if err != nil {
+		return fmt.Errorf("failed to get prover state transition verifier key: %w", err)
+	}
+
 	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to prover: %w", err)
 	}
 	defer celestiaProverConn.Close()
-
 	proverClient := proverclient.NewProverClient(celestiaProverConn)
 
-	fmt.Printf("Requesting celestia-prover state transition verifier key...\n")
-	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
-	if err != nil {
-		return fmt.Errorf("failed to get celestia-prover info %w", err)
-	}
-	fmt.Printf("Received celestia-prover state transition verifier key: %v\n", info.StateTransitionVerifierKey)
-
-	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
-	if err != nil {
-		return fmt.Errorf("failed to decode verifier key %w", err)
-	}
-	var verifierKey [32]byte
-	copy(verifierKey[:], verifierKeyDecoded)
-	fmt.Printf("verifierKey: %x\n", verifierKey)
-
 	fmt.Printf("Requesting celestia-prover state transition proof...\n")
-	request := &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint}
-	resp, err := proverClient.ProveStateTransition(context.Background(), request)
+	resp, err := proverClient.ProveStateTransition(context.Background(), &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint})
 	if err != nil {
 		return fmt.Errorf("failed to get state transition proof: %w", err)
 	}
