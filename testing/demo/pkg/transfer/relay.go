@@ -148,7 +148,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		return fmt.Errorf("RecvPacket failed with status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
+		return fmt.Errorf("RecvPacket failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
 	}
 	fmt.Printf("RecvPacket success in block %v\n", receipt.BlockNumber.Uint64())
 	fmt.Printf("Relayed IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)

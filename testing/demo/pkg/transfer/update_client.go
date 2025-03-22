@@ -48,7 +48,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get update msg: %w", err)
 	}
 
-	fmt.Printf("Submitting UpdateClient on EVM roll-up... ")
+	fmt.Printf("Submitting UpdateClient on EVM roll-up...\n")
 	ethTx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, updateMsg)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
@@ -58,7 +58,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("failed to get transaction receipt: %w", err)
 	}
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		return fmt.Errorf("UpdateClient tx failed with status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
+		return fmt.Errorf("UpdateClient tx failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
 	}
 	fmt.Printf("Updated Tendermint light client in block %v.\n", receipt.BlockNumber.Uint64())
 	return nil
