@@ -52,6 +52,8 @@ func assertVerifierKeys() error {
 	if clientMembershipKey != proverMembershipKey {
 		return fmt.Errorf("membership verifier key mismatch. client: %v, prover: %v", clientMembershipKey, proverMembershipKey)
 	}
+
+	fmt.Printf("The verifier keys on celestia-prover match the verifier keys on the Tendermint light client.")
 	return nil
 }
 
