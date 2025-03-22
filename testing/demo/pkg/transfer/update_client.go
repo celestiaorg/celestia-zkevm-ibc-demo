@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -41,15 +43,41 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
+	updateMsg, err := getUpdateMsg()
+	if err != nil {
+		return fmt.Errorf("failed to get update msg: %w", err)
+	}
+
+	fmt.Printf("Submitting UpdateClient on EVM roll-up... ")
+	ethTx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, updateMsg)
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+	receipt, err := getTxReciept(context.Background(), eth, ethTx.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
+		return fmt.Errorf("UpdateClient tx failed with status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
+	}
+	fmt.Printf("Updated Tendermint light client in block %v.\n", receipt.BlockNumber.Uint64())
+	return nil
+}
+
+func getUpdateMsg() (updateMsg []byte, err error) {
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return nil, err
+	}
 
 	verifierKey, err := getProverSTFKey()
 	if err != nil {
-		return fmt.Errorf("failed to get prover state transition verifier key: %w", err)
+		return nil, fmt.Errorf("failed to get prover state transition verifier key: %w", err)
 	}
 
 	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return fmt.Errorf("failed to connect to prover: %w", err)
+		return nil, fmt.Errorf("failed to connect to prover: %w", err)
 	}
 	defer celestiaProverConn.Close()
 	proverClient := proverclient.NewProverClient(celestiaProverConn)
@@ -57,13 +85,13 @@ func updateTendermintLightClient() error {
 	fmt.Printf("Requesting celestia-prover state transition proof...\n")
 	resp, err := proverClient.ProveStateTransition(context.Background(), &proverclient.ProveStateTransitionRequest{ClientId: addresses.ICS07Tendermint})
 	if err != nil {
-		return fmt.Errorf("failed to get state transition proof: %w", err)
+		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
 	}
 	fmt.Printf("Received celestia-prover state transition proof.\n")
 
 	arguments, err := getUpdateClientArguments()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	encoded, err := arguments.Pack(struct {
@@ -84,22 +112,18 @@ func updateTendermintLightClient() error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("error packing msg %w", err)
+		return nil, fmt.Errorf("error packing msg %w", err)
+	}
+	return encoded, nil
+}
+
+func getUpdateClientArguments() (abi.Arguments, error) {
+	var updateClientABI = "[{\"type\":\"function\",\"name\":\"updateClient\",\"stateMutability\":\"pure\",\"inputs\":[{\"name\":\"o3\",\"type\":\"tuple\",\"internalType\":\"struct IUpdateClientMsgs.MsgUpdateClient\",\"components\":[{\"name\":\"sp1Proof\",\"type\":\"tuple\",\"internalType\":\"struct ISP1Msgs.SP1Proof\",\"components\":[{\"name\":\"vKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"publicValues\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]}],\"outputs\":[]}]"
+
+	parsed, err := abi.JSON(strings.NewReader(updateClientABI))
+	if err != nil {
+		return nil, err
 	}
 
-	fmt.Printf("Submitting UpdateClient on EVM roll-up... ")
-
-	ethTx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
-	if err != nil {
-		return fmt.Errorf("failed to create transaction: %w", err)
-	}
-	receipt, err := getTxReciept(context.Background(), eth, ethTx.Hash())
-	if err != nil {
-		return fmt.Errorf("failed to get transaction receipt: %w", err)
-	}
-	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		return fmt.Errorf("UpdateClient tx failed with status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
-	}
-	fmt.Printf("Updated Tendermint light client in block %v.\n", receipt.BlockNumber.Uint64())
-	return nil
+	return parsed.Methods["updateClient"].Inputs, nil
 }

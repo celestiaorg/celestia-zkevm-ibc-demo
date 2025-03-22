@@ -13,7 +13,6 @@ import (
 	coretypes "github.com/cometbft/cometbft/rpc/core/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -238,15 +237,4 @@ func getSendPacketEvent(simAppTx *coretypes.ResultTx) (map[string]interface{}, e
 	sendPacketEvent := sendPacketEvents[0]
 	fmt.Printf("Extracted SendPacket event from transaction: %+v\n", sendPacketEvent)
 	return sendPacketEvent, nil
-}
-
-func getUpdateClientArguments() (abi.Arguments, error) {
-	var updateClientABI = "[{\"type\":\"function\",\"name\":\"updateClient\",\"stateMutability\":\"pure\",\"inputs\":[{\"name\":\"o3\",\"type\":\"tuple\",\"internalType\":\"struct IUpdateClientMsgs.MsgUpdateClient\",\"components\":[{\"name\":\"sp1Proof\",\"type\":\"tuple\",\"internalType\":\"struct ISP1Msgs.SP1Proof\",\"components\":[{\"name\":\"vKey\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"publicValues\",\"type\":\"bytes\",\"internalType\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\",\"internalType\":\"bytes\"}]}]}],\"outputs\":[]}]"
-
-	parsed, err := abi.JSON(strings.NewReader(updateClientABI))
-	if err != nil {
-		return nil, err
-	}
-
-	return parsed.Methods["updateClient"].Inputs, nil
 }
