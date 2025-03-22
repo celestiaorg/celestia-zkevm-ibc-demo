@@ -5,6 +5,11 @@ import (
 )
 
 func main() {
+	err := assertVerifierKeys()
+	if err != nil {
+		log.Fatal("Failed to assert verifier keys: ", err)
+	}
+
 	msg, err := createMsgSendPacket()
 	if err != nil {
 		log.Fatal("Failed to create msg send packet: ", err)
