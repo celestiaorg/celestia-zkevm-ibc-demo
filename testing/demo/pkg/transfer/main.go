@@ -16,12 +16,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Updating Tendermint light client on EVM roll-up...\n")
 	err = updateTendermintLightClient()
 	if err != nil {
 		log.Fatalf("Failed to update Tendermint light client: %v\n", err)
 	}
-	fmt.Printf("Updated Tendermint light client on EVM roll-up.\n")
 
 	fmt.Printf("Relaying IBC transaction %v...\n", txHash)
 	err = relayByTx(txHash, tendermintClientID)

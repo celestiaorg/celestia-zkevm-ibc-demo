@@ -30,11 +30,12 @@ import (
 // updateTendermintLightClient submits a MsgUpdateClient to the Tendermint light
 // client on the EVM roll-up.
 func updateTendermintLightClient() error {
+	fmt.Printf("Updating Tendermint light client on EVM roll-up...\n")
+
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
 	}
-
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return err
@@ -52,20 +53,21 @@ func updateTendermintLightClient() error {
 		return err
 	}
 
-	// Connect to the Celestia prover
-	conn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to prover: %w", err)
 	}
-	defer conn.Close()
+	defer celestiaProverConn.Close()
+
+	proverClient := proverclient.NewProverClient(celestiaProverConn)
 
 	fmt.Printf("Requesting celestia-prover state transition verifier key...\n")
-	proverClient := proverclient.NewProverClient(conn)
 	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
 	if err != nil {
 		return fmt.Errorf("failed to get celestia-prover info %w", err)
 	}
 	fmt.Printf("Received celestia-prover state transition verifier key: %v\n", info.StateTransitionVerifierKey)
+
 	verifierKeyDecoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
 	if err != nil {
 		return fmt.Errorf("failed to decode verifier key %w", err)
@@ -108,16 +110,26 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("error packing msg %w", err)
 	}
 
-	fmt.Printf("Submitting UpdateClient tx to client %v on EVM roll-up...\n", tendermintClientID)
-	fmt.Printf("Encoded message: %x\n", encoded)
+	fmt.Printf("Submitting UpdateClient tx to %v on EVM roll-up with encoded message: %x...\n", tendermintClientID, encoded)
 
 	tx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
+
 	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", tx.Hash().Hex(), tx.Nonce())
-	receipt := getTxReciept(context.Background(), eth, tx.Hash())
+	receipt, err := getTxReciept(context.Background(), eth, tx.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+
 	fmt.Printf("Submitted UpdateClient tx in block %v with tx hash %v\n", receipt.BlockNumber.Uint64(), receipt.TxHash.Hex())
+
+	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
+		return fmt.Errorf("UpdateClient tx failed with status %v", receipt.Status)
+	}
+
+	fmt.Printf("Updated Tendermint light client on EVM roll-up.\n")
 	return nil
 }
 
@@ -244,8 +256,15 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return fmt.Errorf("failed to create transaction: %w", err)
 	}
 	fmt.Printf("Created transaction with hash: %v and nonce: %v\n", ethTx.Hash().Hex(), ethTx.Nonce())
-	receipt := getTxReciept(context.Background(), eth, ethTx.Hash())
-	fmt.Printf("Transaction sent to Ethereum, hash: %s, status: %d\n", ethTx.Hash().Hex(), receipt.Status)
+
+	receipt, err := getTxReciept(context.Background(), eth, ethTx.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
+		return fmt.Errorf("failed to update client on EVM roll-up. Transaction status: %v, tx hash: %s, block number: %d, gas used: %d, logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
+	}
+	fmt.Printf("Updated Tendermint light client on EVM roll-up in block %v, tx hash: %s, status: %d\n", receipt.BlockNumber.Uint64(), receipt.TxHash.Hex(), receipt.Status)
 	return nil
 }
 
@@ -361,10 +380,10 @@ func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.Trans
 	return txOpts
 }
 
-func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.Hash) *ethtypes.Receipt {
+func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.Hash) (*ethtypes.Receipt, error) {
 	ethClient, err := ethclient.Dial(chain.RPC)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
 
 	var receipt *ethtypes.Receipt
@@ -378,19 +397,10 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	})
 
 	if err != nil {
-		log.Fatalf("Failed to fetch receipt: %v", err)
+		return nil, fmt.Errorf("failed to fetch receipt: %v", err)
 	}
 
-	// Log more details about the receipt
-	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		fmt.Printf("Transaction status: %v\n", receipt.Status)
-		fmt.Printf("Transaction hash: %s\n", hash.Hex())
-		fmt.Printf("Block number: %d\n", receipt.BlockNumber.Uint64())
-		fmt.Printf("Gas used: %d\n", receipt.GasUsed)
-		fmt.Printf("Logs: %v\n", receipt.Logs)
-	}
-
-	return receipt
+	return receipt, nil
 }
 
 func getUpdateClientArguments() (abi.Arguments, error) {
