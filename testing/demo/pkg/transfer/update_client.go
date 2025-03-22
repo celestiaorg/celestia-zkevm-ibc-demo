@@ -65,6 +65,10 @@ func updateTendermintLightClient() error {
 }
 
 func getUpdateMsg() (updateMsg []byte, err error) {
+	arguments, err := getUpdateClientArguments()
+	if err != nil {
+		return nil, err
+	}
 	verifierKey, err := getProverSTFKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get prover state transition verifier key: %w", err)
@@ -73,23 +77,11 @@ func getUpdateMsg() (updateMsg []byte, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get proof response: %w", err)
 	}
-	arguments, err := getUpdateClientArguments()
-	if err != nil {
-		return nil, err
-	}
 
 	updateMsg, err = arguments.Pack(struct {
-		Sp1Proof struct {
-			VKey         [32]byte
-			PublicValues []byte
-			Proof        []byte
-		}
+		Sp1Proof sp1proof
 	}{
-		Sp1Proof: struct {
-			VKey         [32]byte
-			PublicValues []byte
-			Proof        []byte
-		}{
+		Sp1Proof: sp1proof{
 			VKey:         verifierKey,
 			PublicValues: resp.PublicValues,
 			Proof:        resp.Proof,
@@ -133,4 +125,11 @@ func getProofResponse() (resp *proverclient.ProveStateTransitionResponse, err er
 	}
 	fmt.Printf("Received celestia-prover state transition proof.\n")
 	return resp, nil
+}
+
+// sp1proof represents the proof structure used in the update client message
+type sp1proof struct {
+	VKey         [32]byte
+	PublicValues []byte
+	Proof        []byte
 }
