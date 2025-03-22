@@ -53,7 +53,7 @@ func assertVerifierKeys() error {
 		return fmt.Errorf("membership verifier key mismatch. client: %v, prover: %v", clientMembershipKey, proverMembershipKey)
 	}
 
-	fmt.Printf("The verifier keys on celestia-prover match the verifier keys on the Tendermint light client.")
+	fmt.Printf("The verifier keys on celestia-prover match the verifier keys on the Tendermint light client.\n")
 	return nil
 }
 

@@ -87,7 +87,7 @@ func updateTendermintLightClient() error {
 		return fmt.Errorf("error packing msg %w", err)
 	}
 
-	fmt.Printf("Submitting UpdateClient tx to %v on EVM roll-up with encoded message: %x...\n", tendermintClientID, encoded)
+	fmt.Printf("Submitting UpdateClient on EVM roll-up... ")
 
 	ethTx, err := icsRouter.UpdateClient(getTransactOpts(faucet, eth), tendermintClientID, encoded)
 	if err != nil {
