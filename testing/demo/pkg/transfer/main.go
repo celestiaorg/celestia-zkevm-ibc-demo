@@ -7,12 +7,12 @@ import (
 func main() {
 	msg, err := createMsgSendPacket()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to create msg send packet: ", err)
 	}
 
 	txHash, err := submitMsgTransfer(msg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to submit msg transfer: ", err)
 	}
 
 	err = updateTendermintLightClient()
