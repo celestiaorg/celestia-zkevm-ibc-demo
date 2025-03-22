@@ -78,7 +78,7 @@ start:
 
 ## setup: Set up the IBC light clients.
 setup:
-	@echo "--> Creating genesis.json for tendermint light client"
+	@echo "--> Creating genesis.json for Tendermint light client"
 	@cd ./solidity-ibc-eureka && just genesis-sp1-ics07
 	@echo "--> Setting up IBC light clients"
 	@go run ./testing/demo/pkg/setup/
