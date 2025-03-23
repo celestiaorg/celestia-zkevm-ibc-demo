@@ -30,5 +30,5 @@ func main() {
 	txHash := ethcommon.HexToHash(os.Args[1])
 	rpcURL := "http://localhost:8545/"
 	result := getRevertReason(txHash, rpcURL)
-	fmt.Printf("result %v\n", string(result))
+	fmt.Printf("%v\n", string(result))
 }
