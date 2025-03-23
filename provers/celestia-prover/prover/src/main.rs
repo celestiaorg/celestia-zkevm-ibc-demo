@@ -1,3 +1,4 @@
+use alloy::primitives::Bytes;
 use alloy_sol_types::SolValue;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
@@ -169,7 +170,7 @@ impl Prover for ProverService {
         let trusted_consensus_state: SolConsensusState = trusted_block.to_consensus_state().into();
         println!("trusted_consensus_state: {:?}", trusted_consensus_state);
 
-        let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
+        let path_value_and_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
             futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
                 let path = vec![b"ibc".into(), path.into_bytes()];
                 println!("path: {:?}", path);
@@ -187,22 +188,25 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        println!("Generating proof with key_proofs: {:?}", key_proofs);
+        println!(
+            "Generating proof with path_value_and_proofs: {:?}",
+            path_value_and_proofs
+        );
+
+        let kv_proofs = path_value_and_proofs
+            .into_iter()
+            .map(|(path, value, proof)| {
+                let path = path.into_iter().map(Bytes::from).collect::<Vec<Bytes>>();
+                let value = Bytes::from(value);
+                (KVPair { path, value }, proof)
+            })
+            .collect();
+
+        // Generate the SP1 proof
         let start_time = Instant::now();
-        let proof = self.membership_prover.generate_proof(
+        let sp1_proof = self.membership_prover.generate_proof(
             trusted_block.signed_header.header.app_hash.as_bytes(),
-            key_proofs
-                .into_iter()
-                .map(|(path, value, proof)| {
-                    (
-                        KVPair {
-                            path: path.into_iter().map(|p| p.into()).collect(),
-                            value: value.into(),
-                        },
-                        proof,
-                    )
-                })
-                .collect(),
+            kv_proofs,
         );
         let elapsed = start_time.elapsed();
 
@@ -215,19 +219,19 @@ impl Prover for ProverService {
         let membership_proof = MembershipProof::from(SP1MembershipProof {
             sp1Proof: SP1Proof::new(
                 &self.membership_prover.vkey.bytes32(),
-                proof.bytes(),
-                proof.public_values.to_vec(),
+                sp1_proof.bytes(),
+                sp1_proof.public_values.to_vec(),
             ),
             trustedConsensusState: trusted_consensus_state,
         });
         println!(
-            "Converted proof to membership_proof: {:?}",
+            "Converted SP1 proof to membership_proof: {:?}",
             membership_proof
         );
-        let proof_commitment = membership_proof.abi_encode().to_vec();
+        let proof = membership_proof.abi_encode().to_vec();
 
         let response = ProveStateMembershipResponse {
-            proof: proof_commitment,
+            proof,
             height: trusted_block.signed_header.header.height.value() as i64,
         };
 
