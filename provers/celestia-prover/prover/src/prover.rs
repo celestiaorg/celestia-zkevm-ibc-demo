@@ -36,17 +36,6 @@ pub enum SupportedProofType {
     Groth16,
 }
 
-/// A struct representing a single key-value proof
-#[derive(Debug)]
-pub struct KeyValueProof {
-    /// The key path components
-    pub path: Vec<Vec<u8>>,
-    /// The value being proven
-    pub value: Vec<u8>,
-    /// The Merkle proof for this key-value pair
-    pub proof: MerkleProof,
-}
-
 impl<T: SP1Program> SP1ICS07TendermintProver<T> {
     /// Create a new prover.
     #[must_use]

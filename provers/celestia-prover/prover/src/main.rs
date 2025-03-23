@@ -1,8 +1,7 @@
-use alloy_sol_types::{SolType, SolValue};
-use celestia_prover::prover::KeyValueProof;
+use alloy_sol_types::SolValue;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
-    IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
+    IMembershipMsgs::{KVPair, MembershipProof, SP1MembershipProof},
     ISP1Msgs::SP1Proof,
 };
 use sp1_sdk::HashableKey;
