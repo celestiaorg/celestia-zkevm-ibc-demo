@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -194,26 +195,20 @@ func getRawEvent(simAppTx *coretypes.ResultTx) (map[string]interface{}, error) {
 	return sendPacketEvent, nil
 }
 
-func getPacketCommitmentPath(event SendPacketEvent) ([]byte, error) {
-	// Convert sequence to big-endian bytes and append
-	packetSequenceBigEndian := make([]byte, 8)
-	// Store sequence in big-endian format (most significant byte first)
-	for i := 7; i >= 0; i-- {
-		packetSequenceBigEndian[i] = byte(event.Sequence & 0xff)
-		event.Sequence >>= 8
-	}
+// getPacketCommitmentPath returns the commitment path for the packet.
+func getPacketCommitmentPath(event SendPacketEvent) (path []byte) {
+	// Convert sequence to big-endian
+	sequence := make([]byte, 8)
+	binary.BigEndian.PutUint64(sequence, event.Sequence)
 
 	// Create the commitment path according to IBC Eureka specification:
 	// 1. Source client ID bytes
 	// 2. Marker byte (1 for packet commitment)
 	// 3. Sequence number in big-endian
-	var packetCommitmentPath []byte
-	packetCommitmentPath = append(packetCommitmentPath, []byte(event.SourceClient)...)
-	packetCommitmentPath = append(packetCommitmentPath, byte(1)) // Marker byte for packet commitment
-	packetCommitmentPath = append(packetCommitmentPath, packetSequenceBigEndian...)
-
-	fmt.Printf("packetCommitmentPath: %x\n", packetCommitmentPath)
-	return packetCommitmentPath, nil
+	path = append(path, []byte(event.SourceClient)...)
+	path = append(path, byte(1)) // Marker byte for packet commitment
+	path = append(path, sequence...)
+	return path
 }
 
 func getHeight(sourceTxHash string) (int64, error) {
@@ -247,10 +242,8 @@ func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*pro
 	if err != nil {
 		return nil, fmt.Errorf("failed to get height: %w", err)
 	}
-	packetCommitmentPath, err := getPacketCommitmentPath(event)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get packet commitment path: %w", err)
-	}
+	packetCommitmentPath := getPacketCommitmentPath(event)
+	fmt.Printf("packetCommitmentPath: %x\n", packetCommitmentPath)
 
 	fmt.Printf("Requesting celestia-prover state membership proof...\n")
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
