@@ -79,7 +79,7 @@ start:
 ## setup: Set up the IBC light clients.
 setup:
 	@echo "--> Creating genesis.json for Tendermint light client"
-	@cd ./solidity-ibc-eureka && just genesis-sp1-ics07
+	@cd ./solidity-ibc-eureka && cargo run --bin operator --release -- genesis -o scripts/genesis.json --proof-type groth16
 	@echo "--> Setting up IBC light clients"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
