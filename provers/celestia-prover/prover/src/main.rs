@@ -1,4 +1,4 @@
-use alloy_sol_types::SolValue;
+use alloy_sol_types::{SolType, SolValue};
 use celestia_prover::prover::KeyValueProof;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
@@ -161,14 +161,6 @@ impl Prover for ProverService {
             "Got state membership request for height {:?} key paths {:?}...",
             inner_request.height, inner_request.key_paths
         );
-        let key_paths: Vec<Vec<u8>> = inner_request
-            .key_paths
-            .clone()
-            .into_iter()
-            .map(|path| hex::decode(path).unwrap())
-            .collect();
-        println!("key_paths: {:?}", key_paths);
-
         let trusted_block = self
             .tendermint_rpc_client
             .get_light_block(Some(inner_request.height as u32))
@@ -179,9 +171,8 @@ impl Prover for ProverService {
         println!("trusted_consensus_state: {:?}", trusted_consensus_state);
 
         let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
-            futures::future::try_join_all(key_paths.into_iter().map(|path| async {
-                let path = vec![b"ibc".into(), path];
-                println!("path: {:?}", path);
+            futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
+                let path = vec![b"ibc".into(), path.into_bytes()];
 
                 let (value, proof) = self
                     .tendermint_rpc_client
@@ -197,12 +188,8 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         println!("Generating proof with key_proofs: {:?}", key_proofs);
-        // key_proofs.into_iter().for_each(|(path, _, _)| {
-        //     println!("path: {:?}", path);
-        // });
-
         let start_time = Instant::now();
-        let sp1_proof = self.membership_prover.generate_proof(
+        let proof = self.membership_prover.generate_proof(
             trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs
                 .into_iter()
@@ -216,13 +203,12 @@ impl Prover for ProverService {
             trusted_block.signed_header.header.height.value() as i64,
             elapsed
         );
-        // println!("sp1_proof: {:?}", sp1_proof.public_values);
 
         let membership_proof = MembershipProof::from(SP1MembershipProof {
             sp1Proof: SP1Proof::new(
                 &self.membership_prover.vkey.bytes32(),
-                sp1_proof.bytes(),
-                sp1_proof.public_values.to_vec(),
+                proof.bytes(),
+                proof.public_values.to_vec(),
             ),
             trustedConsensusState: trusted_consensus_state,
         });
@@ -230,7 +216,6 @@ impl Prover for ProverService {
             "Converted proof to membership_proof: {:?}",
             membership_proof
         );
-
         let proof_commitment = membership_proof.abi_encode().to_vec();
 
         let response = ProveStateMembershipResponse {
