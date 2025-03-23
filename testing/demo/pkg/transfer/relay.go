@@ -28,6 +28,12 @@ import (
 func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Relaying IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
 
+	// TODO: Add this back in
+	// err := assertTrustedHeightGreaterThanSourceTxHeight(sourceTxHash)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to assert trusted height greater than source tx height: %w", err)
+	// }
+
 	event, err := getSendPacketEvent(sourceTxHash)
 	if err != nil {
 		return fmt.Errorf("failed to get SendPacket event: %w", err)
@@ -259,3 +265,20 @@ func getHeight(sourceTxHash string) (int64, error) {
 
 	return simAppTx.Height, nil
 }
+
+// func assertTrustedHeightGreaterThanSourceTxHeight(sourceTxHash string) error {
+// 	sourceTxHeight, err := getHeight(sourceTxHash)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to get height: %w", err)
+// 	}
+
+// 	addresses, err := utils.ExtractDeployedContractAddresses()
+// 	if err != nil {
+// 		return err
+// 	}
+// TODO: Add this back in
+// tm, err := ics07tendermint.NewContract(ethcommon.HexToAddress(addresses.ICS07Tendermint))
+// if err != nil {
+// 	return fmt.Errorf("failed to create tendermint contract: %w", err)
+// }
+// }
