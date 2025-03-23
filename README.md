@@ -30,11 +30,22 @@ For more information refer to the [architecture document](./ARCHITECTURE.md). No
     git submodule update
     ```
 
-1. Create and populate the `.env` file
+1. Create and populate the `.env` file in this repo
 
     ```shell
     cp .env.example .env
-    # Modify the .env file and set `SP1_PROVER=network` and `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
+    # Modify the .env file:
+    # Set SP1_PROVER=network
+    # Set NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Celestia 1Password
+    ```
+
+1. Create and populate the `.env` file in solidity-ibc-eureka
+
+    ```shell
+    cd solidity-ibc-eureka
+    cp .env.example .env
+    # Modify the .env file:
+    # Set VERIFIER=""
     ```
 
 1. Modify the `docker-compose.yml` file and set `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
