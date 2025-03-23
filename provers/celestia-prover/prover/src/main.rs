@@ -173,7 +173,6 @@ impl Prover for ProverService {
         let path_value_and_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
             futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
                 let path = vec![b"ibc".into(), path.into_bytes()];
-                println!("path: {:?}", path);
 
                 let (value, proof) = self
                     .tendermint_rpc_client
