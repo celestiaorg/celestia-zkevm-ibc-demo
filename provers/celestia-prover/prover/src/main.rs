@@ -188,6 +188,14 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        path_value_and_proofs
+            .iter()
+            .for_each(|(path, value, proof)| {
+                println!("path: {:?}", path);
+                println!("value: {:?}", value);
+                println!("proof: {:?}", proof);
+            });
+
         println!(
             "Generating proof with path_value_and_proofs: {:?}",
             path_value_and_proofs
