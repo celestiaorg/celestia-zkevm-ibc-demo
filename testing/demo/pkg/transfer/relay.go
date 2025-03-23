@@ -86,6 +86,36 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	return nil
 }
 
+func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*proverclient.ProveStateMembershipResponse, error) {
+	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to celestia-prover: %w", err)
+	}
+	defer celestiaProverConn.Close()
+	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
+
+	height, err := getHeight(sourceTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get height: %w", err)
+	}
+
+	path := getPacketCommitmentPath(event)
+	fmt.Printf("Packet commitment path: %x\n", path)
+
+	keyPaths := []string{hex.EncodeToString(path)}
+	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", height, keyPaths)
+	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
+		Height:   height,
+		KeyPaths: keyPaths,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get state membership proof: %w", err)
+	}
+	fmt.Printf("Received celestia-prover state membership proof with height %v.\n", resp.GetHeight())
+	return resp, nil
+}
+
 func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMembershipResponse) (msgRecvPacket ics26router.IICS26RouterMsgsMsgRecvPacket, err error) {
 	payloadValue, err := hex.DecodeString(event.EncodedPacketHex)
 	if err != nil {
@@ -108,6 +138,7 @@ func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMember
 				},
 			},
 		},
+		// TODO: resp.Proof must be abi.encoded() as a Membership proof. Currently it is just bytes.
 		ProofCommitment: resp.Proof,
 		ProofHeight: ics26router.IICS02ClientMsgsHeight{
 			RevisionNumber: 0,
@@ -193,36 +224,6 @@ func getRawEvent(simAppTx *coretypes.ResultTx) (map[string]interface{}, error) {
 	}
 	sendPacketEvent := sendPacketEvents[0]
 	return sendPacketEvent, nil
-}
-
-func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*proverclient.ProveStateMembershipResponse, error) {
-	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to celestia-prover: %w", err)
-	}
-	defer celestiaProverConn.Close()
-	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
-
-	height, err := getHeight(sourceTxHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get height: %w", err)
-	}
-
-	path := getPacketCommitmentPath(event)
-	fmt.Printf("Packet commitment path: %x\n", path)
-
-	keyPaths := []string{hex.EncodeToString(path)}
-	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", height, keyPaths)
-	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		Height:   height,
-		KeyPaths: keyPaths,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get state membership proof: %w", err)
-	}
-	fmt.Printf("Received celestia-prover state membership proof with height %v.\n", resp.GetHeight())
-	return resp, nil
 }
 
 // getPacketCommitmentPath returns the commitment path for the packet.
