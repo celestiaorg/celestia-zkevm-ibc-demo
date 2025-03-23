@@ -151,9 +151,11 @@ impl Prover for ProverService {
         &self,
         request: Request<ProveStateMembershipRequest>,
     ) -> Result<Response<ProveStateMembershipResponse>, Status> {
-        println!("Got state membership request...");
         let inner_request = request.into_inner();
-
+        println!(
+            "Got state membership request for height {:?} key paths {:?}...",
+            inner_request.height, inner_request.key_paths
+        );
         let trusted_block = self
             .tendermint_rpc_client
             .get_light_block(Some(inner_request.height as u32))

@@ -207,19 +207,21 @@ func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*pro
 	if err != nil {
 		return nil, fmt.Errorf("failed to get height: %w", err)
 	}
-	packetCommitmentPath := getPacketCommitmentPath(event)
-	fmt.Printf("packetCommitmentPath: %x\n", packetCommitmentPath)
 
-	fmt.Printf("Requesting celestia-prover state membership proof...\n")
+	path := getPacketCommitmentPath(event)
+	fmt.Printf("Packet commitment path: %x\n", path)
+
+	keyPaths := []string{hex.EncodeToString(path)}
+	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", height, keyPaths)
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
 		Height:   height,
-		KeyPaths: []string{hex.EncodeToString(packetCommitmentPath)},
+		KeyPaths: keyPaths,
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get state membership proof: %w", err)
 	}
 	fmt.Printf("Received celestia-prover state membership proof with height %v.\n", resp.GetHeight())
-
 	return resp, nil
 }
 
