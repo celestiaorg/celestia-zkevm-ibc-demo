@@ -2,7 +2,7 @@ use alloy_sol_types::{SolType, SolValue};
 use celestia_prover::prover::KeyValueProof;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
-    IMembershipMsgs::{MembershipProof, SP1MembershipProof},
+    IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
     ISP1Msgs::SP1Proof,
 };
 use sp1_sdk::HashableKey;
@@ -173,6 +173,7 @@ impl Prover for ProverService {
         let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
             futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
                 let path = vec![b"ibc".into(), path.into_bytes()];
+                println!("path: {:?}", path);
 
                 let (value, proof) = self
                     .tendermint_rpc_client
@@ -193,7 +194,15 @@ impl Prover for ProverService {
             trusted_block.signed_header.header.app_hash.as_bytes(),
             key_proofs
                 .into_iter()
-                .map(|(path, value, proof)| KeyValueProof { path, value, proof })
+                .map(|(path, value, proof)| {
+                    (
+                        KVPair {
+                            path: path.into_iter().map(|p| p.into()).collect(),
+                            value: value.into(),
+                        },
+                        proof,
+                    )
+                })
                 .collect(),
         );
         let elapsed = start_time.elapsed();

@@ -126,33 +126,24 @@ impl SP1ICS07TendermintProver<UpdateClientProgram> {
 }
 
 impl SP1ICS07TendermintProver<MembershipProgram> {
-    /// Generate a proof of (non)membership for multiple key-value pairs.
+    /// Generate a proof of verify (non)membership for multiple key-value pairs.
     ///
     /// # Panics
-    /// Panics if:
-    /// * No proofs are provided
-    /// * Too many proofs are provided (more than 255)
-    /// * Proof serialization fails
+    /// Panics if the proof cannot be generated or the proof is invalid.
     #[must_use]
     pub fn generate_proof(
         &self,
         commitment_root: &[u8],
-        proofs: Vec<KeyValueProof>,
+        kv_proofs: Vec<(KVPair, MerkleProof)>,
     ) -> SP1ProofWithPublicValues {
-        assert!(!proofs.is_empty(), "No key-value pairs to prove");
-        let len =
-            u16::try_from(proofs.len()).expect("too many key-value pairs (maximum 255 supported)");
+        assert!(!kv_proofs.is_empty(), "No key-value pairs to prove");
+        let len = u16::try_from(kv_proofs.len()).expect("too many key-value pairs");
 
         let mut stdin = SP1Stdin::new();
         stdin.write_slice(commitment_root);
-        stdin.write_slice(&u16::to_le_bytes(len));
-        for KeyValueProof { path, value, proof } in proofs {
-            let pair = KVPair {
-                path: path.iter().map(|v| v.clone().into()).collect(),
-                value: value.into(),
-            };
-            let encoded_pair = KVPair::abi_encode(&pair);
-            stdin.write_vec(encoded_pair);
+        stdin.write_slice(&len.to_le_bytes());
+        for (kv_pair, proof) in kv_proofs {
+            stdin.write_vec(kv_pair.abi_encode());
             stdin.write_vec(proof.encode_vec());
         }
 
