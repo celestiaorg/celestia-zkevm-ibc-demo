@@ -5,30 +5,26 @@ use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
 use tonic::{transport::Server, Request, Response, Status};
-// Import the generated proto rust code
 pub mod prover {
     tonic::include_proto!("celestia.prover.v1");
 }
-use std::path::PathBuf;
-
+use alloy::primitives::Address;
+use alloy::providers::ProviderBuilder;
+use celestia_prover::{
+    programs::{MembershipProgram, UpdateClientProgram},
+    prover::{SP1ICS07TendermintProver, SupportedProofType},
+};
+use ibc_core_commitment_types::merkle::MerkleProof;
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
-
-use celestia_prover::{
-    programs::{MembershipProgram, UpdateClientProgram},
-    prover::{SP1ICS07TendermintProver, SupportedProofType},
-};
-
-use alloy::primitives::Address;
-use alloy::providers::ProviderBuilder;
-use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
-use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
+use std::path::PathBuf;
 use std::time::Instant;
 use tendermint_rpc::HttpClient;
 
