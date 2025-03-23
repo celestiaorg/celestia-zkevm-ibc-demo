@@ -138,7 +138,6 @@ func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMember
 				},
 			},
 		},
-		// TODO: resp.Proof must be abi.encoded() as a Membership proof. Currently it is just bytes.
 		ProofCommitment: resp.Proof,
 		ProofHeight: ics26router.IICS02ClientMsgsHeight{
 			RevisionNumber: 0,

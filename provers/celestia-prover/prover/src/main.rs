@@ -1,6 +1,10 @@
-use alloy_sol_types::SolType;
+use alloy_sol_types::{SolType, SolValue};
 use celestia_prover::prover::KeyValueProof;
-use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
+use ibc_eureka_solidity_types::sp1_ics07::{
+    IICS07TendermintMsgs::ClientState,
+    IMembershipMsgs::{MembershipProof, SP1MembershipProof},
+    ISP1Msgs::SP1Proof,
+};
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
@@ -90,8 +94,9 @@ impl Prover for ProverService {
             ._0;
         println!("client_state_bytes: {:?}", client_state_bytes);
 
-        let client_state = ClientState::abi_decode(&client_state_bytes, true)
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let client_state =
+            <ClientState as alloy_sol_types::SolType>::abi_decode(&client_state_bytes, true)
+                .map_err(|e| Status::internal(e.to_string()))?;
         println!("client_state chainId: {:?}", client_state.chainId);
 
         // Fetch the block at the latest height of the client state. This is the
@@ -162,6 +167,9 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        let trusted_consensus_state: SolConsensusState = trusted_block.to_consensus_state().into();
+        println!("trusted_consensus_state: {:?}", trusted_consensus_state);
+
         let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
             futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
                 let path = vec![b"ibc".into(), path.into_bytes()];
@@ -191,13 +199,27 @@ impl Prover for ProverService {
         let elapsed = start_time.elapsed();
 
         println!(
-            "Generated membership proof for height: {:?} in {:.2?}",
+            "Generated proof for height: {:?} in {:.2?}",
             trusted_block.signed_header.header.height.value() as i64,
             elapsed
         );
 
+        let membership_proof = MembershipProof::from(SP1MembershipProof {
+            sp1Proof: SP1Proof::new(
+                &self.membership_prover.vkey.bytes32(),
+                proof.bytes(),
+                proof.public_values.to_vec(),
+            ),
+            trustedConsensusState: trusted_consensus_state,
+        });
+        println!(
+            "Converted proof to membership_proof: {:?}",
+            membership_proof
+        );
+        let proof_commitment = membership_proof.abi_encode().to_vec();
+
         let response = ProveStateMembershipResponse {
-            proof: proof.bytes().to_vec(),
+            proof: proof_commitment,
             height: trusted_block.signed_header.header.height.value() as i64,
         };
 
