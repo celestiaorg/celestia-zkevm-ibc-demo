@@ -2,7 +2,7 @@ use alloy::primitives::Bytes;
 use alloy_sol_types::SolValue;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
-    IMembershipMsgs::{KVPair, MembershipProof, SP1MembershipProof},
+    IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
     ISP1Msgs::SP1Proof,
 };
 use sp1_sdk::HashableKey;
@@ -216,6 +216,15 @@ impl Prover for ProverService {
             elapsed
         );
 
+        let membership_output =
+            MembershipOutput::abi_decode(&sp1_proof.public_values.to_vec(), true).unwrap();
+        membership_output.kvPairs.iter().for_each(|kv| {
+            println!(
+                "membership_output path: {:?} value: {:?}",
+                kv.path, kv.value
+            );
+        });
+
         let membership_proof = MembershipProof::from(SP1MembershipProof {
             sp1Proof: SP1Proof::new(
                 &self.membership_prover.vkey.bytes32(),
@@ -224,6 +233,7 @@ impl Prover for ProverService {
             ),
             trustedConsensusState: trusted_consensus_state,
         });
+
         println!(
             "Converted SP1 proof to membership_proof: {:?}",
             membership_proof
