@@ -1424,6 +1424,7 @@ dependencies = [
  "bincode",
  "dotenv",
  "futures",
+ "hex",
  "ibc-client-tendermint-types",
  "ibc-core-commitment-types",
  "ibc-eureka-solidity-types",
