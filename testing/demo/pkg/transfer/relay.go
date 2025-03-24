@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -108,10 +109,13 @@ func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*pro
 	path := getPacketCommitmentPath(event)
 	fmt.Printf("Packet commitment path: %x\n", path)
 
+	// Note: add 1 to height because tendermint client queries height - 1.
+	heightWithOffset := height + 1
+
 	keyPaths := []string{hex.EncodeToString(path)}
-	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", height, keyPaths)
+	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", heightWithOffset, keyPaths)
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		Height:   height + 1,
+		Height:   heightWithOffset,
 		KeyPaths: keyPaths,
 	})
 
@@ -128,22 +132,27 @@ func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMember
 		return ics26router.IICS26RouterMsgsMsgRecvPacket{}, fmt.Errorf("failed to decode encoded_packet_hex: %w", err)
 	}
 
-	return ics26router.IICS26RouterMsgsMsgRecvPacket{
-		Packet: ics26router.IICS26RouterMsgsPacket{
-			Sequence:         event.Sequence,
-			SourceClient:     groth16ClientID,
-			DestClient:       tendermintClientID,
-			TimeoutTimestamp: event.TimeoutTimestamp,
-			Payloads: []ics26router.IICS26RouterMsgsPayload{
-				{
-					SourcePort: transfertypes.PortID,      // transfer
-					DestPort:   transfertypes.PortID,      // transfer
-					Version:    transfertypes.V1,          // ics20-1
-					Encoding:   transfertypes.EncodingABI, // application/x-solidity-abi
-					Value:      payloadValue,
-				},
+	packet := ics26router.IICS26RouterMsgsPacket{
+		Sequence:         event.Sequence,
+		SourceClient:     groth16ClientID,
+		DestClient:       tendermintClientID,
+		TimeoutTimestamp: event.TimeoutTimestamp,
+		Payloads: []ics26router.IICS26RouterMsgsPayload{
+			{
+				SourcePort: transfertypes.PortID,      // transfer
+				DestPort:   transfertypes.PortID,      // transfer
+				Version:    transfertypes.V1,          // ics20-1
+				Encoding:   transfertypes.EncodingABI, // application/x-solidity-abi
+				Value:      payloadValue,
 			},
 		},
+	}
+
+	packetCommitment := getPacketCommitment(packet)
+	fmt.Printf("Packet commitment: %x\n", packetCommitment)
+
+	return ics26router.IICS26RouterMsgsMsgRecvPacket{
+		Packet:          packet,
 		ProofCommitment: resp.Proof,
 		ProofHeight: ics26router.IICS02ClientMsgsHeight{
 			RevisionNumber: 0,
@@ -282,3 +291,47 @@ func getHeight(sourceTxHash string) (int64, error) {
 // 	return fmt.Errorf("failed to create tendermint contract: %w", err)
 // }
 // }
+
+// getPacketCommitment returns the packet commitment. It implements the following Solidity function in Go:
+/// @notice Get the packet commitment bytes.
+/// @dev CommitPacket returns the V2 packet commitment bytes. The commitment consists of:
+/// @dev sha256_hash(0x02 + sha256_hash(destinationClient) + sha256_hash(timeout) + sha256_hash(payload)) for a
+/// @dev given packet.
+/// @dev This results in a fixed length preimage.
+/// @dev A fixed length preimage is ESSENTIAL to prevent relayers from being able
+/// @dev to malleate the packet fields and create a commitment hash that matches the original packet.
+/// @param packet The packet to get the commitment for
+/// @return The commitment bytes
+// function packetCommitmentBytes32(IICS26RouterMsgs.Packet memory packet) internal pure returns (bytes32) {
+//     bytes memory appBytes = "";
+//     for (uint256 i = 0; i < packet.payloads.length; i++) {
+//         appBytes = abi.encodePacked(appBytes, hashPayload(packet.payloads[i]));
+//     }
+
+//	    return sha256(
+//	        abi.encodePacked(
+//	            uint8(2),
+//	            sha256(bytes(packet.destClient)),
+//	            sha256(abi.encodePacked(packet.timeoutTimestamp)),
+//	            sha256(appBytes)
+//	        )
+//	    );
+//	}
+func getPacketCommitment(packet ics26router.IICS26RouterMsgsPacket) (commitment []byte) {
+
+	appBytes := []byte{}
+	for _, payload := range packet.Payloads {
+		appBytes = append(appBytes, hashPayload(payload))
+	}
+	data := []byte{}
+	data = append(data, byte(2))
+	destClientHash := sha256.Sum256([]byte(packet.DestClient))
+	data = append(data, destClientHash[:]...)
+	timeoutHash := sha256.Sum256([]byte(strconv.FormatUint(packet.TimeoutTimestamp, 10)))
+	data = append(data, timeoutHash[:]...)
+	appBytesHash := sha256.Sum256(appBytes)
+	data = append(data, appBytesHash[:]...)
+
+	hash := sha256.Sum256(data)
+	return hash[:]
+}
