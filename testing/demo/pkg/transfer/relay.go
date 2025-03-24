@@ -94,13 +94,18 @@ func getCelestiaProverResponse(event SendPacketEvent) (*proverclient.ProveStateM
 	defer celestiaProverConn.Close()
 	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
 
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return nil, err
+	}
+
 	path := getPacketCommitmentPath(event)
 	fmt.Printf("Packet commitment path: %x\n", path)
 
 	keyPaths := []string{hex.EncodeToString(path)}
 	fmt.Printf("Requesting celestia-prover state membership proof key paths %v...\n", keyPaths)
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		ClientId: tendermintClientID,
+		ClientId: addresses.ICS07Tendermint,
 		KeyPaths: keyPaths,
 	})
 
