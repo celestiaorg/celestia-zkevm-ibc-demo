@@ -1,6 +1,5 @@
 use alloy::primitives::Bytes;
 use alloy_sol_types::SolValue;
-use hex;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
     IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
