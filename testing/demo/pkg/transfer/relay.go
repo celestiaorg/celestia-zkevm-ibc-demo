@@ -28,19 +28,13 @@ import (
 func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Relaying IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
 
-	// TODO: Add this back in
-	// err := assertTrustedHeightGreaterThanSourceTxHeight(sourceTxHash)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to assert trusted height greater than source tx height: %w", err)
-	// }
-
 	event, err := getSendPacketEvent(sourceTxHash)
 	if err != nil {
 		return fmt.Errorf("failed to get SendPacket event: %w", err)
 	}
 	fmt.Printf("SendPacket event: %v\n", event)
 
-	resp, err := getCelestiaProverResponse(sourceTxHash, event)
+	resp, err := getCelestiaProverResponse(event)
 	if err != nil {
 		return err
 	}
@@ -92,7 +86,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	return nil
 }
 
-func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*proverclient.ProveStateMembershipResponse, error) {
+func getCelestiaProverResponse(event SendPacketEvent) (*proverclient.ProveStateMembershipResponse, error) {
 	celestiaProverConn, err := grpc.NewClient(celestiaProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to celestia-prover: %w", err)
@@ -100,21 +94,13 @@ func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*pro
 	defer celestiaProverConn.Close()
 	celestiaProverClient := proverclient.NewProverClient(celestiaProverConn)
 
-	height, err := getHeight(sourceTxHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get height: %w", err)
-	}
-
 	path := getPacketCommitmentPath(event)
 	fmt.Printf("Packet commitment path: %x\n", path)
 
-	// Note: add 1 to height because tendermint client queries height - 1.
-	heightWithOffset := height + 1
-
 	keyPaths := []string{hex.EncodeToString(path)}
-	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", heightWithOffset, keyPaths)
+	fmt.Printf("Requesting celestia-prover state membership proof key paths %v...\n", keyPaths)
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		Height:   heightWithOffset,
+		ClientId: tendermintClientID,
 		KeyPaths: keyPaths,
 	})
 
@@ -253,25 +239,6 @@ func getPacketCommitmentPath(event SendPacketEvent) (path []byte) {
 	path = append(path, byte(1)) // Marker byte for packet commitment
 	path = append(path, sequence...)
 	return path
-}
-
-func getHeight(sourceTxHash string) (int64, error) {
-	hash, err := hex.DecodeString(strings.TrimPrefix(sourceTxHash, "0x"))
-	if err != nil {
-		return 0, fmt.Errorf("failed to decode source tx hash: %w", err)
-	}
-
-	clientCtx, err := utils.SetupClientContext()
-	if err != nil {
-		return 0, fmt.Errorf("failed to setup client context: %w", err)
-	}
-
-	simAppTx, err := clientCtx.Client.Tx(context.Background(), hash, true)
-	if err != nil {
-		return 0, fmt.Errorf("failed to query transaction: %w", err)
-	}
-
-	return simAppTx.Height, nil
 }
 
 // func assertTrustedHeightGreaterThanSourceTxHeight(sourceTxHash string) error {

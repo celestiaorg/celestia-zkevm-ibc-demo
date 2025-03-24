@@ -158,9 +158,44 @@ impl Prover for ProverService {
     ) -> Result<Response<ProveStateMembershipResponse>, Status> {
         let inner_request = request.into_inner();
         println!(
-            "Got state membership request for height {:?} key paths {:?}...",
-            inner_request.height, inner_request.key_paths
+            "Got state membership request client_id: {:?} for key paths {:?}...",
+            inner_request.client_id, inner_request.key_paths
         );
+
+        let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
+            Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
+        })?;
+        println!("client_id: {:?}", client_id);
+
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .on_http(self.evm_rpc_url.clone());
+
+        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("contract: {:?}", contract);
+
+        // Fetch the client state as Bytes
+        let client_state_bytes = contract
+            .getClientState()
+            .call()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            ._0;
+        println!("client_state_bytes: {:?}", client_state_bytes);
+
+        let client_state =
+            <ClientState as alloy_sol_types::SolType>::abi_decode(&client_state_bytes, true)
+                .map_err(|e| Status::internal(e.to_string()))?;
+        println!("client_state chainId: {:?}", client_state.chainId);
+
+        // Fetch the block at the latest height of the client state. This is the
+        // beginning of the range we need to prove.
+        let trusted_block = self
+            .tendermint_rpc_client
+            .get_light_block(Some(client_state.latestHeight.revisionHeight))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        println!("trusted_block.height: {:?}", trusted_block.height());
 
         let key_paths: Vec<Vec<u8>> = inner_request
             .key_paths
@@ -170,12 +205,6 @@ impl Prover for ProverService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         println!("decoded key_paths: {:?}", key_paths);
-
-        let trusted_block = self
-            .tendermint_rpc_client
-            .get_light_block(Some(inner_request.height as u32))
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
 
         let trusted_consensus_state: SolConsensusState = trusted_block.to_consensus_state().into();
         println!("trusted_consensus_state: {:?}", trusted_consensus_state);
@@ -201,13 +230,10 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        path_value_and_proofs
-            .iter()
-            .for_each(|(path, value, proof)| {
-                println!("path: {:?}", path);
-                println!("value: {:?}", value);
-                println!("proof: {:?}", proof);
-            });
+        path_value_and_proofs.iter().for_each(|(path, value, _)| {
+            println!("path: {:?}", path);
+            println!("value: {:?}", value);
+        });
 
         println!(
             "Generating proof with path_value_and_proofs: {:?}",

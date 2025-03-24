@@ -22,7 +22,8 @@ message InfoResponse {
 }
 
 message ProveStateTransitionRequest {
-  // for evm, this is the contract address, for ibc-go this is the client id
+  // For EVM chains this is the Tendermint light client contract address.
+  // For Tendermint chains this is the client ID.
   string client_id = 1;
 }
 
@@ -32,7 +33,9 @@ message ProveStateTransitionResponse {
 }
 
 message ProveStateMembershipRequest {
-  int64 height = 1;
+  // For EVM chains this is the Tendermint light client contract address.
+  // For Tendermint chains this is the client ID.
+  string client_id = 1;
   repeated string key_paths = 2;
 }
 
