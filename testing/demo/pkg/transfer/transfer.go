@@ -13,24 +13,17 @@ import (
 
 // createMsgSendPacket returns a msg that sends 100stake over IBC.
 func createMsgSendPacket() (channeltypesv2.MsgSendPacket, error) {
-	coin := sdktypes.NewCoin(denom, math.NewInt(100))
-	transferPayload := transfertypes.FungibleTokenPacketData{
-		Denom:    coin.Denom,
-		Amount:   coin.Amount.String(),
-		Sender:   sender,
-		Receiver: receiver,
-		Memo:     "test transfer",
-	}
-	transferBz, err := transfertypes.EncodeABIFungibleTokenPacketData(&transferPayload)
+	payloadValue, err := getPayloadValue()
 	if err != nil {
 		return channeltypesv2.MsgSendPacket{}, err
 	}
+
 	payload := channeltypesv2.Payload{
 		SourcePort:      transfertypes.PortID,
 		DestinationPort: transfertypes.PortID,
 		Version:         transfertypes.V1,
 		Encoding:        transfertypes.EncodingABI,
-		Value:           transferBz,
+		Value:           payloadValue,
 	}
 
 	return channeltypesv2.MsgSendPacket{
@@ -58,4 +51,20 @@ func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err err
 	}
 	fmt.Printf("Submitted MsgTransfer successfully, txHash %v landed in block height %v.\n", response.TxHash, response.Height)
 	return response.TxHash, nil
+}
+
+func getPayloadValue() ([]byte, error) {
+	coin := sdktypes.NewCoin(denom, math.NewInt(100))
+	transferPayload := transfertypes.FungibleTokenPacketData{
+		Denom:    coin.Denom,
+		Amount:   coin.Amount.String(),
+		Sender:   sender,
+		Receiver: receiver,
+		Memo:     "test transfer",
+	}
+	payloadValue, err := transfertypes.EncodeABIFungibleTokenPacketData(&transferPayload)
+	if err != nil {
+		return []byte{}, err
+	}
+	return payloadValue, nil
 }

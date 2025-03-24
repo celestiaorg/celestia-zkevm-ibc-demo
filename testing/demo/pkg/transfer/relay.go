@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,16 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+// FungibleTokenPacketData represents the ICS20 token transfer data structure
+// It should match IICS20TransferMsgs.FungibleTokenPacketData in the Solidity contract
+type FungibleTokenPacketData struct {
+	Denom    string
+	Amount   *big.Int
+	Sender   string
+	Receiver string
+	Memo     string
+}
 
 // relayByTx implements the logic of an IBC relayer.
 // It processes source tx, extracts IBC events, generates proofs,
@@ -117,12 +128,15 @@ func getCelestiaProverResponse(event SendPacketEvent) (*proverclient.ProveStateM
 }
 
 func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMembershipResponse) (msgRecvPacket ics26router.IICS26RouterMsgsMsgRecvPacket, err error) {
-	payloadValue, err := hex.DecodeString(event.EncodedPacketHex)
+	// HACKHACK: ideally we would decode the encodedPacketHex and convert the payload into a FungibleTokenPacketData but this doesn't work.
+	// rawPayload, err := hex.DecodeString(event.EncodedPacketHex)
+	// Instead, we just get the ABI encoded fungible token packet data that was used to create the packet.
+	value, err := getPayloadValue()
 	if err != nil {
-		return ics26router.IICS26RouterMsgsMsgRecvPacket{}, fmt.Errorf("failed to decode encoded_packet_hex: %w", err)
+		return ics26router.IICS26RouterMsgsMsgRecvPacket{}, fmt.Errorf("failed to get payload value: %w", err)
 	}
 
-	packet := ics26router.IICS26RouterMsgsPacket{
+	ibcPacket := ics26router.IICS26RouterMsgsPacket{
 		Sequence:         event.Sequence,
 		SourceClient:     groth16ClientID,
 		DestClient:       tendermintClientID,
@@ -133,16 +147,16 @@ func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMember
 				DestPort:   transfertypes.PortID,      // transfer
 				Version:    transfertypes.V1,          // ics20-1
 				Encoding:   transfertypes.EncodingABI, // application/x-solidity-abi
-				Value:      payloadValue,
+				Value:      value,                     // this is ABI encoded fungible token packet data
 			},
 		},
 	}
 
-	// packetCommitment := getPacketCommitment(packet)
+	// packetCommitment := getPacketCommitment(ibcPacket)
 	// fmt.Printf("Packet commitment: %x\n", packetCommitment)
 
 	return ics26router.IICS26RouterMsgsMsgRecvPacket{
-		Packet:          packet,
+		Packet:          ibcPacket,
 		ProofCommitment: resp.Proof,
 		ProofHeight: ics26router.IICS02ClientMsgsHeight{
 			RevisionNumber: 0,
@@ -245,64 +259,3 @@ func getPacketCommitmentPath(event SendPacketEvent) (path []byte) {
 	path = append(path, sequence...)
 	return path
 }
-
-// func assertTrustedHeightGreaterThanSourceTxHeight(sourceTxHash string) error {
-// 	sourceTxHeight, err := getHeight(sourceTxHash)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to get height: %w", err)
-// 	}
-
-// 	addresses, err := utils.ExtractDeployedContractAddresses()
-// 	if err != nil {
-// 		return err
-// 	}
-// TODO: Add this back in
-// tm, err := ics07tendermint.NewContract(ethcommon.HexToAddress(addresses.ICS07Tendermint))
-// if err != nil {
-// 	return fmt.Errorf("failed to create tendermint contract: %w", err)
-// }
-// }
-
-// getPacketCommitment returns the packet commitment. It implements the following Solidity function in Go:
-/// @notice Get the packet commitment bytes.
-/// @dev CommitPacket returns the V2 packet commitment bytes. The commitment consists of:
-/// @dev sha256_hash(0x02 + sha256_hash(destinationClient) + sha256_hash(timeout) + sha256_hash(payload)) for a
-/// @dev given packet.
-/// @dev This results in a fixed length preimage.
-/// @dev A fixed length preimage is ESSENTIAL to prevent relayers from being able
-/// @dev to malleate the packet fields and create a commitment hash that matches the original packet.
-/// @param packet The packet to get the commitment for
-/// @return The commitment bytes
-// function packetCommitmentBytes32(IICS26RouterMsgs.Packet memory packet) internal pure returns (bytes32) {
-//     bytes memory appBytes = "";
-//     for (uint256 i = 0; i < packet.payloads.length; i++) {
-//         appBytes = abi.encodePacked(appBytes, hashPayload(packet.payloads[i]));
-//     }
-
-//	    return sha256(
-//	        abi.encodePacked(
-//	            uint8(2),
-//	            sha256(bytes(packet.destClient)),
-//	            sha256(abi.encodePacked(packet.timeoutTimestamp)),
-//	            sha256(appBytes)
-//	        )
-//	    );
-//	}
-// func getPacketCommitment(packet ics26router.IICS26RouterMsgsPacket) (commitment []byte) {
-
-// 	appBytes := []byte{}
-// 	for _, payload := range packet.Payloads {
-// 		appBytes = append(appBytes, hashPayload(payload))
-// 	}
-// 	data := []byte{}
-// 	data = append(data, byte(2))
-// 	destClientHash := sha256.Sum256([]byte(packet.DestClient))
-// 	data = append(data, destClientHash[:]...)
-// 	timeoutHash := sha256.Sum256([]byte(strconv.FormatUint(packet.TimeoutTimestamp, 10)))
-// 	data = append(data, timeoutHash[:]...)
-// 	appBytesHash := sha256.Sum256(appBytes)
-// 	data = append(data, appBytesHash[:]...)
-
-// 	hash := sha256.Sum256(data)
-// 	return hash[:]
-// }
