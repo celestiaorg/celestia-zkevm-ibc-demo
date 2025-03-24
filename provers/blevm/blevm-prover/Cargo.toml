@@ -27,6 +27,8 @@ rsp-host-executor = { workspace = true }
 rsp-primitives.workspace = true
 rsp-rpc-db.workspace = true
 alloy-chains = "0.1.66"
+reqwest = "0.12.15"
+thiserror = "2.0.12"
 
 [build-dependencies]
 sp1-helper = { workspace=true }
