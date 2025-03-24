@@ -30,6 +30,7 @@ ethers = {workspace=true}
 celestia-types = {workspace=true}
 celestia-rpc = {workspace=true}
 rsp-client-executor = { workspace = true }
+rsp-primitives = { workspace = true }
 
 blevm-prover = { path = "../blevm/blevm-prover" }
 blevm-common = {path = "../blevm/common"}

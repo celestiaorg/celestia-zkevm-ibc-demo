@@ -1,4 +1,4 @@
-use alloy_provider::network::Ethereum;
+use alloy_provider::ProviderBuilder;
 use eyre::Context;
 use reth_chainspec::ChainSpec;
 use rsp_host_executor::EthHostExecutor;
@@ -7,17 +7,18 @@ use rsp_rpc_db::RpcDb;
 use std::sync::Arc;
 
 /// Generate client input for the specified block
-async fn generate_client_input(
-    provider: impl alloy_provider::Provider<Ethereum> + Clone,
+pub async fn generate_client_input(
+    evm_rpc_url: String,
     block_number: u64,
     genesis: &Genesis,
-    custom_beneficiary: Option<String>,
+    custom_beneficiary: Option<&String>,
     opcode_tracking: bool,
 ) -> eyre::Result<Vec<u8>> {
+    let provider = ProviderBuilder::new().on_http(evm_rpc_url.parse().unwrap());
+
     let chain_spec: Arc<ChainSpec> = Arc::new(genesis.try_into().unwrap());
 
     let custom_beneficiary = custom_beneficiary
-        .as_deref()
         .map(|addr| addr.parse())
         .transpose()
         .wrap_err("Failed to parse custom beneficiary address")?;
