@@ -155,18 +155,19 @@ func getStateTransitionVerifierKey() ([]byte, error) {
 	return decoded, nil
 }
 
-func getStateMembershipVerifierKey() ([]byte, error) {
-	info, err := getEvmProverInfo()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get evm prover info %w", err)
-	}
+// TODO: Uncomment this function once the EVM prover info endpoint includes a state membership verifier key.
+// func getStateMembershipVerifierKey() ([]byte, error) {
+// 	info, err := getEvmProverInfo()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get evm prover info %w", err)
+// 	}
 
-	decoded, err := hex.DecodeString(strings.TrimPrefix(info.StateMembershipVerifierKey, "0x"))
-	if err != nil {
-		return []byte{}, fmt.Errorf("failed to decode state membership verifier key %w", err)
-	}
-	return decoded, nil
-}
+// 	decoded, err := hex.DecodeString(strings.TrimPrefix(info.StateMembershipVerifierKey, "0x"))
+// 	if err != nil {
+// 		return []byte{}, fmt.Errorf("failed to decode state membership verifier key %w", err)
+// 	}
+// 	return decoded, nil
+// }
 
 func getEvmProverInfo() (*proverclient.InfoResponse, error) {
 	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
