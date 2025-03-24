@@ -1,8 +1,12 @@
+use blevm_prover::indexer::get_inclusion_height;
 use blevm_prover::prover::{
-    AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
+    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
+    CelestiaConfig, ProverConfig,
 };
+use blevm_prover::rsp::generate_client_input;
 use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
 use prost::Message;
+use rsp_primitives::genesis::Genesis;
 use sp1_sdk::include_elf;
 use std::env;
 use std::fs;
@@ -34,18 +38,23 @@ pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
 pub const BLEVM_AGGREGATOR_ELF: &[u8] = include_elf!("blevm-aggregator");
 
 pub struct ProverService {
+    evm_rpc_url: String,
     evm_client: Provider<Http>,
     prover: BlockProver,
     simapp_client: ClientQueryClient<tonic::transport::Channel>,
-    namespace: Namespace,
+    indexer_url: String,
+    genesis: Genesis,
+    custom_beneficiary: Option<String>,
+    opcode_tracking: bool,
 }
 
 impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let evm_rpc = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
-        let evm_client = Provider::try_from(evm_rpc)?;
+        let evm_rpc_url = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
+        let evm_client = Provider::try_from(evm_rpc_url.clone())?;
         let simapp_rpc = env::var("SIMAPP_RPC_URL").expect("SIMAPP_RPC_URL not provided");
         let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
+        let indexer_url = env::var("INDEXER_URL").expect("INDEXER_URL not provided");
 
         let prover_config = ProverConfig {
             elf_bytes: BLEVM_ELF,
@@ -67,11 +76,22 @@ impl ProverService {
 
         let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
+        let custom_beneficiary = env::var("CUSTOM_BENEFICIARY").ok();
+        let opcode_tracking = env::var("OPCODE_TRACKING").is_ok();
+
+        let genesis_json = std::env::var("GENESIS_PATH").expect("GENESIS_PATH must be set");
+
+        let genesis = Genesis::Custom(genesis_json);
+
         Ok(ProverService {
+            evm_rpc_url,
             evm_client,
             prover,
             simapp_client,
-            namespace,
+            indexer_url,
+            genesis,
+            custom_beneficiary,
+            opcode_tracking,
         })
     }
 
@@ -138,11 +158,58 @@ impl Prover for ProverService {
             latest_height, trusted_height
         );
 
-        // TODO: generate proofs for the range of heights
+        if latest_height.as_u64() <= trusted_height {
+            return Err(Status::unimplemented(
+                "Trusted height is greater than latest height",
+            ));
+        }
+
+        let mut inputs = vec![];
+        for height in trusted_height + 1..=latest_height.as_u64() {
+            let inclusion_height = get_inclusion_height(self.indexer_url.clone(), height)
+                .await
+                .unwrap();
+            let client_executor_input = generate_client_input(
+                self.evm_rpc_url.clone(),
+                height,
+                &self.genesis,
+                self.custom_beneficiary.as_ref(),
+                self.opcode_tracking,
+            )
+            .await
+            .unwrap();
+            let input = BlockProverInput {
+                inclusion_height,
+                client_executor_input,
+            };
+            inputs.push(input);
+        }
+
+        // Generate proofs and collect verifying keys
+        let mut aggregation_inputs = vec![];
+        for input in inputs {
+            let (proof, vk) = self.prover.generate_proof(input).await.unwrap();
+            aggregation_inputs.push(AggregationInput {
+                proof,
+                vk: vk.clone(),
+            });
+        }
+
+        // Aggregate the proofs
+        let (public_values, _) = self
+            .prover
+            .execute_aggregate_proofs(aggregation_inputs.clone())
+            .await
+            .unwrap();
+        let aggregation_output = self
+            .prover
+            .aggregate_proofs(aggregation_inputs)
+            .await
+            .unwrap();
 
         let response = ProveStateTransitionResponse {
-            proof: vec![],
-            public_values: vec![],
+            proof: bincode::serialize(&aggregation_output.proof).unwrap(),
+            public_values: public_values.to_vec(),
         };
 
         Ok(Response::new(response))

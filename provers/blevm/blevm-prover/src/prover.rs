@@ -32,7 +32,7 @@ pub struct AggregatorConfig {
 }
 
 /// Input for proof aggregation
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AggregationInput {
     pub proof: SP1ProofWithPublicValues,
     pub vk: SP1VerifyingKey,
