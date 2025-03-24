@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// relayByTx implements the logic of an IBC relayer.
-// It processes source tx, extracts IBC events, generates proofs,
+// relayByTx implements the logic of an IBC relayer for a MsgTransfer from SimApp to EVM roll-up.
+// It processes the sourceTxHash of a MsgTransfer, extracts the IBC events, generates proofs,
 // and creates an Ethereum transaction to submit to the ICS26Router contract.
 func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Relaying IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
