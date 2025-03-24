@@ -1,33 +1,35 @@
-use alloy_sol_types::SolType;
-use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ClientState;
+use alloy::primitives::Bytes;
+use alloy_sol_types::SolValue;
+use ibc_eureka_solidity_types::sp1_ics07::{
+    IICS07TendermintMsgs::ClientState,
+    IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
+    ISP1Msgs::SP1Proof,
+};
 use sp1_sdk::HashableKey;
 use std::env;
 use std::fs;
 use tonic::{transport::Server, Request, Response, Status};
-// Import the generated proto rust code
 pub mod prover {
     tonic::include_proto!("celestia.prover.v1");
 }
-use std::path::PathBuf;
-
+use alloy::primitives::Address;
+use alloy::providers::ProviderBuilder;
+use celestia_prover::{
+    programs::{MembershipProgram, UpdateClientProgram},
+    prover::{SP1ICS07TendermintProver, SupportedProofType},
+};
+use ibc_core_commitment_types::merkle::MerkleProof;
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
-
-use celestia_prover::{
-    programs::{MembershipProgram, UpdateClientProgram},
-    prover::{SP1ICS07TendermintProver, SupportedProofType},
-};
-
-use alloy::primitives::Address;
-use alloy::providers::ProviderBuilder;
-use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
-use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
+use std::path::PathBuf;
+use std::time::Instant;
 use tendermint_rpc::HttpClient;
 
 pub struct ProverService {
@@ -92,8 +94,9 @@ impl Prover for ProverService {
             ._0;
         println!("client_state_bytes: {:?}", client_state_bytes);
 
-        let client_state = ClientState::abi_decode(&client_state_bytes, true)
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let client_state =
+            <ClientState as alloy_sol_types::SolType>::abi_decode(&client_state_bytes, true)
+                .map_err(|e| Status::internal(e.to_string()))?;
         println!("client_state chainId: {:?}", client_state.chainId);
 
         // Fetch the block at the latest height of the client state. This is the
@@ -130,18 +133,21 @@ impl Prover for ProverService {
             &header.height().revision_height()
         );
 
+        let start_time = Instant::now();
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
             &trusted_consensus_state,
             &header,
             now,
         );
+        let elapsed = start_time.elapsed();
 
         let response = ProveStateTransitionResponse {
             proof: proof.bytes().to_vec(),
             public_values: proof.public_values.to_vec(),
         };
-        println!("Generated state transition proof.");
+
+        println!("Generated state transition proof in {:.2?}", elapsed);
 
         Ok(Response::new(response))
     }
@@ -150,18 +156,66 @@ impl Prover for ProverService {
         &self,
         request: Request<ProveStateMembershipRequest>,
     ) -> Result<Response<ProveStateMembershipResponse>, Status> {
-        println!("Got state membership request...");
         let inner_request = request.into_inner();
+        println!(
+            "Got state membership request client_id: {:?} for key paths {:?}...",
+            inner_request.client_id, inner_request.key_paths
+        );
 
+        let client_id = inner_request.client_id.parse::<Address>().map_err(|e| {
+            Status::internal(format!("Failed to parse client_id as EVM address: {}", e))
+        })?;
+        println!("client_id: {:?}", client_id);
+
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .on_http(self.evm_rpc_url.clone());
+
+        let contract = sp1_ics07_tendermint::new(client_id, provider);
+        println!("contract: {:?}", contract);
+
+        // Fetch the client state as Bytes
+        let client_state_bytes = contract
+            .getClientState()
+            .call()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            ._0;
+        println!("client_state_bytes: {:?}", client_state_bytes);
+
+        let client_state =
+            <ClientState as alloy_sol_types::SolType>::abi_decode(&client_state_bytes, true)
+                .map_err(|e| Status::internal(e.to_string()))?;
+        println!("client_state chainId: {:?}", client_state.chainId);
+
+        // Fetch the block at the latest height of the client state. This is the
+        // beginning of the range we need to prove.
         let trusted_block = self
             .tendermint_rpc_client
-            .get_light_block(Some(inner_request.height as u32))
+            .get_light_block(Some(client_state.latestHeight.revisionHeight))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+        println!("trusted_block.height: {:?}", trusted_block.height());
 
-        let key_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
-            futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
-                let path = vec![b"ibc".into(), path.into_bytes()];
+        let key_paths: Vec<Vec<u8>> = inner_request
+            .key_paths
+            .iter()
+            .map(hex::decode)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        println!("decoded key_paths: {:?}", key_paths);
+
+        let trusted_consensus_state: SolConsensusState = trusted_block.to_consensus_state().into();
+        println!("trusted_consensus_state: {:?}", trusted_consensus_state);
+        println!(
+            "trusted_block.height: {:?}",
+            trusted_block.signed_header.header.height.value()
+        );
+
+        let path_value_and_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
+            futures::future::try_join_all(key_paths.into_iter().map(|path| async {
+                let path = vec![b"ibc".to_vec(), path];
 
                 let (value, proof) = self
                     .tendermint_rpc_client
@@ -176,18 +230,65 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let proof = self.membership_prover.generate_proof(
-            trusted_block.signed_header.header.app_hash.as_bytes(),
-            key_proofs,
-        );
+        path_value_and_proofs.iter().for_each(|(path, value, _)| {
+            println!("path: {:?}", path);
+            println!("value: {:?}", value);
+        });
 
         println!(
-            "Generated membership proof for height: {:?}",
-            trusted_block.signed_header.header.height.value() as i64
+            "Generating proof with path_value_and_proofs: {:?}",
+            path_value_and_proofs
         );
 
+        let kv_proofs = path_value_and_proofs
+            .into_iter()
+            .map(|(path, value, proof)| {
+                let path = path.into_iter().map(Bytes::from).collect::<Vec<Bytes>>();
+                let value = Bytes::from(value);
+                (KVPair { path, value }, proof)
+            })
+            .collect();
+
+        // Generate the SP1 proof
+        let start_time = Instant::now();
+        let sp1_proof = self.membership_prover.generate_proof(
+            trusted_block.signed_header.header.app_hash.as_bytes(),
+            kv_proofs,
+        );
+        let elapsed = start_time.elapsed();
+
+        println!(
+            "Generated proof for height: {:?} in {:.2?}",
+            trusted_block.signed_header.header.height.value() as i64,
+            elapsed
+        );
+
+        let membership_output =
+            MembershipOutput::abi_decode(&sp1_proof.public_values.to_vec(), true).unwrap();
+        membership_output.kvPairs.iter().for_each(|kv| {
+            println!(
+                "membership_output path: {:?} value: {:?}",
+                kv.path, kv.value
+            );
+        });
+
+        let membership_proof = MembershipProof::from(SP1MembershipProof {
+            sp1Proof: SP1Proof::new(
+                &self.membership_prover.vkey.bytes32(),
+                sp1_proof.bytes(),
+                sp1_proof.public_values.to_vec(),
+            ),
+            trustedConsensusState: trusted_consensus_state,
+        });
+
+        println!(
+            "Converted SP1 proof to membership_proof: {:?}",
+            membership_proof
+        );
+        let proof = membership_proof.abi_encode().to_vec();
+
         let response = ProveStateMembershipResponse {
-            proof: proof.bytes().to_vec(),
+            proof,
             height: trusted_block.signed_header.header.height.value() as i64,
         };
 

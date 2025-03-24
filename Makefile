@@ -78,10 +78,8 @@ start:
 
 ## setup: Set up the IBC light clients.
 setup:
-# TODO: de-duplicate this. Currently, we deploy the Tendermint light client twice
-# once in `just deploy-sp1-ics07` and once in deployEurekaContracts.
-	@echo "--> Deploying tendermint light client contract on the EVM roll-up"
-	@cd ./solidity-ibc-eureka/scripts && just deploy-sp1-ics07
+	@echo "--> Creating genesis.json for Tendermint light client"
+	@cd ./solidity-ibc-eureka && cargo run --bin operator --release -- genesis -o scripts/genesis.json --proof-type groth16
 	@echo "--> Setting up IBC light clients"
 	@go run ./testing/demo/pkg/setup/
 .PHONY: setup
@@ -91,13 +89,6 @@ transfer:
 	@echo "--> Transferring tokens from simapp to the EVM roll-up"
 	@go run ./testing/demo/pkg/transfer/
 .PHONY: transfer
-
-## relay: Relay the token transfer from simapp to the EVM roll-up.
-relay:
-# Note: this is split out from transfer to speed up local development. This
-# command can be merged into transfer to make the demo fewer steps to run.
-	go run testing/demo/pkg/relay/main.go
-.PHONY: relay
 
 ## stop: Stop all Docker containers and remove the tmp directory.
 stop:
@@ -234,5 +225,4 @@ demo:
 	@make start
 	@make setup
 	@make transfer
-	@make relay
 .PHONY: demo

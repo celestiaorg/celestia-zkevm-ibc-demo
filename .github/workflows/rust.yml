@@ -102,6 +102,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          submodules: true
+
       - name: "Set up environment"
         uses: ./.github/setup
       - name: Install SP1 toolchain
@@ -111,6 +114,16 @@ jobs:
           ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
-      - name: Build
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+        with:
+          just-version: "1.40.0"
+
+      - name: Build SP1 programs in solidity-ibc-eureka
+        run: just build-sp1-programs
+        working-directory: ./solidity-ibc-eureka
+
+      - name: Build celestia prover
         run: cargo build --release --locked
         working-directory: ./provers/celestia-prover/
