@@ -1,5 +1,6 @@
 use alloy::primitives::Bytes;
 use alloy_sol_types::SolValue;
+use hex;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
     IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
@@ -161,6 +162,16 @@ impl Prover for ProverService {
             "Got state membership request for height {:?} key paths {:?}...",
             inner_request.height, inner_request.key_paths
         );
+
+        let key_paths: Vec<Vec<u8>> = inner_request
+            .key_paths
+            .iter()
+            .map(hex::decode)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        println!("decoded key_paths: {:?}", key_paths);
+
         let trusted_block = self
             .tendermint_rpc_client
             .get_light_block(Some(inner_request.height as u32))
@@ -169,10 +180,14 @@ impl Prover for ProverService {
 
         let trusted_consensus_state: SolConsensusState = trusted_block.to_consensus_state().into();
         println!("trusted_consensus_state: {:?}", trusted_consensus_state);
+        println!(
+            "trusted_block.height: {:?}",
+            trusted_block.signed_header.header.height.value()
+        );
 
         let path_value_and_proofs: Vec<(Vec<Vec<u8>>, Vec<u8>, MerkleProof)> =
-            futures::future::try_join_all(inner_request.key_paths.into_iter().map(|path| async {
-                let path = vec![b"ibc".into(), path.into_bytes()];
+            futures::future::try_join_all(key_paths.into_iter().map(|path| async {
+                let path = vec![b"ibc".to_vec(), path];
 
                 let (value, proof) = self
                     .tendermint_rpc_client

@@ -111,7 +111,7 @@ func getCelestiaProverResponse(sourceTxHash string, event SendPacketEvent) (*pro
 	keyPaths := []string{hex.EncodeToString(path)}
 	fmt.Printf("Requesting celestia-prover state membership proof for height %v and key paths %v...\n", height, keyPaths)
 	resp, err := celestiaProverClient.ProveStateMembership(context.Background(), &proverclient.ProveStateMembershipRequest{
-		Height:   height,
+		Height:   height + 1,
 		KeyPaths: keyPaths,
 	})
 
