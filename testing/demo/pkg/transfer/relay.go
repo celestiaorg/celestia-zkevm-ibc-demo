@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -148,8 +147,8 @@ func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMember
 		},
 	}
 
-	packetCommitment := getPacketCommitment(packet)
-	fmt.Printf("Packet commitment: %x\n", packetCommitment)
+	// packetCommitment := getPacketCommitment(packet)
+	// fmt.Printf("Packet commitment: %x\n", packetCommitment)
 
 	return ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet:          packet,
@@ -317,21 +316,21 @@ func getHeight(sourceTxHash string) (int64, error) {
 //	        )
 //	    );
 //	}
-func getPacketCommitment(packet ics26router.IICS26RouterMsgsPacket) (commitment []byte) {
+// func getPacketCommitment(packet ics26router.IICS26RouterMsgsPacket) (commitment []byte) {
 
-	appBytes := []byte{}
-	for _, payload := range packet.Payloads {
-		appBytes = append(appBytes, hashPayload(payload))
-	}
-	data := []byte{}
-	data = append(data, byte(2))
-	destClientHash := sha256.Sum256([]byte(packet.DestClient))
-	data = append(data, destClientHash[:]...)
-	timeoutHash := sha256.Sum256([]byte(strconv.FormatUint(packet.TimeoutTimestamp, 10)))
-	data = append(data, timeoutHash[:]...)
-	appBytesHash := sha256.Sum256(appBytes)
-	data = append(data, appBytesHash[:]...)
+// 	appBytes := []byte{}
+// 	for _, payload := range packet.Payloads {
+// 		appBytes = append(appBytes, hashPayload(payload))
+// 	}
+// 	data := []byte{}
+// 	data = append(data, byte(2))
+// 	destClientHash := sha256.Sum256([]byte(packet.DestClient))
+// 	data = append(data, destClientHash[:]...)
+// 	timeoutHash := sha256.Sum256([]byte(strconv.FormatUint(packet.TimeoutTimestamp, 10)))
+// 	data = append(data, timeoutHash[:]...)
+// 	appBytesHash := sha256.Sum256(appBytes)
+// 	data = append(data, appBytesHash[:]...)
 
-	hash := sha256.Sum256(data)
-	return hash[:]
-}
+// 	hash := sha256.Sum256(data)
+// 	return hash[:]
+// }
