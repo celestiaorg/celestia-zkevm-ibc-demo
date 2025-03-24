@@ -202,6 +202,7 @@ func decodeEthBlockNumber(data []byte) (uint16, error) {
 func startIndexer(ctx context.Context, config Config) {
 	// Add to wait group before any possible returns
 	wg.Add(1)
+	defer wg.Done()
 
 	nsBytes, err := hex.DecodeString(config.CelestiaNamespace)
 	if err != nil {
@@ -347,6 +348,8 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 			continue
 		}
 
+        // The eth block number is the first 2 bytes of the payload transaction
+        // which is the first transaction in the block
 		data := block.Data.Txs[0]
 		ethBlockNum, err := decodeEthBlockNumber(data)
 		if err != nil {
@@ -375,6 +378,7 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 func startAPI(config Config) {
 	// Add to wait group before any possible returns
 	wg.Add(1)
+	defer wg.Done()
 
 	router := mux.NewRouter()
 
@@ -491,13 +495,8 @@ func startAPI(config Config) {
 	log.Printf("API server listening on port %s", config.APIPort)
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Printf("API server error: %v", err)
-		// Make sure we signal the waitgroup even on error
-		wg.Done()
 		return
 	}
-
-	// This is needed to ensure wg.Done() is called when server.Shutdown() succeeds
-	wg.Done()
 }
 
 func main() {
