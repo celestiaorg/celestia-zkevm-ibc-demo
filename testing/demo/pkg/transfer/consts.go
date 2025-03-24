@@ -1,5 +1,12 @@
 package main
 
+import "cosmossdk.io/math"
+
+var (
+	// transferAmount is the amount of tokens to transfer.
+	transferAmount = math.NewInt(100)
+)
+
 const (
 	// denom is the denomination of the token on SimApp.
 	denom = "stake"
