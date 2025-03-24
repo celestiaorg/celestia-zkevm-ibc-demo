@@ -47,7 +47,7 @@ func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err err
 		return "", fmt.Errorf("failed to setup client context: %v", err)
 	}
 
-	fmt.Printf("Broadcasting MsgTransfer...\n")
+	fmt.Printf("Submitting MsgTransfer...\n")
 	response, err := utils.BroadcastMessages(clientCtx, sender, 200_000, &msg)
 	if err != nil {
 		return "", fmt.Errorf("failed to broadcast MsgTransfer %w", err)
@@ -56,6 +56,6 @@ func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err err
 	if response.Code != 0 {
 		return "", fmt.Errorf("failed to execute MsgTransfer %v with status code %v", response.RawLog, response.Code)
 	}
-	fmt.Printf("Broadcast MsgTransfer success. TxHash: %v landed in height %v\n", response.TxHash, response.Height)
+	fmt.Printf("Submitted MsgTransfer successfully, txHash %v landed in block height %v.\n", response.TxHash, response.Height)
 	return response.TxHash, nil
 }
