@@ -1888,7 +1888,7 @@ name = "blevm-prover"
 version = "0.1.0"
 dependencies = [
  "alloy-chains",
- "alloy-provider 0.9.2",
+ "alloy-provider 0.12.6",
  "alloy-sol-types",
  "bincode",
  "celestia-rpc",
@@ -2151,7 +2151,7 @@ name = "celestia-prover"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-provider 0.9.2",
+ "alloy-provider 0.12.6",
  "alloy-sol-types",
  "anyhow",
  "bincode",
@@ -3547,7 +3547,7 @@ name = "evm-prover"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-provider 0.9.2",
+ "alloy-provider 0.12.6",
  "anyhow",
  "bincode",
  "blevm-common",
