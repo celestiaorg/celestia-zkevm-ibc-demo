@@ -9,7 +9,7 @@
 //! RUST_LOG=info cargo run --release -- --prove
 //! ```
 use blevm_common::BlevmOutput;
-use blevm_prover::{
+use blevm_prover::prover::{
     AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
     CelestiaConfig, ProverConfig,
 };
