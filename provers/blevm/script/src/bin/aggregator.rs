@@ -1,5 +1,5 @@
 use blevm_common::BlevmAggOutput;
-use blevm_prover::{
+use blevm_prover::prover::{
     AggregationInput, AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
 };
 use celestia_types::nmt::Namespace;

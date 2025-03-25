@@ -22,12 +22,16 @@ ibc-proto-eureka = { package = "ibc-proto", git = "https://github.com/srdtrk/ibc
 nmt-rs = "*"
 prost = "0.13"
 reqwest = { version = "0.12", features = ["json"] }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth", tag = "v1.3.3", default-features = false }
 reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-20240830", default-features = false, features = [
     "alloy-compat",
     "optimism",
     "std",
 ] }
-rsp-client-executor = {git = "https://github.com/succinctlabs/rsp.git", rev="c01149568a2ed4d3e766756e8b847c870a0b1e4e"}
+rsp-primitives = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-host-executor = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-rpc-db = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 sp1-sdk = { version = "4.0.1", default-features = false }
 tendermint-rpc = "0.40"

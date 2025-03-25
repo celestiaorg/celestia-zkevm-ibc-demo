@@ -14,11 +14,19 @@ celestia-rpc = {workspace=true}
 tendermint-proto = {workspace=true}
 tendermint = {workspace=true}
 reth-primitives = {workspace=true}
-bincode = {workspace=true}
+bincode.workspace = true
 rsp-client-executor = {workspace=true}
 nmt-rs = {workspace=true}
 tokio = { version = "1", features = ["full"] }
 serde = {workspace=true}
+alloy-provider.workspace = true
+dotenv = "0.15.0"
+eyre = "0.6.12"
+reth-chainspec.workspace = true
+rsp-host-executor = { workspace = true }
+rsp-primitives.workspace = true
+rsp-rpc-db.workspace = true
+alloy-chains = "0.1.66"
 
 [build-dependencies]
 sp1-helper = { workspace=true }

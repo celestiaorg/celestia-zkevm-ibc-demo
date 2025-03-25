@@ -1,5 +1,5 @@
 use clap::Parser;
-use rsp_client_executor::io::ClientExecutorInput;
+use rsp_client_executor::io::EthClientExecutorInput;
 use std::{error::Error, fs};
 
 // The arguments for the command.
@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if args.cmd == "dump-block" {
         let mut cache_file = std::fs::File::open(args.input)?;
-        let client_input: ClientExecutorInput = bincode::deserialize_from(&mut cache_file)?;
+        let client_input: EthClientExecutorInput = bincode::deserialize_from(&mut cache_file)?;
         let block_bytes = bincode::serialize(&client_input.current_block)?;
         fs::write(args.output, block_bytes)?;
     }
