@@ -1,4 +1,6 @@
-use blevm_prover::{AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig};
+use blevm_prover::prover::{
+    AggregatorConfig, BlockProver, CelestiaClient, CelestiaConfig, ProverConfig,
+};
 use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
 use prost::Message;
 use sp1_sdk::include_elf;
