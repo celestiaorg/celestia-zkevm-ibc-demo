@@ -195,12 +195,6 @@ impl Prover for ProverService {
             });
         }
 
-        // Aggregate the proofs
-        let (public_values, _) = self
-            .prover
-            .execute_aggregate_proofs(aggregation_inputs.clone())
-            .await
-            .unwrap();
         let aggregation_output = self
             .prover
             .aggregate_proofs(aggregation_inputs)
@@ -208,8 +202,8 @@ impl Prover for ProverService {
             .unwrap();
 
         let response = ProveStateTransitionResponse {
-            proof: bincode::serialize(&aggregation_output.proof).unwrap(),
-            public_values: public_values.to_vec(),
+            proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),
+            public_values: aggregation_output.proof.public_values.to_vec(),
         };
 
         Ok(Response::new(response))
