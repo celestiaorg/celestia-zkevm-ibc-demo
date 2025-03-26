@@ -4,6 +4,31 @@
 
 // TODO: The STARK proofs in this diagram are actually Groth16 proofs.
 
+```mermaid
+architecture-beta
+    group evmrollup[EVM Rollup]
+    service beaconkit[BeaconKit] in evmrollup
+    group reth[Reth] in evmrollup
+    service tendermintlightclient[Tendermint light client] in reth
+
+
+    group simapp[SimApp]
+    service groth16lightclient[Groth16 light client] in simapp
+
+    group celestia[Celestia]
+    service celestiavalidator[Celestia Validator] in celestia
+    service celestiabridge[Celestia Bridge] in celestia
+
+    service evmprover[EVM Prover]
+    service celestiaprover[Celestia Prover]
+
+    service relayer[Relayer]
+
+    beaconkit{group}:B -- T:celestiavalidator{group}
+    evmprover:B -- T:beaconkit{group}
+    celestiaprover:B -- T:groth16lightclient{group}
+```
+
 ## IBC Transfer flow
 
 This section takes the diagram from above and breaks down each step to help aid your understanding.
