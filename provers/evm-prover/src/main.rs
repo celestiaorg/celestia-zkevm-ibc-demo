@@ -79,7 +79,8 @@ impl ProverService {
         let custom_beneficiary = env::var("CUSTOM_BENEFICIARY").ok();
         let opcode_tracking = env::var("OPCODE_TRACKING").is_ok();
 
-        let genesis_json = std::env::var("GENESIS_PATH").expect("GENESIS_PATH must be set");
+        let genesis_path = std::env::var("GENESIS_PATH").expect("GENESIS_PATH must be set");
+        let genesis_json = fs::read_to_string(&genesis_path)?;
 
         let genesis = Genesis::Custom(genesis_json);
 
