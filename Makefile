@@ -106,6 +106,18 @@ build-simapp: mod
 	@go build $(BUILD_FLAGS) -o build/ ./simapp/simd/
 .PHONY: build-simapp
 
+## build-indexer: Build the indexer binary
+build-indexer:
+	@cd ./indexer
+	@mkdir -p build/
+	@cd indexer && go build $(BUILD_FLAGS) -o build/ .
+.PHONY: build-indexer
+
+## build-indexer-docker: Build the indexer docker container
+build-indexer-docker:
+	@docker build -t eth-celestia-indexer -f docker/indexer.Dockerfile indexer
+.PHONY: build-indexer-docker
+
 ## build: Build the simapp the binaries into the ./build directory.
 build: build-simapp
 .PHONY: build
