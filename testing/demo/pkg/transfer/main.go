@@ -29,4 +29,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to relay IBC transaction: %v", err)
 	}
+
+	err = queryBalance()
+	if err != nil {
+		log.Fatalf("Failed to query balance: %v", err)
+	}
 }

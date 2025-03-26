@@ -92,7 +92,6 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             ._0;
-        println!("client_state_bytes: {:?}", client_state_bytes);
 
         let client_state =
             <ClientState as alloy_sol_types::SolType>::abi_decode(&client_state_bytes, true)
@@ -181,7 +180,6 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?
             ._0;
-        println!("client_state_bytes: {:?}", client_state_bytes);
 
         let client_state =
             <ClientState as alloy_sol_types::SolType>::abi_decode(&client_state_bytes, true)
@@ -230,16 +228,6 @@ impl Prover for ProverService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        path_value_and_proofs.iter().for_each(|(path, value, _)| {
-            println!("path: {:?}", path);
-            println!("value: {:?}", value);
-        });
-
-        println!(
-            "Generating proof with path_value_and_proofs: {:?}",
-            path_value_and_proofs
-        );
-
         let kv_proofs = path_value_and_proofs
             .into_iter()
             .map(|(path, value, proof)| {
@@ -248,6 +236,11 @@ impl Prover for ProverService {
                 (KVPair { path, value }, proof)
             })
             .collect();
+
+        println!(
+            "Generating SP1 memberhsip proof for height: {:?}",
+            trusted_block.signed_header.header.height.value()
+        );
 
         // Generate the SP1 proof
         let start_time = Instant::now();
@@ -281,14 +274,8 @@ impl Prover for ProverService {
             trustedConsensusState: trusted_consensus_state,
         });
 
-        println!(
-            "Converted SP1 proof to membership_proof: {:?}",
-            membership_proof
-        );
-        let proof = membership_proof.abi_encode().to_vec();
-
         let response = ProveStateMembershipResponse {
-            proof,
+            proof: membership_proof.abi_encode().to_vec(),
             height: trusted_block.signed_header.header.height.value() as i64,
         };
 

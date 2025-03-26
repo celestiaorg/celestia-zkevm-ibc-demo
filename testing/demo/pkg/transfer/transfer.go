@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"cosmossdk.io/math"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
@@ -54,7 +53,7 @@ func submitMsgTransfer(msg channeltypesv2.MsgSendPacket) (txHash string, err err
 }
 
 func getPayloadValue() ([]byte, error) {
-	coin := sdktypes.NewCoin(denom, math.NewInt(100))
+	coin := sdktypes.NewCoin(denom, transferAmount)
 	transferPayload := transfertypes.FungibleTokenPacketData{
 		Denom:    coin.Denom,
 		Amount:   coin.Amount.String(),
