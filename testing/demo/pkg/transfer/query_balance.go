@@ -6,6 +6,7 @@ import (
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ibcerc20"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -20,7 +21,21 @@ func queryBalance() error {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
 
-	ibcERC20, err := ibcerc20.NewContract(ethcommon.HexToAddress(addresses.ICS20Transfer), ethClient)
+	// First get the ICS20Transfer contract
+	ics20Transfer, err := ics20transfer.NewContract(ethcommon.HexToAddress(addresses.ICS20Transfer), ethClient)
+	if err != nil {
+		return fmt.Errorf("failed to create ICS20Transfer contract: %w", err)
+	}
+
+	// Get the IBCERC20 contract address for the denom
+	denomOnEthereum := transfertypes.NewDenom(denom, transfertypes.NewHop(transfertypes.PortID, tendermintClientID))
+	ibcERC20Address, err := ics20Transfer.IbcERC20Contract(nil, denomOnEthereum.Path())
+	if err != nil {
+		return fmt.Errorf("failed to get IBCERC20 contract address: %w", err)
+	}
+
+	// Create the IBCERC20 contract instance
+	ibcERC20, err := ibcerc20.NewContract(ibcERC20Address, ethClient)
 	if err != nil {
 		return fmt.Errorf("failed to create IBCERC20 contract: %w", err)
 	}
@@ -30,8 +45,6 @@ func queryBalance() error {
 		return fmt.Errorf("failed to get denom on Ethereum: %w", err)
 	}
 
-	// Recreate the full denom path
-	denomOnEthereum := transfertypes.NewDenom(denom, transfertypes.NewHop(transfertypes.PortID, tendermintClientID))
 	if actualDenom != denomOnEthereum.Path() {
 		return fmt.Errorf("denom on Ethereum does not match expected denom: %s != %s", actualDenom, denomOnEthereum.Path())
 	}
