@@ -3,7 +3,7 @@
 ## Overview
 
 This service indexes the mapping between EVM block heights and Celestia
-inclusion block heights in a [BeaconKit Rollkit
+inclusion block heights for a [BeaconKit Rollkit
 rollup](https://github.com/rollkit/beacon-kit/tree/rollkit).
 
 It listens to Celestia blocks, decodes the beacon block in Simple Serialize
