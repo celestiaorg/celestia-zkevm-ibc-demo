@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 
@@ -23,18 +22,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// FungibleTokenPacketData represents the ICS20 token transfer data structure
-// It should match IICS20TransferMsgs.FungibleTokenPacketData in the Solidity contract
-type FungibleTokenPacketData struct {
-	Denom    string
-	Amount   *big.Int
-	Sender   string
-	Receiver string
-	Memo     string
-}
-
-// relayByTx implements the logic of an IBC relayer.
-// It processes source tx, extracts IBC events, generates proofs,
+// relayByTx implements the logic of an IBC relayer for a MsgTransfer from SimApp to EVM roll-up.
+// It processes the sourceTxHash of a MsgTransfer, extracts the IBC events, generates proofs,
 // and creates an Ethereum transaction to submit to the ICS26Router contract.
 func relayByTx(sourceTxHash string, targetClientID string) error {
 	fmt.Printf("Relaying IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
@@ -127,9 +116,7 @@ func getCelestiaProverResponse(event SendPacketEvent) (*proverclient.ProveStateM
 }
 
 func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMembershipResponse) (msgRecvPacket ics26router.IICS26RouterMsgsMsgRecvPacket, err error) {
-	// HACKHACK: ideally we would decode the encodedPacketHex and convert the payload into a FungibleTokenPacketData but this doesn't work.
-	// rawPayload, err := hex.DecodeString(event.EncodedPacketHex)
-	// Instead, we just get the ABI encoded fungible token packet data that was used to create the packet.
+	// TODO: instead of using getPayloadValue, we should decode the encodedPacketHex and convert the payload into a FungibleTokenPacketData. This isn't trivial to do because there is no utility method to decode the encodedPacketHex and ABI encode it.
 	value, err := getPayloadValue()
 	if err != nil {
 		return ics26router.IICS26RouterMsgsMsgRecvPacket{}, fmt.Errorf("failed to get payload value: %w", err)

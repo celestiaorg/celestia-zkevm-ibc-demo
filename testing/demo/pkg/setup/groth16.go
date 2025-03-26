@@ -2,17 +2,21 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
+	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // CreateGroth16LightClient creates the Groth16 light client on simapp.
@@ -59,14 +63,18 @@ func createClientAndConsensusState() (*cdctypes.Any, *cdctypes.Any, error) {
 		return nil, nil, err
 	}
 
-	// TODO: Query the stateTransitionVerifierKey and stateMembershipVerifierKey from the EVM prover.
-	// Query the celestia prover info endpoint for the state transition verifier key
-	// conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	stateTransitionVerifierKey, err := getStateTransitionVerifierKey()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get state transition verifier key: %w", err)
+	}
+	fmt.Printf("Got state transition verifier key: %x\n", stateTransitionVerifierKey)
+
+	// TODO: Uncomment this code once the EVM prover info endpoint includes a state memberhsip verifier key.
+	// stateMembershipVerifierKey, err := getStateMembershipVerifierKey()
 	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("failed to connect to prover: %w", err)
+	// 	return nil, nil, fmt.Errorf("failed to get state membership verifier key: %w", err)
 	// }
-	// defer conn.Close()
-	stateTransitionVerifierKey := []byte{}
+	// fmt.Printf("State state membership verifier key: %v\n", stateMembershipVerifierKey)
 	stateMembershipVerifierKey := []byte{}
 
 	// TODO: Query the codeCommitment from the EVM rollup.
@@ -132,4 +140,45 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 	}
 
 	return genesisBlock, latestBlock, nil
+}
+
+func getStateTransitionVerifierKey() ([]byte, error) {
+	info, err := getEvmProverInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get evm prover info %w", err)
+	}
+
+	decoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to decode state transition verifier key %w", err)
+	}
+	return decoded, nil
+}
+
+// TODO: Uncomment this function once the EVM prover info endpoint includes a state membership verifier key.
+// func getStateMembershipVerifierKey() ([]byte, error) {
+// 	info, err := getEvmProverInfo()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get evm prover info %w", err)
+// 	}
+
+// 	decoded, err := hex.DecodeString(strings.TrimPrefix(info.StateMembershipVerifierKey, "0x"))
+// 	if err != nil {
+// 		return []byte{}, fmt.Errorf("failed to decode state membership verifier key %w", err)
+// 	}
+// 	return decoded, nil
+// }
+
+func getEvmProverInfo() (*proverclient.InfoResponse, error) {
+	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to evm prover: %w", err)
+	}
+	defer conn.Close()
+	proverClient := proverclient.NewProverClient(conn)
+	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get evm prover info %w", err)
+	}
+	return info, nil
 }
