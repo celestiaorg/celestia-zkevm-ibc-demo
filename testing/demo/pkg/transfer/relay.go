@@ -43,7 +43,6 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get SendPacket event: %w", err)
 	}
-	fmt.Printf("SendPacket event: %v\n", event)
 
 	resp, err := getCelestiaProverResponse(event)
 	if err != nil {
@@ -79,8 +78,8 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get MsgRecvPacket: %w", err)
 	}
-	fmt.Printf("MsgRecvPacket: %v\n", msgRecvPacket)
 
+	fmt.Printf("Submitting RecvPacket transaction...\n")
 	ethTx, err := ics26Router.RecvPacket(getTransactOpts(privateKey, eth), msgRecvPacket)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)
@@ -92,8 +91,8 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
 		return fmt.Errorf("RecvPacket failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
 	}
-	fmt.Printf("RecvPacket success in block %v\n", receipt.BlockNumber.Uint64())
-	fmt.Printf("Relayed IBC transaction %s to client %s...\n", sourceTxHash, targetClientID)
+	fmt.Printf("Submitted RecvPacket successfully tx hash %v landed in EVM block %v\n", receipt.TxHash.Hex(), receipt.BlockNumber.Uint64())
+	fmt.Printf("Relayed IBC transaction %s to client %s\n", sourceTxHash, targetClientID)
 	return nil
 }
 
