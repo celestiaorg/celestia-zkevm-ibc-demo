@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/berachain/beacon-kit/mod/consensus-types/pkg/types"
+	"github.com/berachain/beacon-kit/mod/primitives/pkg/version"
 	client "github.com/celestiaorg/celestia-openrpc"
 	"github.com/celestiaorg/celestia-openrpc/types/header"
 	"github.com/celestiaorg/celestia-openrpc/types/share"
@@ -108,17 +110,17 @@ func setupDB() error {
 }
 
 // storeMapping saves an Ethereum block number to Celestia height mapping
-func storeMapping(ethBlockNum uint16, celestiaHeight uint64) error {
+func storeMapping(ethBlockNum uint64, celestiaHeight uint64) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 
 		// Convert ethBlockNum to bytes
-		key := make([]byte, 2)
-		binary.LittleEndian.PutUint16(key, ethBlockNum)
+		key := make([]byte, 8)
+		binary.LittleEndian.PutUint64(key, ethBlockNum)
 
 		// Convert celestiaHeight to bytes
 		value := make([]byte, 8)
-		binary.LittleEndian.PutUint64(value, uint64(celestiaHeight))
+		binary.LittleEndian.PutUint64(value, celestiaHeight)
 
 		return b.Put(key, value)
 	})
@@ -154,7 +156,7 @@ func getLastProcessedHeight() (uint64, error) {
 }
 
 // getCelestiaHeight retrieves the Celestia height for a given Ethereum block number
-func getCelestiaHeight(ethBlockNum uint16) (int64, bool, error) {
+func getCelestiaHeight(ethBlockNum uint64) (int64, bool, error) {
 	var celestiaHeight int64
 	var found bool
 
@@ -162,8 +164,8 @@ func getCelestiaHeight(ethBlockNum uint16) (int64, bool, error) {
 		b := tx.Bucket([]byte(bucketName))
 
 		// Convert ethBlockNum to bytes
-		key := make([]byte, 2)
-		binary.LittleEndian.PutUint16(key, ethBlockNum)
+		key := make([]byte, 8)
+		binary.LittleEndian.PutUint64(key, ethBlockNum)
 
 		v := b.Get(key)
 		if v == nil {
@@ -190,12 +192,13 @@ func decodeRollkitBlock(blob []byte) (*pb.Block, error) {
 }
 
 // decodeEthBlockNumber extracts the block number
-func decodeEthBlockNumber(data []byte) (uint16, error) {
-	if len(data) < 2 {
-		return 0, fmt.Errorf("insufficient data: need at least 2 bytes, got %d", len(data))
+func decodeEthBlockNumber(data []byte) (uint64, error) {
+	block := &types.BeaconBlock{}
+	block, err := block.NewFromSSZ(data, version.Deneb)
+	if err != nil {
+		return 0, err
 	}
-
-	return binary.LittleEndian.Uint16(data[:2]), nil
+	return block.GetBody().GetExecutionPayload().GetNumber().Unwrap(), nil
 }
 
 // startIndexer starts the indexing service that listens for new Celestia blocks and extracts Ethereum block numbers
@@ -348,8 +351,6 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 			continue
 		}
 
-        // The eth block number is the first 2 bytes of the payload transaction
-        // which is the first transaction in the block
 		data := block.Data.Txs[0]
 		ethBlockNum, err := decodeEthBlockNumber(data)
 		if err != nil {
@@ -400,7 +401,7 @@ func startAPI(config Config) {
 			return
 		}
 
-		ethBlockNum := uint16(ethBlockNum64)
+		ethBlockNum := ethBlockNum64
 
 		// Get mapping from database
 		celestiaHeight, found, err := getCelestiaHeight(ethBlockNum)
@@ -427,7 +428,7 @@ func startAPI(config Config) {
 		err := db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(bucketName))
 			return b.ForEach(func(k, v []byte) error {
-				ethBlockNum := binary.LittleEndian.Uint16(k)
+				ethBlockNum := binary.LittleEndian.Uint64(k)
 				celestiaHeight := int64(binary.LittleEndian.Uint64(v))
 				mappings[fmt.Sprintf("%d", ethBlockNum)] = celestiaHeight
 				return nil
