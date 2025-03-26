@@ -1,64 +1,39 @@
-# IBC ZK-EVM Architecture Document
+# Architecture
 
-> [!NOTE]
-> This is a work in progress designed to describe all the components needed for transferring tokens from Celestia to a ZK proven EVM
+![mvp-zk-accounts](./images/mvp-zk-accounts.png)
 
-To provide some context on what we’re trying to achieve, we’re going to start with describing the user flow for transferring TIA to a ZK EVM (Based of the current flow)
+## A Breakdown of an IBC Transfer
 
-![zkevm-ibc-transfer-flow](./images/zkevm-ibc-transfer-flow.png)
+This section takes the diagram from above and breaks down each step during `make transfer` to help aid your understanding.
 
-1. A user submits a `MsgTransfer` to the Celestia chain. Celestia performs some validation checks on the message, then transfers the user’s funds to a module account, effectively locking the funds. The chain then creates a `Commitment` , a receipt of the successful execution of that message as well as an event emitted containing a `Packet` with information to send to the EVM rollup
-2. A relayer listens for the event. It queries a Celestia consensus node for the `Commitment` in the state tree along with the merkle proof, proving the inclusion of that data. The relayer submits the packet along with the inclusion proofs to the rollups namespace.
-3. The rollup full node validates the Celestia header as part of it’s STF, thus it does not require an `UpdateClient` message. It can be assumed that it always has the latest state root for verifying Celestia state. Reading the namespace it validates the `Commitment` and it’s inclusion in Celestia state. It then mints TIA (or the IBC denomination equivalent) and sends it to the recipient address. Similar to Celestia, it saves an `AcknowledgementCommitment` in state.
-4. The relayer listens to the acknowledgement event, queries the state of the EVM Rollup alongside the 1) STF proof in groth16 form, 2) State inclusion proof of the `AcknowledgementCommitment` (as a Merkle Patricia Trie Proof). It submits a transaction with the first proof and often multiple second proofs batched together to Celestia.
-5. Celestia validates the groth16 proof to update the EVM state root it has stored, it verifies the `Acknowledgement` in the EVM state using the inclusion proof. It then cancels the pending timeout thus confirming the transfer. Alternatively, after a timeout period, a timeout message can be sent to Celestia which will unlock the funds returning them to the user.
+![mvp-zk-accounts](./images/mvp-zk-accounts-step-1.png)
 
-To transfer back follows a similar process except, instead of minting tokens, the EVM proves that they burned the tokens and Celestia proves back to the EVM that it released the tokens and gave it back to the user.
+1a -> The user submits a transfer message. This is a `ICS20LibFungibleTokenPacketData` wrapped in a `SendPacket` message. As well as who it's sending the tokens to and how much it also specifies where this packet is going to and lets the eventual receiver know where the packet came from.
 
-## Architecture
+1b -> The SimApp chain (mimicking Celestia) executes the transaction, checking the user's balance and then moving the funds to a locked acount. It stores a commitment to this execution in state. This is kind of like a verifiable receipt.
 
-The architecture involves several different logical components:
+![mvp-zk-accounts](./images/mvp-zk-accounts-step-2.png)
 
-- User + Light Node: Performs actions on either chain or rollup and uses the light client to verify every interaction
-- Data Availability Layer (DA): Publishes a canonical serialised stream of transactions for rollup full nodes and light nodes alike to read and execute. Here we have a convention of separating the STF proofs and the rollup data into separate namespaces. The Celestia namespace can be one or more namespaces that Celestia validators read and execute over.
-- Sequencer: batches transactions together from many users to lower the overall cost.
-- Executor: reads transactions of a subscribed namespace and executes them to reach the next state. For this example we’re specifically talking about Reth.
-- Prover: proves the computation to go from one state to the next. Publishes these proofs to the state namespace. An example of this for EVMs is RSP (Reth Succinct Prover) which is a circuit for proving the computation of a single block.
-- Relayer: listens for events from both the EVM rollup full node and the Celestia consensus full node. It queries for commitments and proofs and submits them to the DA layer under the appropriate namespaces. We expect it to often run on the same machine as the sequencer.
+2a -> Now the relayer kicks in. It listens to events that SimApp has emitted that there are pending packets ready to be sent to other chains. It queries the chain for the receipt based on a predetermined location.
 
-![zkevm-ibc-architecture](./images/zkevm-ibc-architecture.png)
+2b -> The relayer needs to prove to the EVM rollup that SimApp has actually successfully executed the first part of the transfer: locking up the tokens. Proving this requires two steps: First the relayer queries a state transition proof from the prover process. This will prove the latest state root from the last trusted state root stored in the state of the ICS07 Tendermint smart contract on the EVM. Now the EVM has an up to date record of SimApp's current state (which includes the receipt). Second, the relayer asks the prover for a proof that the receipt is a merkle leaf of the state root i.e. it's part of state
 
-## Proving System
+2c -> The prover has a zk circuit for generating both proofs. One takes tendermint headers and uses the `SkippingVerification` algorithm to assert the latest header. The other takes IAVL merkle proofs and proves some leaf key as part of the root. These are both STARK proofs which can be processed by the smart contracts on the EVM.
 
-Celestia will track the state roots of the ZK EVM through a ZK IBC Client. To update it, the relayer needs to submit a transaction with a groth16 proof and the public inputs (trusted reference height, new height, new state root etc.)
+2d -> The last step of the relayer is to combine these proofs and packets and submit a `MsgUpdateClient` and `MsgRecvPacket` to the EVM rollup.
 
-RSP has a circuit for proving the execution of a single block.
+![mvp-zk-accounts](./images/mvp-zk-accounts-step-3.png)
 
-We need to write a circuit that proves the following computation:
+Step 3 mirrors step 2 in many ways but now in the opposite direction
 
-- That a set of blobs was included in Celestia’s header hash (not just in the data root). This would be namespace inclusion proofs.
-- The fork choice rule which decides which transactions and in which order should the state machine execute those blobs
-- The execution of the filtered blobs given some prior state generates this new state
+3a -> The EVM executes both messages. It verifies the STARK proofs and updates it's local record of SimApp's state. It then uses the updated state to verify that the receipt that the packet refers is indeed present in SimApp's state. Once all the verification checks are passed. It mints the tokens and adds them to the account of the recipient as specified in the packet. The rollup then writes it's own respective receipt that it processed the corresponding message.
 
-This circuit can then be repeated across multiple Celestia blocks to provide an aggregated proof from one height to another arbitrary height. Lastly, this needs to be wrapped in a groth16 circuit that can be verified by the ZK IBC Client.
+3b -> Similarly, the relayer listens for events emitted from the EVM rollup for any packets awaiting to be sent back. Upon receiving the packet to be returned, an acknowledgement of the transfer to be sent back to SimApp, it talks to the prover service to prepare the relevant proofs. While they are of different state machines and different state trees, the requests are universal: a proof of the state transition and a proof of membership. The EVM Prover Service here futher compresses the STARK proofs into groth16 proofs for SimApp's groth16 IBC Client.
 
-```go
-type PublicWitness struct {
-	TrustedHeight int64 // Provided by the relayer/user
-	TrustedCelestiaHeaderHash []byte // Provided by the ZK IBC Client
-	TrustedRollupStateRoot []byte // Provided by the ZK IBC Client
-	NewHeight int64 // Provided by the relayer/user
-	NewRollupStateRoot []byte // Provided by the relayer/user
-	NewCelestiaHeaderHash []byte // Provided by Celestia State Machine
-	CodeCommitment []byte // Provided during initialization of the IBC Client
-	GenesisStateRoot []byte // Provided during initialization of the IBC Client
-}
-```
+3c -> The relayer then sends a `MsgUpdateClient` with the state transition proof to update SimApp's record of the Rollup's state after the point that it processed the transfer packet and wrote the receipt. The relayer also sends a `MsgAcknowledgement` which contains the membership proof of the commitment, a.k.a. the receipt alongside the details of the receipt i.e. for what transfer message are we acknowledging.
 
-## API
+3d -> SimApp processes these two messages. It validates the proofs and if everything is in order, it removes the transfer receipt and keeps one final receipt of the acknowledgement (to prevent a later timeout message).
 
-The prover needs to provide an API for the relayer to query aggregated proofs to submit to Celestia to update the IBC client state.
+In the case that the EVM decided these messages were not valid it would not write the acknowledgement receipt. The relayer, tracking the time when the transfer message was sent would submit a `MsgTimeout` instead of the acknowledgement with an absence proof. This is a proof that no acknowledgement was written where the predermined path says it should be written. When SimApp receives this timeout and the corresponding absence proof, it reverses the transfer, releaseing the locked funds and returning them to the sender. This process is atomic - funds can not be unlocked if they are minted on the other chain.
 
-## Relayer Design
-
-The relayer relies on an events system from both Celestia and the EVM rollup. These events should emit packets. The relayer then needs to query the rollup or Celestia state for the corresponding commitments alongside the proofs to the header. In either case, the relayer submits the transactions to Celestia either wrapped as a PFB for a certain namespace or as messages for Celestia’s reserved namespace (for the validators to execute themselves)
+If someone were to send tokens from the EVM rollup back to SimApp, the source chain of those tokens, the process would be very similar, however the actions wouldn't be to lock and mint but rather the EVM rollup would burn tokens and SimApp would unlock them.
