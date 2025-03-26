@@ -3,6 +3,9 @@ package main
 import "cosmossdk.io/math"
 
 var (
+	// initialBalance is the initial balance of the sender on SimApp.
+	initialBalance = math.NewInt(274883996352)
+
 	// transferAmount is the amount of tokens to transfer.
 	transferAmount = math.NewInt(100)
 )
