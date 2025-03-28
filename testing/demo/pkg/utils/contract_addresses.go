@@ -7,7 +7,6 @@ import (
 )
 
 type ContractAddresses struct {
-	ERC20           string `json:"erc20"`
 	ICS07Tendermint string `json:"ics07Tendermint"`
 	ICS20Transfer   string `json:"ics20Transfer"`
 	ICS26Router     string `json:"ics26Router"`
@@ -15,7 +14,7 @@ type ContractAddresses struct {
 }
 
 func (c ContractAddresses) String() string {
-	return fmt.Sprintf("ERC20: %s\nICS07Tendermint: %s\nICS20Transfer: %s\nICS26Router: %s\nIBCERC20: %s\n", c.ERC20, c.ICS07Tendermint, c.ICS20Transfer, c.ICS26Router, c.IBCERC20)
+	return fmt.Sprintf("ICS07Tendermint: %s\nICS20Transfer: %s\nICS26Router: %s\nIBCERC20: %s\n", c.ICS07Tendermint, c.ICS20Transfer, c.ICS26Router, c.IBCERC20)
 }
 
 type Transaction struct {
@@ -55,6 +54,15 @@ func ExtractDeployedContractAddresses() (ContractAddresses, error) {
 
 	if addresses.IBCERC20 == "" {
 		return ContractAddresses{}, fmt.Errorf("IBCERC20 contract address not found in deployment file")
+	}
+	if addresses.ICS07Tendermint == "" {
+		return ContractAddresses{}, fmt.Errorf("SP1ICS07Tendermint contract address not found in deployment file")
+	}
+	if addresses.ICS20Transfer == "" {
+		return ContractAddresses{}, fmt.Errorf("ICS20Transfer contract address not found in deployment file")
+	}
+	if addresses.ICS26Router == "" {
+		return ContractAddresses{}, fmt.Errorf("ICS26Router contract address not found in deployment file")
 	}
 
 	return addresses, nil
