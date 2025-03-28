@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 )
 
 type ContractAddresses struct {
@@ -12,12 +11,20 @@ type ContractAddresses struct {
 	ICS07Tendermint string `json:"ics07Tendermint"`
 	ICS20Transfer   string `json:"ics20Transfer"`
 	ICS26Router     string `json:"ics26Router"`
-	// TODO: Add IBCERC20 address but it doesn't show up in run-latest returns block.
-	// IBCERC20        string `json:"ibcERC20"`
+	IBCERC20        string `json:"ibcERC20"`
 }
 
 func (c ContractAddresses) String() string {
-	return fmt.Sprintf("ERC20: %s\nICS07Tendermint: %s\nICS20Transfer: %s\nICS26Router: %s\n", c.ERC20, c.ICS07Tendermint, c.ICS20Transfer, c.ICS26Router)
+	return fmt.Sprintf("ERC20: %s\nICS07Tendermint: %s\nICS20Transfer: %s\nICS26Router: %s\nIBCERC20: %s\n", c.ERC20, c.ICS07Tendermint, c.ICS20Transfer, c.ICS26Router, c.IBCERC20)
+}
+
+type Transaction struct {
+	ContractName    string `json:"contractName"`
+	ContractAddress string `json:"contractAddress"`
+}
+
+type RunLatest struct {
+	Transactions []Transaction `json:"transactions"`
 }
 
 func ExtractDeployedContractAddresses() (ContractAddresses, error) {
@@ -27,31 +34,27 @@ func ExtractDeployedContractAddresses() (ContractAddresses, error) {
 		return ContractAddresses{}, fmt.Errorf("error reading file: %v", err)
 	}
 
-	var runLatest map[string]interface{}
+	var runLatest RunLatest
 	if err := json.Unmarshal(file, &runLatest); err != nil {
 		return ContractAddresses{}, fmt.Errorf("error unmarshalling JSON: %v", err)
 	}
 
-	returns, ok := runLatest["returns"].(map[string]interface{})
-	if !ok {
-		return ContractAddresses{}, fmt.Errorf("no valid returns found")
+	addresses := ContractAddresses{}
+	for _, tx := range runLatest.Transactions {
+		switch tx.ContractName {
+		case "IBCERC20":
+			addresses.IBCERC20 = tx.ContractAddress
+		case "SP1ICS07Tendermint":
+			addresses.ICS07Tendermint = tx.ContractAddress
+		case "ICS20Transfer":
+			addresses.ICS20Transfer = tx.ContractAddress
+		case "ICS26Router":
+			addresses.ICS26Router = tx.ContractAddress
+		}
 	}
 
-	returnValue, ok := returns["0"].(map[string]interface{})
-	if !ok {
-		return ContractAddresses{}, fmt.Errorf("no valid return value found")
-	}
-
-	value, ok := returnValue["value"].(string)
-	if !ok {
-		return ContractAddresses{}, fmt.Errorf("no valid value found")
-	}
-
-	unescapedValue := strings.ReplaceAll(value, "\\\"", "\"")
-
-	var addresses ContractAddresses
-	if err := json.Unmarshal([]byte(unescapedValue), &addresses); err != nil {
-		return ContractAddresses{}, fmt.Errorf("error unmarshalling contract addresses: %v", err)
+	if addresses.IBCERC20 == "" {
+		return ContractAddresses{}, fmt.Errorf("IBCERC20 contract address not found in deployment file")
 	}
 
 	return addresses, nil
