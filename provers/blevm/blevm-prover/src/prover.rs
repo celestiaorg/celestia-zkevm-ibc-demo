@@ -49,6 +49,7 @@ pub struct AggregationOutput {
 pub struct BlockProverInput {
     pub inclusion_height: u64,
     pub client_executor_input: Vec<u8>,
+    pub rollup_block: Vec<u8>,
 }
 
 /// Handles interaction with Celestia network
@@ -152,6 +153,7 @@ impl BlockProver {
         stdin.write(&row_root_multiproof);
         stdin.write(&nmt_multiproofs);
         stdin.write(&selected_roots);
+        stdin.write_vec(input.rollup_block);
         Ok(stdin)
     }
 
