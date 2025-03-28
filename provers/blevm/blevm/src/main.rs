@@ -11,13 +11,18 @@ use celestia_types::nmt::{NamespaceProof, NamespacedHashExt};
 use celestia_types::{nmt::Namespace, AppVersion, Blob};
 use nmt_rs::simple_merkle::tree::MerkleHash;
 use nmt_rs::{simple_merkle::proof::Proof, NamespacedHash, TmSha2Hasher};
-use rsp_client_executor::{io::ClientExecutorInput, ClientExecutor, EthereumVariant};
+use rsp_client_executor::{
+    executor::{EthClientExecutor, DESERIALZE_INPUTS},
+    io::EthClientExecutorInput,
+};
+use std::sync::Arc;
 use tendermint::Hash as TmHash;
 use tendermint_proto::Protobuf;
 
 pub fn main() {
     println!("cycle-tracker-start: cloning and deserializing inputs");
-    let input: ClientExecutorInput = sp1_zkvm::io::read();
+    let input = sp1_zkvm::io::read_vec();
+    let input = bincode::deserialize::<EthClientExecutorInput>(&input).unwrap();
     // namespace is the namespace on Celestia that includes the roll-up block data.
     let namespace: Namespace = sp1_zkvm::io::read();
     let celestia_header_hash: TmHash = sp1_zkvm::io::read();
@@ -90,8 +95,11 @@ pub fn main() {
 
     // Execute the EVM block
     println!("cycle-tracker-start: executing EVM block");
-    let executor = ClientExecutor;
-    let header = executor.execute::<EthereumVariant>(input).unwrap(); // panicking should prevent a proof of invalid execution from being generated
+    let executor = EthClientExecutor::eth(
+        Arc::new((&input.genesis).try_into().unwrap()),
+        input.custom_beneficiary,
+    );
+    let header = executor.execute(input).expect("failed to execute client");
     println!("cycle-tracker-end: executing EVM block");
 
     // Commit the new EVM header hash
