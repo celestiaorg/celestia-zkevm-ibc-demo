@@ -184,6 +184,10 @@ build-celestia-prover-docker:
 	$(DOCKER) build -t $(CELESTIA_PROVER_GHCR_REPO) -f docker/celestia_prover.Dockerfile .
 .PHONY: build-celestia-prover-docker
 
+# publish: Publish all Docker images to GHCR. Requires Docker and authentication.
+publish: publish-simapp-docker publish-celestia-prover-docker
+.PHONY: publish
+
 ## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
 publish-simapp-docker:
 	$(DOCKER) push $(SIMAPP_GHCR_REPO)
