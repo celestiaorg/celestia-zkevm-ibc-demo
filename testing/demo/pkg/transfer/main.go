@@ -83,7 +83,7 @@ func approveSpend() error {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
 
-	erc20, err := ibcerc20.NewContract(ethcommon.HexToAddress(addresses.IBCERC20), ethClient)
+	erc20, err := ibcerc20.NewContract(ethcommon.HexToAddress(addresses.IBCERC20Logic), ethClient)
 	if err != nil {
 		return err
 	}
