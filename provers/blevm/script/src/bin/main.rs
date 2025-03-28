@@ -39,6 +39,9 @@ struct Args {
     input_path: String,
 
     #[clap(long)]
+    rollup_block_path: String,
+
+    #[clap(long)]
     inclusion_block: u64,
 }
 
@@ -79,6 +82,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let input = BlockProverInput {
         inclusion_height: args.inclusion_block,
         client_executor_input: fs::read(args.input_path).expect("failed to read input file"),
+        rollup_block: fs::read(args.rollup_block_path).expect("failed to read rollup block file"),
     };
 
     if args.execute {
