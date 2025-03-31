@@ -1569,6 +1569,7 @@ dependencies = [
  "alloy-chains",
  "alloy-provider",
  "alloy-sol-types 0.7.7",
+ "base64 0.22.1",
  "bincode",
  "celestia-rpc",
  "celestia-types",
