@@ -73,6 +73,7 @@ For more information refer to the [architecture](./docs/ARCHITECTURE.md). Note t
 1. Run the demo
 
     ```shell
+    # This runs make start, setup, and transfer
     make demo
     ```
 
