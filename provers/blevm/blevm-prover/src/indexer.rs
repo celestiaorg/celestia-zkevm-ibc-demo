@@ -1,12 +1,25 @@
+use base64::{engine::general_purpose, Engine as _};
 use reqwest::Error;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::time::Duration;
+
+fn deserialize_base64<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    general_purpose::STANDARD
+        .decode(&s)
+        .map_err(serde::de::Error::custom)
+}
 
 /// Response structure for the inclusion height API
 #[derive(Debug, Deserialize)]
 struct InclusionHeightResponse {
     eth_block_number: u64,
     celestia_height: u64,
+    #[serde(deserialize_with = "deserialize_base64")]
+    blob_commitment: Vec<u8>,
 }
 
 /// Error returned by the get_inclusion_height function
@@ -25,7 +38,7 @@ pub enum IndexerError {
 pub async fn get_inclusion_height(
     indexer_url: String,
     evm_block_height: u64,
-) -> Result<u64, IndexerError> {
+) -> Result<(u64, Vec<u8>), IndexerError> {
     // Create a client with timeout
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
@@ -46,7 +59,7 @@ pub async fn get_inclusion_height(
         reqwest::StatusCode::OK => {
             // Parse the response body
             let data: InclusionHeightResponse = response.json().await?;
-            Ok(data.celestia_height)
+            Ok((data.celestia_height, data.blob_commitment))
         }
         reqwest::StatusCode::NOT_FOUND => Err(IndexerError::BlockNotFound),
         status => {

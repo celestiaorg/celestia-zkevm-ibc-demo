@@ -167,9 +167,10 @@ impl Prover for ProverService {
 
         let mut inputs = vec![];
         for height in trusted_height + 1..=latest_height.as_u64() {
-            let inclusion_height = get_inclusion_height(self.indexer_url.clone(), height)
-                .await
-                .unwrap();
+            let (inclusion_height, blob_commitment) =
+                get_inclusion_height(self.indexer_url.clone(), height)
+                    .await
+                    .unwrap();
             let client_executor_input = generate_client_input(
                 self.evm_rpc_url.clone(),
                 height,
@@ -182,6 +183,7 @@ impl Prover for ProverService {
             let input = BlockProverInput {
                 inclusion_height,
                 client_executor_input,
+                rollup_block: vec![],
             };
             inputs.push(input);
         }

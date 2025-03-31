@@ -29,6 +29,7 @@ rsp-rpc-db.workspace = true
 alloy-chains = "0.1.66"
 reqwest = "0.12.15"
 thiserror = "2.0.12"
+base64 = "0.22.1"
 
 [build-dependencies]
 sp1-helper = { workspace=true }
