@@ -71,6 +71,13 @@ check-dependencies:
 	@echo "All dependencies are installed."
 .PHONY: check-dependencies
 
+## demo: Run the entire demo.
+demo:
+	@make start
+	@make setup
+	@make transfer
+.PHONY: demo
+
 ## start: Start all Docker containers for the demo.
 start:
 	@docker compose -f docker-compose.rollkit.yml up --detach
@@ -99,6 +106,10 @@ stop:
 	@rm -rf .tmp
 .PHONY: stop
 
+## build: Build the simapp and indexer binaries into the ./build directory.
+build: build-simapp build-indexer
+.PHONY: build
+
 ## build-simapp: Build the simapp binary into the ./build directory.
 build-simapp: mod
 	@cd ./simapp/simd/
@@ -113,14 +124,9 @@ build-indexer:
 	@cd indexer && go build $(BUILD_FLAGS) -o build/ .
 .PHONY: build-indexer
 
-## build-indexer-docker: Build the indexer docker container
-build-indexer-docker:
-	@docker build -t eth-celestia-indexer -f docker/indexer.Dockerfile indexer
-.PHONY: build-indexer-docker
-
-## build: Build the simapp the binaries into the ./build directory.
-build: build-simapp
-.PHONY: build
+## install: Install the simapp binary into the $GOPATH/bin directory.
+install: install-simapp
+.PHONY: install
 
 ## install-simapp: Build and install the simapp binary into the $GOPATH/bin directory.
 install-simapp:
@@ -128,21 +134,11 @@ install-simapp:
 	@go install $(BUILD_FLAGS) ./simapp/simd/
 .PHONY: install-simapp
 
-## install: Install the simapp binary into the $GOPATH/bin directory.
-install: install-simapp
-.PHONY: install
-
 ## mod: Update all go.mod files.
 mod:
 	@echo "--> Updating go.mod"
 	@go mod tidy
 .PHONY: mod
-
-## mod-verify: Verify dependencies have expected content.
-mod-verify: mod
-	@echo "--> Verifying dependencies have expected content"
-	GO111MODULE=on go mod verify
-.PHONY: mod-verify
 
 ## proto-gen: Generate protobuf files. Requires docker.
 proto-gen:
@@ -168,27 +164,36 @@ proto-format:
 	@$(DOCKER_PROTO_BUILDER) find . -name '*.proto' -path "./proto/*" -exec clang-format -i {} \;
 .PHONY: proto-format
 
+## docker: Build the all Docker images.
+docker: build-simapp-docker build-indexer-docker build-celestia-prover-docker
+.PHONY: docker
+
 ## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
 build-simapp-docker: build-simapp
 	@echo "--> Building Docker image"
 	$(DOCKER) build -t $(SIMAPP_GHCR_REPO) -f docker/simapp.Dockerfile .
 .PHONY: build-simapp-docker
 
-## docker: Build the simapp Docker image.
-docker: build-simapp-docker
-.PHONY: docker
-
-## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
-publish-simapp-docker:
-	$(DOCKER) push $(SIMAPP_GHCR_REPO)
-.PHONY: publish-simapp-docker
+## build-indexer-docker: Build the indexer docker image. Requires docker.
+build-indexer-docker: build-indexer
+	@docker build -t eth-celestia-indexer -f docker/indexer.Dockerfile indexer
+.PHONY: build-indexer-docker
 
 ## build-celestia-prover-docker: Build the celestia prover docker image from the current branch. Requires docker.
 build-celestia-prover-docker:
 	$(DOCKER) build -t $(CELESTIA_PROVER_GHCR_REPO) -f docker/celestia_prover.Dockerfile .
 .PHONY: build-celestia-prover-docker
 
-## publish-celestia-prover-docker: Publish the celestia prover docker image from the current branch. Requires docker.
+# publish: Publish all Docker images to GHCR. Requires Docker and authentication.
+publish: publish-simapp-docker publish-celestia-prover-docker
+.PHONY: publish
+
+## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
+publish-simapp-docker:
+	$(DOCKER) push $(SIMAPP_GHCR_REPO)
+.PHONY: publish-simapp-docker
+
+## publish-celestia-prover-docker: Publish the celestia prover docker image. Requires docker.
 publish-celestia-prover-docker:
 	$(DOCKER) push $(CELESTIA_PROVER_GHCR_REPO)
 .PHONY: publish-celestia-prover-docker
@@ -225,16 +230,3 @@ test:
 	@echo "--> Running tests"
 	@go test -timeout 30m ./...
 .PHONY: test
-
-## run-simapp: Initializes a single local node network. It is useful for testing and development.
-run-simapp:
-# Warning this will remove all data in simapp home directory
-	./scripts/init-simapp.sh
-.PHONY: run-simapp
-
-## demo: Run the entire demo.
-demo:
-	@make start
-	@make setup
-	@make transfer
-.PHONY: demo
