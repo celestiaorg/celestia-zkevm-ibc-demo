@@ -94,8 +94,20 @@ setup:
 ## transfer: Transfer tokens from simapp to the EVM roll-up.
 transfer:
 	@echo "--> Transferring tokens from simapp to the EVM roll-up"
-	@go run ./testing/demo/pkg/transfer/
+	@go run ./testing/demo/pkg/transfer/ transfer
 .PHONY: transfer
+
+## transfer-back: Transfer tokens back from the EVM roll-up to simapp.
+transfer-back:
+	@echo "--> Transferring tokens back from the EVM roll-up to simapp"
+	@go run ./testing/demo/pkg/transfer/ transfer-back
+.PHONY: transfer-back
+
+## query-balance: Query the balance of the receiver in the EVM roll-up.
+query-balance:
+	@echo "--> Querying the balance of the receivier on the EVM roll-up"
+	@go run ./testing/demo/pkg/transfer/ query-balance
+.PHONY: query-balance
 
 ## stop: Stop all Docker containers and remove the tmp directory.
 stop:
