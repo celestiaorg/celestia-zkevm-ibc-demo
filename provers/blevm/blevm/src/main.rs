@@ -11,13 +11,15 @@ use celestia_types::nmt::{NamespaceProof, NamespacedHashExt};
 use celestia_types::{nmt::Namespace, AppVersion, Blob};
 use nmt_rs::simple_merkle::tree::MerkleHash;
 use nmt_rs::{simple_merkle::proof::Proof, NamespacedHash, TmSha2Hasher};
-use rsp_client_executor::{io::ClientExecutorInput, ClientExecutor, EthereumVariant};
+use rsp_client_executor::{executor::EthClientExecutor, io::EthClientExecutorInput};
+use std::sync::Arc;
 use tendermint::Hash as TmHash;
 use tendermint_proto::Protobuf;
 
 pub fn main() {
     println!("cycle-tracker-start: cloning and deserializing inputs");
-    let input: ClientExecutorInput = sp1_zkvm::io::read();
+    let input = sp1_zkvm::io::read_vec();
+    let input = bincode::deserialize::<EthClientExecutorInput>(&input).unwrap();
     // namespace is the namespace on Celestia that includes the roll-up block data.
     let namespace: Namespace = sp1_zkvm::io::read();
     let celestia_header_hash: TmHash = sp1_zkvm::io::read();
@@ -31,8 +33,9 @@ pub fn main() {
     let row_root_multiproof: Proof<TmSha2Hasher> = sp1_zkvm::io::read();
     let nmt_multiproofs: Vec<NamespaceProof> = sp1_zkvm::io::read();
     let row_roots: Vec<NamespacedHash<29>> = sp1_zkvm::io::read();
+    // block_bytes is the serialized roll-up block containing the EVM block.
+    let block_bytes = sp1_zkvm::io::read();
 
-    let block = input.current_block.clone();
     println!("cycle-tracker-end: cloning and deserializing inputs");
 
     // Verify that the data hash is a member of the Merkle tree with root celestia_header_hash. In
@@ -47,12 +50,8 @@ pub fn main() {
         .unwrap();
     println!("cycle-tracker-end: verify data hash");
 
-    println!("cycle-tracker-start: serializing EVM block");
-    let block_bytes = bincode::serialize(&block).unwrap();
-    println!("cycle-tracker-end: serializing EVM block");
-
     println!("cycle-tracker-start: creating Blob");
-    // Convert the EVM block into a Celestia blob.
+    // Convert the roll-up block into a Celestia blob.
     let blob = Blob::new(namespace, block_bytes, AppVersion::V3).unwrap();
     println!("Blob commitment: {}", hex::encode(blob.commitment.0));
     println!("cycle-tracker-end: creating Blob");
@@ -90,8 +89,11 @@ pub fn main() {
 
     // Execute the EVM block
     println!("cycle-tracker-start: executing EVM block");
-    let executor = ClientExecutor;
-    let header = executor.execute::<EthereumVariant>(input).unwrap(); // panicking should prevent a proof of invalid execution from being generated
+    let executor = EthClientExecutor::eth(
+        Arc::new((&input.genesis).try_into().unwrap()),
+        input.custom_beneficiary,
+    );
+    let header = executor.execute(input).expect("failed to execute client");
     println!("cycle-tracker-end: executing EVM block");
 
     // Commit the new EVM header hash

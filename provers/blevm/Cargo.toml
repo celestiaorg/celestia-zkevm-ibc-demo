@@ -10,9 +10,14 @@ license = "MIT"
 rust-version = "1.85.0"
 
 [workspace.dependencies]
+alloy-provider = { version = "0.12.6" }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 alloy-sol-types = "0.7.7"
-rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", rev = "c01149568a2ed4d3e766756e8b847c870a0b1e4e" }
+rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-host-executor = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-primitives = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-rpc-db = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth", tag = "v1.3.3", default-features = false }
 reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-20240830", default-features = false, features = [
     "alloy-compat",
     "optimism",

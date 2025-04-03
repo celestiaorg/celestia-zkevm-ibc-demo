@@ -1,19 +1,14 @@
-# EVM to Celestia Inclusion Block Indexer
+# EVM to Celestia Indexer
 
 ## Overview
 
-This service indexes the mapping between EVM block heights and Celestia
-inclusion block heights for a [BeaconKit Rollkit
-rollup](https://github.com/rollkit/beacon-kit/tree/rollkit).
+This service indexes the mapping between EVM block heights and Celestia inclusion block heights and blob index in a
+[BeaconKit Rollkit rollup](https://github.com/rollkit/beacon-kit/tree/rollkit).
 
-It listens to Celestia blocks, decodes the beacon block in Simple Serialize
-(SSZ) format, and provides a queryable API for these mappings. The SSZ
-serialized beacon block is stored as the first transaction in the Rollkit
-block.
+It listens to Celestia blocks, decodes the beacon block in Simple Serialize (SSZ) format, and provides a queryable API for these mappings. The SSZ serialized beacon block is stored as a the first transaction in the Rollkit block.
 
-This indexer serves as a temporary stopgap solution. Future versions of Rollkit
-will include the inclusion block as part of its header, making this external
-indexing service unnecessary.
+This indexer serves as a temporary stopgap solution. Future versions of
+Rollkit will include the data commitment as part of its header, making this external indexing service unnecessary.
 
 ## How It Works
 
@@ -28,8 +23,7 @@ indexing service unnecessary.
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /inclusion_height/{eth_block_number}` | Get the Celestia block height for a specific EVM block number |
-| `GET /mappings` | Get all indexed EVM block → Celestia height mappings |
+| `GET /inclusion_height/{eth_block_number}` | Get the Celestia block height and blob index for a specific EVM block number |
 | `GET /status` | Get the last processed Celestia block height |
 | `GET /health` | Health check endpoint |
 
@@ -54,7 +48,7 @@ curl http://localhost:8080/inclusion_height/100
 
 Expected response if found:
 ```json
-{"eth_block_number": 100, "celestia_height": 54321}
+{"eth_block_number": 100, "celestia_height": 54321, "blob_index": 12345}
 ```
 
 ## Configuration

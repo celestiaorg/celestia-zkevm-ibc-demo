@@ -13,7 +13,7 @@
 //! RUST_LOG=info cargo run --release -- --prove --mock
 //! ```
 use blevm_common::BlevmOutput;
-use blevm_prover::{
+use blevm_prover::prover::{
     AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
     CelestiaConfig, ProverConfig,
 };
@@ -42,6 +42,9 @@ struct Args {
 
     #[clap(long)]
     input_path: String,
+
+    #[clap(long)]
+    rollup_block_path: String,
 
     #[clap(long)]
     inclusion_block: u64,
@@ -87,8 +90,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
 
     let input = BlockProverInput {
-        block_height: args.inclusion_block,
-        l2_block_data: fs::read(args.input_path).expect("failed to read input file"),
+        inclusion_height: args.inclusion_block,
+        client_executor_input: fs::read(args.input_path).expect("failed to read input file"),
+        rollup_block: fs::read(args.rollup_block_path).expect("failed to read rollup block file"),
     };
 
     if args.execute {
