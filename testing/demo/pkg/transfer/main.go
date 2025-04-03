@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ibcerc20"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -69,6 +71,12 @@ func transferBack() error {
 	if err != nil {
 		return fmt.Errorf("failed to approve spend: %w", err)
 	}
+
+	err = sendTransferBackMsg()
+	if err != nil {
+		return fmt.Errorf("failed to send transfer back msg: %w", err)
+	}
+
 	return nil
 }
 
@@ -118,6 +126,61 @@ func approveSpend() error {
 
 	if allowance.Cmp(transferBackAmount) != 0 {
 		return fmt.Errorf("allowance is not correct: %v", allowance)
+	} else {
+		fmt.Printf("allowance is correct: %v\n", allowance)
 	}
+
+	return nil
+}
+
+func sendTransferBackMsg() error {
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return err
+	}
+
+	msg := ics20transfer.IICS20TransferMsgsSendTransferMsg{
+		Denom:            ethcommon.HexToAddress(addresses.IBCERC20Logic),
+		Amount:           transferBackAmount,
+		Receiver:         sender,
+		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
+		SourceClient:     tendermintClientID,
+		Memo:             "transfer back memo",
+	}
+
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return fmt.Errorf("failed to connect to Ethereum: %w", err)
+	}
+
+	ics20Contract, err := ics20transfer.NewContract(ethcommon.HexToAddress(addresses.ICS20Transfer), ethClient)
+	if err != nil {
+		return err
+	}
+
+	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	if err != nil {
+		return fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to create Ethereum client: %w", err)
+	}
+
+	tx, err := ics20Contract.SendTransfer(getTransactOpts(privateKey, eth), msg)
+	if err != nil {
+		return fmt.Errorf("failed to create transaction: %w", err)
+	}
+
+	receipt, err := getTxReciept(context.Background(), eth, tx.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
+		return fmt.Errorf("send transfer back msg failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
+	}
+
+	fmt.Printf("send transfer back msg success tx hash: %s\n", tx.Hash().Hex())
 	return nil
 }
