@@ -18,7 +18,7 @@ use prover::{
 use sp1_sdk::{include_elf, ProverClient, SP1ProvingKey};
 
 // The ELF file for the Succinct RISC-V zkVM.
-const BLEVM_ELF: &[u8] = include_elf!("blevm-mock");
+const BLEVM_ELF: &[u8] = include_elf!("blevm");
 pub struct ProverService {
     sp1_proving_key: SP1ProvingKey,
 }

@@ -1,4 +1,4 @@
-//! This script generates a blevm or blevm-mock proof.
+//! This script generates a blevm proof.
 //!
 //! You can run this script using the following command:
 //! ```shell
@@ -7,10 +7,6 @@
 //! or
 //! ```shell
 //! RUST_LOG=info cargo run --release -- --prove
-//! ```
-//! and you can use blevm-mock in execute or prove mode:
-//! ```shell
-//! RUST_LOG=info cargo run --release -- --prove --mock
 //! ```
 use blevm_common::BlevmOutput;
 use blevm_prover::{
@@ -24,7 +20,6 @@ use std::time::Instant;
 use std::{error::Error, fs};
 
 pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
-pub const BLEVM_MOCK_ELF: &[u8] = include_elf!("blevm-mock");
 pub const BLEVM_AGGREGATOR_ELF: &[u8] = include_elf!("blevm-aggregator");
 
 // The arguments for the command.
@@ -62,13 +57,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         std::process::exit(1);
     }
 
-    if args.mock {
-        println!("In mock mode so using BLEVM_MOCK_ELF.")
-    } else {
-        println!("Not in mock mode so using BLEVM_ELF.")
-    }
     let prover_config = ProverConfig {
-        elf_bytes: if args.mock { BLEVM_MOCK_ELF } else { BLEVM_ELF },
+        elf_bytes: BLEVM_ELF,
     };
 
     let celestia_config = CelestiaConfig {
@@ -111,6 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let (proof, vk) = prover.generate_proof(input).await?;
         let duration = start.elapsed();
         println!("Generated proof in {:?}.", duration);
+        println!("Proof: {:?}", proof);
 
         let aggregation_input = AggregationInput { proof, vk };
         let aggregation_input_bin = bincode::serialize(&aggregation_input)?;
