@@ -101,7 +101,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let (proof, vk) = prover.generate_proof(input).await?;
         let duration = start.elapsed();
         println!("Generated proof in {:?}.", duration);
-        println!("Proof: {:?}", proof);
 
         let aggregation_input = AggregationInput { proof, vk };
         let aggregation_input_bin = bincode::serialize(&aggregation_input)?;

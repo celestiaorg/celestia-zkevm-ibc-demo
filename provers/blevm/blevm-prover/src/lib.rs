@@ -212,7 +212,6 @@ impl BlockProver {
         let (pk, vk) = client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
         let proof = client.prove(&pk, &stdin).compressed().run()?;
-        println!("proof 1 {:?}", proof);
         Ok((proof, vk))
     }
 
