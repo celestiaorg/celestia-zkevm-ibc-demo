@@ -9,7 +9,6 @@ use std::time::Instant;
 use std::{error::Error, fs};
 
 pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
-pub const BLEVM_MOCK_ELF: &[u8] = include_elf!("blevm-mock");
 pub const BLEVM_AGGREGATOR_ELF: &[u8] = include_elf!("blevm-aggregator");
 
 // The arguments for the command.
@@ -44,13 +43,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         std::process::exit(1);
     }
 
-    if args.mock {
-        println!("In mock mode so using BLEVM_MOCK_ELF.")
-    } else {
-        println!("Not in mock mode so using BLEVM_ELF.")
-    }
     let prover_config = ProverConfig {
-        elf_bytes: if args.mock { BLEVM_MOCK_ELF } else { BLEVM_ELF },
+        elf_bytes: BLEVM_ELF,
     };
 
     let celestia_config = CelestiaConfig {
