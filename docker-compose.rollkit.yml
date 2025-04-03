@@ -127,14 +127,24 @@ services:
   #     - rollkit-network
 
   evm-prover:
-    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover:latest
+    build:
+      dockerfile: ./docker/evm_prover.Dockerfile
     container_name: evm-prover
+    volumes:
+      - ./testing/files:/testapp_files
+      - ./.tmp:/.tmp
     environment:
       # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
       # for Celestia (with IBC Eurekea enabled).
       - TENDERMINT_RPC_URL=http://simapp-validator:26657
+      - INDEXER_URL=http://indexer:8080
       - RPC_URL=http://reth:8545
       - EVM_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+      - EVM_RPC_URL=http://reth:8545
+      - CELESTIA_NODE_URL=http://celestia-network-bridge:26658
+      - CELESTIA_NODE_AUTH_TOKEN=${CELESTIA_NODE_AUTH_TOKEN:-}
+      - CELESTIA_NAMESPACE=${CELESTIA_NAMESPACE:-0f0f0f0f0f0f0f0f0f0f}
+      - GENESIS_PATH=/testapp_files/eth-genesis.json
     ports:
       - "50052:50052"
     depends_on:
