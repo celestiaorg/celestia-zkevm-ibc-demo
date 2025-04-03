@@ -71,7 +71,6 @@ func transferSimAppToEVM() error {
 }
 
 func transferBack() error {
-	// 	Approve the ICS20Transfer.sol contract to spend the erc20 tokens
 	err := approveSpend()
 	if err != nil {
 		return fmt.Errorf("failed to approve spend: %w", err)
@@ -137,7 +136,7 @@ func approveSpend() error {
 	if allowance.Cmp(transferBackAmount) != 0 {
 		return fmt.Errorf("allowance is not correct: %v", allowance)
 	} else {
-		fmt.Printf("allowance is correct: %v\n", allowance)
+		fmt.Printf("Allowed %v tokens to be spent by the ICS20Transfer contract\n", allowance)
 	}
 
 	return nil
