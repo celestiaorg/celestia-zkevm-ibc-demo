@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let prover_config = ProverConfig {
-        elf_bytes:  BLEVM_ELF ,
+        elf_bytes: BLEVM_ELF,
     };
 
     let celestia_config = CelestiaConfig {
