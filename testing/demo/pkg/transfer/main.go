@@ -28,6 +28,11 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed to transfer from EVM roll-up to SimApp: ", err)
 		}
+	} else if os.Args[1] == "query-balance" {
+		err := queryBalance()
+		if err != nil {
+			log.Fatal("Failed to query balance: ", err)
+		}
 	}
 }
 
@@ -91,7 +96,12 @@ func approveSpend() error {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
 	}
 
-	erc20, err := ibcerc20.NewContract(ethcommon.HexToAddress(addresses.IBCERC20Logic), ethClient)
+	ibcERC20Address, err := getIBCERC20Address()
+	if err != nil {
+		return fmt.Errorf("failed to get IBC ERC20 contract address: %w", err)
+	}
+
+	erc20, err := ibcerc20.NewContract(ibcERC20Address, ethClient)
 	if err != nil {
 		return err
 	}
@@ -139,13 +149,9 @@ func sendTransferBackMsg() error {
 		return err
 	}
 
-	msg := ics20transfer.IICS20TransferMsgsSendTransferMsg{
-		Denom:            ethcommon.HexToAddress(addresses.IBCERC20Logic),
-		Amount:           transferBackAmount,
-		Receiver:         sender,
-		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
-		SourceClient:     tendermintClientID,
-		Memo:             "transfer back memo",
+	ibcERC20Address, err := getIBCERC20Address()
+	if err != nil {
+		return fmt.Errorf("failed to get IBC ERC20 contract address: %w", err)
 	}
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
@@ -168,6 +174,14 @@ func sendTransferBackMsg() error {
 		return fmt.Errorf("failed to create Ethereum client: %w", err)
 	}
 
+	msg := ics20transfer.IICS20TransferMsgsSendTransferMsg{
+		Denom:            ibcERC20Address,
+		Amount:           transferBackAmount,
+		Receiver:         sender,
+		TimeoutTimestamp: uint64(time.Now().Add(30 * time.Minute).Unix()),
+		SourceClient:     tendermintClientID,
+		Memo:             "transfer back memo",
+	}
 	tx, err := ics20Contract.SendTransfer(getTransactOpts(privateKey, eth), msg)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction: %w", err)

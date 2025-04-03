@@ -10,6 +10,8 @@ import (
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -66,4 +68,30 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	}
 
 	return receipt, nil
+}
+
+// getIBCERC20Address returns the address of the IBC ERC20 contract on the Ethereum chain.
+// This is the ERC20 contract that has the tokens transfered from Celestia to Ethereum.
+func getIBCERC20Address() (ethcommon.Address, error) {
+	ethClient, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return ethcommon.Address{}, fmt.Errorf("failed to connect to Ethereum: %w", err)
+	}
+	addresses, err := utils.ExtractDeployedContractAddresses()
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+
+	ics20Transfer, err := ics20transfer.NewContract(ethcommon.HexToAddress(addresses.ICS20Transfer), ethClient)
+	if err != nil {
+		return ethcommon.Address{}, fmt.Errorf("failed to create ICS20Transfer contract: %w", err)
+	}
+
+	denomOnEthereum := transfertypes.NewDenom(denom, transfertypes.NewHop(transfertypes.PortID, tendermintClientID))
+
+	ibcERC20Address, err := ics20Transfer.IbcERC20Contract(nil, denomOnEthereum.Path())
+	if err != nil {
+		return ethcommon.Address{}, fmt.Errorf("failed to get IBC ERC20 contract address: %w", err)
+	}
+	return ibcERC20Address, nil
 }

@@ -112,6 +112,8 @@ func queryBalanceOnEthereum() error {
 	if err != nil {
 		return fmt.Errorf("failed to get user balance on Ethereum: %w", err)
 	}
+	fmt.Printf("receiver: %s\n", receiver)
+	fmt.Printf("user balance: %v\n", userBalance.Int64())
 
 	if userBalance.Int64() != transferAmount.Int64() {
 		return fmt.Errorf("user balance on Ethereum does not match expected balance: %v != %v", userBalance.Int64(), transferAmount.Int64())
