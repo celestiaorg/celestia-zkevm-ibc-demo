@@ -1,5 +1,5 @@
 # Use official Rust image as base
-FROM rust:1.83-slim-bookworm AS builder
+FROM rust:1.85-slim-bookworm AS builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \

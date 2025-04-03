@@ -52,7 +52,7 @@ impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let evm_rpc_url = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
         let evm_client = Provider::try_from(evm_rpc_url.clone())?;
-        let simapp_rpc = env::var("SIMAPP_RPC_URL").expect("SIMAPP_RPC_URL not provided");
+        let simapp_rpc = env::var("TENDERMINT_RPC_URL").expect("TENDERMINT_RPC_URL not provided");
         let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
         let indexer_url = env::var("INDEXER_URL").expect("INDEXER_URL not provided");
 
