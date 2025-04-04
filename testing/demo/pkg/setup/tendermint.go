@@ -12,6 +12,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 )
 
 // CreateTendermintLightClient creates the Tendermint light client on the EVM roll-up.
@@ -45,8 +46,18 @@ func CreateTendermintLightClient() error {
 // deployEurekaContracts deploys all of the IBC Eureka contracts (including the
 // SP1 ICS07 Tendermint light client contract) on the EVM roll-up.
 func deployEurekaContracts() error {
+	err := godotenv.Load()
+	if err != nil {
+		return fmt.Errorf("error loading .env file: %v", err)
+	}
+	prover := os.Getenv("SP1_PROVER")
+	fmt.Printf("SP1_PROVER: %s\n", prover)
+
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
 	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
+	if prover == "mock" {
+		cmd.Env = append(cmd.Env, "VERIFIER=mock")
+	}
 	cmd.Dir = "./solidity-ibc-eureka/scripts"
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
