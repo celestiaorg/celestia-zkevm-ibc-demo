@@ -53,11 +53,19 @@ func deployEurekaContracts() error {
 	prover := os.Getenv("SP1_PROVER")
 	fmt.Printf("SP1_PROVER: %s\n", prover)
 
+	faucetAddress := os.Getenv("E2E_FAUCET_ADDRESS")
+	fmt.Printf("E2E_FAUCET_ADDRESS: %s\n", faucetAddress)
+
+	ethPrivateKey := os.Getenv("PRIVATE_KEY")
+	fmt.Printf("PRIVATE_KEY: %s\n", ethPrivateKey)
+
 	cmd := exec.Command("forge", "script", "E2ETestDeploy.s.sol:E2ETestDeploy", "--rpc-url", "http://localhost:8545", "--private-key", "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a", "--broadcast")
-	cmd.Env = append(cmd.Env, "PRIVATE_KEY=0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a")
 	if prover == "mock" {
 		cmd.Env = append(cmd.Env, "VERIFIER=mock")
 	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("E2E_FAUCET_ADDRESS=%v", faucetAddress))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PRIVATE_KEY=%v", ethPrivateKey))
+
 	cmd.Dir = "./solidity-ibc-eureka/scripts"
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

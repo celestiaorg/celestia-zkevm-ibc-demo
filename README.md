@@ -11,6 +11,15 @@ For more information refer to the [architecture](./docs/ARCHITECTURE.md). Note t
 
 ## Usage
 
+### Preamble
+
+SP1 supports generating proofs in mock mode or network mode. By default, mock mode is used which is faster for testing and development purposes. Network mode is used for production purposes to generate real proofs. To use network mode, modify your `.env` file:
+
+```env
+SP1_PROVER=network
+NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Celestia 1Password
+```
+
 ### Prerequisites
 
 1. Install [Docker](https://docs.docker.com/get-docker/)
@@ -30,38 +39,10 @@ For more information refer to the [architecture](./docs/ARCHITECTURE.md). Note t
     git submodule update
     ```
 
-1. Create and populate the `.env` file in this repo
+1. Create the `.env` file in this repo
 
     ```shell
     cp .env.example .env
-    # Modify the .env file:
-    # Set SP1_PROVER=network
-    # Set NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Celestia 1Password
-    ```
-
-1. Create and populate the `.env` file in solidity-ibc-eureka
-
-    ```shell
-    cd solidity-ibc-eureka
-    cp .env.example .env
-    # Modify the .env file:
-    # Set VERIFIER=""
-    ```
-
-1. Modify the `docker-compose.yml` file and set `NETWORK_PRIVATE_KEY="PRIVATE_KEY"` to the SP1 prover network private key from Celestia 1Password.
-
-    ```diff
-    celestia-prover:
-        image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover:latest
-        container_name: celestia-prover
-        environment:
-        # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
-        # for Celestia (with IBC Eurekea enabled).
-        - TENDERMINT_RPC_URL=http://simapp-validator:26657
-        - RPC_URL=http://reth:8545
-        - CELESTIA_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
-        - SP1_PROVER=network
-    +   - NETWORK_PRIVATE_KEY=PRIVATE_KEY
     ```
 
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
