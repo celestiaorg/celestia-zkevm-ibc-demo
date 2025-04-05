@@ -3575,6 +3575,7 @@ dependencies = [
  "sp1-ics07-tendermint-prover",
  "sp1-ics07-tendermint-utils",
  "sp1-sdk",
+ "tendermint",
  "tendermint-rpc",
  "tokio",
  "tonic",

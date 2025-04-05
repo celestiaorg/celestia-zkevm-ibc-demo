@@ -1,11 +1,10 @@
 use crate::proofs::{generate_header_proofs, generate_row_proofs};
 use celestia_rpc::{BlobClient, Client, HeaderClient};
-use celestia_types::AppVersion;
-use celestia_types::Blob;
 use celestia_types::{
     nmt::{Namespace, NamespaceProof},
     ExtendedHeader,
 };
+use celestia_types::{AppVersion, Blob, Commitment};
 use rsp_client_executor::io::EthClientExecutorInput;
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{
@@ -67,24 +66,28 @@ impl CelestiaClient {
         Ok(Self { client, namespace })
     }
 
-    pub async fn get_blob_and_header(
+    pub async fn get_blob(
         &self,
         height: u64,
-        blob: &Blob,
-    ) -> Result<(Blob, ExtendedHeader), Box<dyn Error>> {
-        let blob_from_chain = self
+        blob_commitment: &Commitment,
+    ) -> Result<Blob, Box<dyn Error>> {
+        let blob = self
             .client
-            .blob_get(height, self.namespace, blob.commitment)
+            .blob_get(height, self.namespace, blob_commitment.clone())
             .await
             .map_err(|e| format!("Failed getting blob: {}", e))?;
 
+        Ok(blob)
+    }
+
+    pub async fn get_header(&self, height: u64) -> Result<ExtendedHeader, Box<dyn Error>> {
         let header = self
             .client
             .header_get_by_height(height)
             .await
             .map_err(|e| format!("Failed getting header: {}", e))?;
 
-        Ok((blob_from_chain, header))
+        Ok(header)
     }
 
     pub async fn get_nmt_proofs(
@@ -123,13 +126,23 @@ impl BlockProver {
     async fn get_stdin(&self, input: BlockProverInput) -> Result<SP1Stdin, Box<dyn Error>> {
         let client_executor_input: EthClientExecutorInput =
             bincode::deserialize(&input.client_executor_input)?;
-        let block_bytes = bincode::serialize(&client_executor_input.current_block)?;
-        let blob = Blob::new(self.celestia_client.namespace, block_bytes, AppVersion::V3)?;
+        let blob = Blob::new(
+            self.celestia_client.namespace,
+            input.rollup_block.clone(),
+            AppVersion::V3,
+        )?;
 
         // Get blob and header from Celestia
-        let (blob_from_chain, header) = self
+        let blob_from_chain = self
             .celestia_client
-            .get_blob_and_header(input.inclusion_height, &blob)
+            .get_blob(input.inclusion_height, &blob.commitment)
+            .await?;
+
+        println!("{:#?} {:#?}", blob_from_chain.commitment, blob.commitment);
+
+        let header = self
+            .celestia_client
+            .get_header(input.inclusion_height)
             .await?;
 
         // Generate all required proofs
@@ -155,6 +168,18 @@ impl BlockProver {
         stdin.write(&selected_roots);
         stdin.write_vec(input.rollup_block);
         Ok(stdin)
+    }
+
+    pub async fn get_blob(
+        &self,
+        inclusion_height: u64,
+        blob_commitment: Commitment,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
+        let blob = self
+            .celestia_client
+            .get_blob(inclusion_height, &blob_commitment)
+            .await?;
+        Ok(blob.data)
     }
 
     async fn get_aggregate_stdin(

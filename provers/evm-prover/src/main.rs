@@ -11,6 +11,7 @@ use sp1_sdk::include_elf;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use tendermint::merkle;
 use tonic::{transport::Server, Request, Response, Status};
 
 // Import the generated proto rust code
@@ -26,6 +27,7 @@ use prover::{
 };
 
 use celestia_types::nmt::Namespace;
+use celestia_types::Commitment;
 
 use ethers::{
     providers::{Http, Middleware, Provider},
@@ -180,10 +182,17 @@ impl Prover for ProverService {
             )
             .await
             .unwrap();
+            let hash: merkle::Hash = blob_commitment[..blob_commitment.len()].try_into().unwrap();
+            let commitment = Commitment(hash);
+            let rollup_block = self
+                .prover
+                .get_blob(inclusion_height, commitment)
+                .await
+                .unwrap();
             let input = BlockProverInput {
                 inclusion_height,
                 client_executor_input,
-                rollup_block: vec![],
+                rollup_block,
             };
             inputs.push(input);
         }

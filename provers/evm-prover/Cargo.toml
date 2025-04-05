@@ -26,14 +26,15 @@ anyhow = "1.0.94"
 bincode = "1.3.3"
 serde = "1.0.217"
 prost-types = "0.13.4"
-ethers = {workspace=true}
-celestia-types = {workspace=true}
-celestia-rpc = {workspace=true}
+ethers = { workspace = true }
+celestia-types = { workspace = true }
+celestia-rpc = { workspace = true }
 rsp-client-executor = { workspace = true }
 rsp-primitives = { workspace = true }
+tendermint = { workspace = true }
 
 blevm-prover = { path = "../blevm/blevm-prover" }
-blevm-common = {path = "../blevm/common"}
+blevm-common = { path = "../blevm/common" }
 
 [build-dependencies]
 tonic-build.workspace = true
