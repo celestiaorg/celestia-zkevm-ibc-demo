@@ -250,6 +250,40 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		panic(fmt.Sprintf("failed to retrieve trusted consensus state: %s", err))
 	}
 
+	// check if we have a mock proof (all zeros)
+	isMockProof := true
+	for _, b := range header.StateTransitionProof {
+		if b != 0 {
+			isMockProof = false
+			break
+		}
+	}
+
+	if isMockProof {
+		// for mock proofs, skip verification and just update the client
+		newConsensusState := &ConsensusState{
+			HeaderTimestamp: header.Timestamp,
+			StateRoot:       header.NewStateRoot,
+		}
+
+		// update client state with new height
+		cs.LatestHeight = uint64(header.NewHeight)
+		setClientState(clientStore, cdc, cs)
+
+		// set consensus state in client store
+		SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
+
+		// set metadata for this consensus state
+		setConsensusMetadata(ctx, clientStore, header.GetHeight())
+
+		height, ok := header.GetHeight().(clienttypes.Height)
+		if !ok {
+			panic(fmt.Sprintf("invalid height type %T", header.GetHeight()))
+		}
+
+		return []exported.Height{height}
+	}
+
 	vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
 	if err != nil {
 		return []exported.Height{}
