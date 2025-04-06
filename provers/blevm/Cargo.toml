@@ -1,5 +1,5 @@
 [workspace]
-members = ["blevm", "script", "blevm-aggregator", "common"]
+members = ["blevm", "script", "blevm-aggregator", "blevm-prover", "common"]
 resolver = "2"
 edition = "2021"
 
