@@ -250,72 +250,44 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		panic(fmt.Sprintf("failed to retrieve trusted consensus state: %s", err))
 	}
 
-	// check if we have a mock proof (all zeros)
-	isMockProof := true
-	for _, b := range header.StateTransitionProof {
-		if b != 0 {
-			isMockProof = false
-			break
-		}
-	}
+	// Check if this is a mock proof (all zeros)
+	isMockProof := bytes.Count(header.StateTransitionProof, []byte{0}) == len(header.StateTransitionProof)
 
-	if isMockProof {
-		// for mock proofs, skip verification and just update the client
-		newConsensusState := &ConsensusState{
-			HeaderTimestamp: header.Timestamp,
-			StateRoot:       header.NewStateRoot,
+	// Proof verification is skipped for mock proofs
+	if !isMockProof {
+		vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
+		if err != nil {
+			return []exported.Height{}
 		}
 
-		// update client state with new height
-		cs.LatestHeight = uint64(header.NewHeight)
-		setClientState(clientStore, cdc, cs)
-
-		// set consensus state in client store
-		SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
-
-		// set metadata for this consensus state
-		setConsensusMetadata(ctx, clientStore, header.GetHeight())
-
-		height, ok := header.GetHeight().(clienttypes.Height)
-		if !ok {
-			panic(fmt.Sprintf("invalid height type %T", header.GetHeight()))
+		// initialize the public witness
+		publicWitness := PublicWitness{
+			TrustedHeight:             header.TrustedHeight,
+			TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
+			TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
+			// TODO: check if NewHeight is the same as GetHeight
+			NewHeight:             header.NewHeight,
+			NewRollupStateRoot:    header.NewStateRoot,
+			NewCelestiaHeaderHash: header.NewCelestiaHeaderHash,
+			CodeCommitment:        cs.CodeCommitment,
+			GenesisStateRoot:      cs.GenesisStateRoot,
 		}
 
-		return []exported.Height{height}
-	}
+		witness, err := publicWitness.Generate()
+		if err != nil {
+			panic(fmt.Sprintf("failed to generate state transition public witness: %s", err))
+		}
 
-	vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
-	if err != nil {
-		return []exported.Height{}
-	}
+		proof := groth16.NewProof(ecc.BN254)
+		_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
+		if err != nil {
+			panic(fmt.Sprintf("failed to read proof: %s", err))
+		}
 
-	// initialize the public witness
-	publicWitness := PublicWitness{
-		TrustedHeight:             header.TrustedHeight,
-		TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
-		TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
-		// TODO: check if NewHeight is the same as GetHeight
-		NewHeight:             header.NewHeight,
-		NewRollupStateRoot:    header.NewStateRoot,
-		NewCelestiaHeaderHash: header.NewCelestiaHeaderHash,
-		CodeCommitment:        cs.CodeCommitment,
-		GenesisStateRoot:      cs.GenesisStateRoot,
-	}
-
-	witness, err := publicWitness.Generate()
-	if err != nil {
-		panic(fmt.Sprintf("failed to generate state transition public witness: %s", err))
-	}
-
-	proof := groth16.NewProof(ecc.BN254)
-	_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
-	if err != nil {
-		panic(fmt.Sprintf("failed to read proof: %s", err))
-	}
-
-	err = groth16.Verify(proof, vk, witness)
-	if err != nil {
-		panic(fmt.Sprintf("failed to verify proof: %s", err))
+		err = groth16.Verify(proof, vk, witness)
+		if err != nil {
+			panic(fmt.Sprintf("failed to verify proof: %s", err))
+		}
 	}
 
 	// Check the earliest consensus state to see if it is expired, if so then set the prune height
