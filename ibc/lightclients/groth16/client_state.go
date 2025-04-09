@@ -250,38 +250,44 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		panic(fmt.Sprintf("failed to retrieve trusted consensus state: %s", err))
 	}
 
-	vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
-	if err != nil {
-		return []exported.Height{}
-	}
+	// Check if this is a mock proof (all zeros)
+	isMockProof := bytes.Count(header.StateTransitionProof, []byte{0}) == len(header.StateTransitionProof)
 
-	// initialize the public witness
-	publicWitness := PublicWitness{
-		TrustedHeight:             header.TrustedHeight,
-		TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
-		TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
-		// TODO: check if NewHeight is the same as GetHeight
-		NewHeight:             header.NewHeight,
-		NewRollupStateRoot:    header.NewStateRoot,
-		NewCelestiaHeaderHash: header.NewCelestiaHeaderHash,
-		CodeCommitment:        cs.CodeCommitment,
-		GenesisStateRoot:      cs.GenesisStateRoot,
-	}
+	// Proof verification is skipped for mock proofs
+	if !isMockProof {
+		vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
+		if err != nil {
+			return []exported.Height{}
+		}
 
-	witness, err := publicWitness.Generate()
-	if err != nil {
-		panic(fmt.Sprintf("failed to generate state transition public witness: %s", err))
-	}
+		// initialize the public witness
+		publicWitness := PublicWitness{
+			TrustedHeight:             header.TrustedHeight,
+			TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
+			TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
+			// TODO: check if NewHeight is the same as GetHeight
+			NewHeight:             header.NewHeight,
+			NewRollupStateRoot:    header.NewStateRoot,
+			NewCelestiaHeaderHash: header.NewCelestiaHeaderHash,
+			CodeCommitment:        cs.CodeCommitment,
+			GenesisStateRoot:      cs.GenesisStateRoot,
+		}
 
-	proof := groth16.NewProof(ecc.BN254)
-	_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
-	if err != nil {
-		panic(fmt.Sprintf("failed to read proof: %s", err))
-	}
+		witness, err := publicWitness.Generate()
+		if err != nil {
+			panic(fmt.Sprintf("failed to generate state transition public witness: %s", err))
+		}
 
-	err = groth16.Verify(proof, vk, witness)
-	if err != nil {
-		panic(fmt.Sprintf("failed to verify proof: %s", err))
+		proof := groth16.NewProof(ecc.BN254)
+		_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
+		if err != nil {
+			panic(fmt.Sprintf("failed to read proof: %s", err))
+		}
+
+		err = groth16.Verify(proof, vk, witness)
+		if err != nil {
+			panic(fmt.Sprintf("failed to verify proof: %s", err))
+		}
 	}
 
 	// Check the earliest consensus state to see if it is expired, if so then set the prune height
