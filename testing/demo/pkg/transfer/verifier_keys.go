@@ -19,7 +19,7 @@ func assertVerifierKeys() error {
 		return fmt.Errorf("error loading .env file: %v", err)
 	}
 	if os.Getenv("SP1_PROVER") == "mock" {
-		fmt.Printf("Skipping verifier key check because SP1_PROVER=mock\n.")
+		fmt.Printf("Skipping verifier key check because SP1_PROVER=mock.\n")
 		return nil
 	}
 
