@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	"github.com/cosmos/ibc-go/v10/modules/core/exported"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -50,17 +52,26 @@ func getHeader() (*groth16.Header, error) {
 		return nil, fmt.Errorf("failed to get trusted height: %w", err)
 	}
 
+	newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EVM state root, height, and timestamp: %w", err)
+	}
+
 	header := &groth16.Header{
 		StateTransitionProof:      mockProof,
 		TrustedHeight:             trustedHeight,
-		TrustedCelestiaHeaderHash: []byte{}, // TODO: get trusted celestia header hash
-		NewStateRoot:              []byte{},
-		NewHeight:                 2,
+		TrustedCelestiaHeaderHash: []byte{},
+		NewStateRoot:              newStateRoot,
+		NewHeight:                 newHeight,
 		NewCelestiaHeaderHash:     []byte{},
 		DataRoots:                 [][]byte{},
-		Timestamp:                 &timestamppb.Timestamp{},
+		Timestamp:                 timestamppb.New(timestamp),
 	}
 
+	fmt.Printf("Header: %v\n", header)
+	fmt.Printf("Header.newStateRoot: %X\n", header.NewStateRoot)
+	fmt.Printf("Header.newHeight: %v\n", header.NewHeight)
+	fmt.Printf("Header.timestamp: %v\n", header.Timestamp)
 	return header, nil
 }
 
@@ -105,4 +116,18 @@ func getClientState() (*groth16.ClientState, error) {
 	}
 
 	return groth16ClientState, nil
+}
+
+func getEVMStateRootHeightTimestamp() ([]byte, int64, time.Time, error) {
+	client, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return nil, 0, time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
+	}
+
+	header, err := client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, 0, time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
+	}
+
+	return header.Root.Bytes(), header.Number.Int64(), time.Unix(int64(header.Time), 0), nil
 }
