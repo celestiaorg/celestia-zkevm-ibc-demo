@@ -227,11 +227,15 @@ func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.K
 	return nil
 }
 
-// UpdateConsensusState updates the client state.
+// UpdateConsensusState updates the consensus state.
 func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
 	header, ok := clientMsg.(*Header)
 	if !ok {
-		return []exported.Height{}, fmt.Errorf("the only support clientMsg type is Header")
+		return []exported.Height{}, fmt.Errorf("the only supported clientMsg type is Header")
+	}
+	height, ok := header.GetHeight().(clienttypes.Height)
+	if !ok {
+		return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
 	}
 
 	// Check if the consensus state has already been updated to this header.
@@ -294,11 +298,6 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 
 	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
 	setConsensusMetadata(ctx, clientStore, header.GetHeight())
-
-	height, ok := header.GetHeight().(clienttypes.Height)
-	if !ok {
-		return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
-	}
 
 	return []exported.Height{height}, nil
 }
