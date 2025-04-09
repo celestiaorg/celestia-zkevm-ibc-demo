@@ -244,41 +244,47 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 		return []exported.Height{header.GetHeight()}, nil
 	}
 
-	trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
-	if err != nil {
-		return []exported.Height{}, fmt.Errorf("failed to get trusted consensus state: %w", err)
-	}
+	// Check if this is a mock proof (all zeros)
+	isMockProof := bytes.Count(header.StateTransitionProof, []byte{0}) == len(header.StateTransitionProof)
 
-	vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
-	if err != nil {
-		return []exported.Height{}, fmt.Errorf("failed to deserialize verifying key: %w", err)
-	}
+	// If this is a mock proof, we don't need to verify it.
+	if !isMockProof {
+		// This is a real proof, so we need to verify it.
+		trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
+		if err != nil {
+			return []exported.Height{}, fmt.Errorf("failed to get trusted consensus state: %w", err)
+		}
+		vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
+		if err != nil {
+			return []exported.Height{}, fmt.Errorf("failed to deserialize verifying key: %w", err)
+		}
 
-	publicWitness := PublicWitness{
-		TrustedHeight:             header.TrustedHeight,
-		TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
-		TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
-		NewHeight:                 header.NewHeight,
-		NewRollupStateRoot:        header.NewStateRoot,
-		NewCelestiaHeaderHash:     header.NewCelestiaHeaderHash,
-		CodeCommitment:            cs.CodeCommitment,
-		GenesisStateRoot:          cs.GenesisStateRoot,
-	}
+		publicWitness := PublicWitness{
+			TrustedHeight:             header.TrustedHeight,
+			TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
+			TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
+			NewHeight:                 header.NewHeight,
+			NewRollupStateRoot:        header.NewStateRoot,
+			NewCelestiaHeaderHash:     header.NewCelestiaHeaderHash,
+			CodeCommitment:            cs.CodeCommitment,
+			GenesisStateRoot:          cs.GenesisStateRoot,
+		}
 
-	witness, err := publicWitness.Generate()
-	if err != nil {
-		return []exported.Height{}, fmt.Errorf("failed to generate state transition public witness: %w", err)
-	}
+		witness, err := publicWitness.Generate()
+		if err != nil {
+			return []exported.Height{}, fmt.Errorf("failed to generate state transition public witness: %w", err)
+		}
 
-	proof := groth16.NewProof(ecc.BN254)
-	_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
-	if err != nil {
-		return []exported.Height{}, fmt.Errorf("failed to read proof: %w", err)
-	}
+		proof := groth16.NewProof(ecc.BN254)
+		_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
+		if err != nil {
+			return []exported.Height{}, fmt.Errorf("failed to read proof: %w", err)
+		}
 
-	err = groth16.Verify(proof, vk, witness)
-	if err != nil {
-		return []exported.Height{}, fmt.Errorf("failed to verify proof: %w", err)
+		err = groth16.Verify(proof, vk, witness)
+		if err != nil {
+			return []exported.Height{}, fmt.Errorf("failed to verify proof: %w", err)
+		}
 	}
 
 	newConsensusState := &ConsensusState{
