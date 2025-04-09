@@ -2,16 +2,27 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/sp1ics07tendermint"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/joho/godotenv"
 )
 
 // assertVerifierKeys returns an error if the verifier key on the Tendermint light client does not match the verifier key of the celestia-prover.
 func assertVerifierKeys() error {
+	err := godotenv.Load()
+	if err != nil {
+		return fmt.Errorf("error loading .env file: %v", err)
+	}
+	if os.Getenv("SP1_PROVER") == "mock" {
+		fmt.Printf("Skipping verifier key check because SP1_PROVER=mock\n.")
+		return nil
+	}
+
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return err
