@@ -1,8 +1,5 @@
 //! Prover for SP1 ICS07 Tendermint programs.
 
-use std::env;
-
-use crate::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
 use alloy_sol_types::SolValue;
 use ibc_client_tendermint_types::Header;
 use ibc_core_commitment_types::merkle::MerkleProof;
@@ -11,9 +8,11 @@ use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::{
 };
 use ibc_eureka_solidity_types::sp1_ics07::IMembershipMsgs::KVPair;
 use ibc_proto::{ibc::lightclients::tendermint::v1::Header as RawHeader, Protobuf};
+use sp1_ics07_tendermint_prover::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
 use sp1_sdk::{
     EnvProver, ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
 };
+use std::env;
 
 /// A prover for for [`SP1Program`] programs.
 #[allow(clippy::module_name_repetitions)]
