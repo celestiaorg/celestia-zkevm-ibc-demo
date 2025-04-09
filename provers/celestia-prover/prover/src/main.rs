@@ -135,7 +135,7 @@ impl Prover for ProverService {
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
             &trusted_consensus_state,
-            &header,
+            &header.into(),
             now,
         );
         let elapsed = start_time.elapsed();
