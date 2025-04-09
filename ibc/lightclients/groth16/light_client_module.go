@@ -81,7 +81,12 @@ func (l LightClientModule) UpdateState(ctx sdktypes.Context, clientID string, cl
 		panic(errorsmod.Wrap(clienttypes.ErrClientNotFound, clientID))
 	}
 
-	return clientState.UpdateState(ctx, l.cdc, clientStore, clientMsg)
+	height, err := clientState.UpdateConsensusState(ctx, l.cdc, clientStore, clientMsg)
+	if err != nil {
+		panic(err)
+	}
+
+	return height
 }
 
 // VerifyMembership obtains the client state associated with the client identifier and calls into the clientState.verifyMembership method.

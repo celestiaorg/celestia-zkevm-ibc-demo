@@ -227,92 +227,58 @@ func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.K
 	return nil
 }
 
-func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) []exported.Height {
+// UpdateConsensusState updates the client state.
+func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
 	header, ok := clientMsg.(*Header)
 	if !ok {
-		fmt.Printf("the only support clientMsg type is Header")
-		return []exported.Height{}
+		return []exported.Height{}, fmt.Errorf("the only support clientMsg type is Header")
 	}
 
-	sdkCtx := sdktypes.UnwrapSDKContext(ctx)
-
+	// Check if the consensus state has already been updated to this header.
 	consensusState, err := GetConsensusState(clientStore, cdc, header.GetHeight())
 	if err != nil {
-		panic(fmt.Sprintf("failed to retrieve consensus state: %s", err))
+		return []exported.Height{}, fmt.Errorf("failed to retrieve consensus state: %w", err)
 	}
 	if consensusState != nil {
-		// perform no-op
-		return []exported.Height{header.GetHeight()}
+		// state has already been updated to this header so this is a no-op
+		return []exported.Height{header.GetHeight()}, nil
 	}
 
 	trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
 	if err != nil {
-		panic(fmt.Sprintf("failed to retrieve trusted consensus state: %s", err))
+		return []exported.Height{}, fmt.Errorf("failed to get trusted consensus state: %w", err)
 	}
 
 	vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
 	if err != nil {
-		return []exported.Height{}
+		return []exported.Height{}, fmt.Errorf("failed to deserialize verifying key: %w", err)
 	}
 
-	// initialize the public witness
 	publicWitness := PublicWitness{
 		TrustedHeight:             header.TrustedHeight,
 		TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
 		TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
-		// TODO: check if NewHeight is the same as GetHeight
-		NewHeight:             header.NewHeight,
-		NewRollupStateRoot:    header.NewStateRoot,
-		NewCelestiaHeaderHash: header.NewCelestiaHeaderHash,
-		CodeCommitment:        cs.CodeCommitment,
-		GenesisStateRoot:      cs.GenesisStateRoot,
+		NewHeight:                 header.NewHeight,
+		NewRollupStateRoot:        header.NewStateRoot,
+		NewCelestiaHeaderHash:     header.NewCelestiaHeaderHash,
+		CodeCommitment:            cs.CodeCommitment,
+		GenesisStateRoot:          cs.GenesisStateRoot,
 	}
 
 	witness, err := publicWitness.Generate()
 	if err != nil {
-		panic(fmt.Sprintf("failed to generate state transition public witness: %s", err))
+		return []exported.Height{}, fmt.Errorf("failed to generate state transition public witness: %w", err)
 	}
 
 	proof := groth16.NewProof(ecc.BN254)
 	_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
 	if err != nil {
-		panic(fmt.Sprintf("failed to read proof: %s", err))
+		return []exported.Height{}, fmt.Errorf("failed to read proof: %w", err)
 	}
 
 	err = groth16.Verify(proof, vk, witness)
 	if err != nil {
-		panic(fmt.Sprintf("failed to verify proof: %s", err))
-	}
-
-	// Check the earliest consensus state to see if it is expired, if so then set the prune height
-	// so that we can delete consensus state and all associated metadata.
-	var (
-		pruneHeight exported.Height
-		pruneError  error
-	)
-	pruneCb := func(height exported.Height) bool {
-		consState, err := GetConsensusState(clientStore, cdc, height)
-		// this error should never occur
-		if err != nil {
-			pruneError = err
-			return true
-		}
-		if consState.IsExpired(sdkCtx.BlockTime()) {
-			pruneHeight = height
-		}
-		return true
-	}
-	err = IterateConsensusStateAscending(clientStore, pruneCb)
-	if err != nil {
-		panic(fmt.Sprintf("failed to iterate consensus states: %s", err))
-	}
-	if pruneError != nil {
-		panic(fmt.Sprintf("failed to prune consensus state: %s", pruneError))
-	}
-	// if pruneHeight is set, delete consensus state and metadata
-	if pruneHeight != nil {
-		deleteConsensusState(clientStore, pruneHeight)
-		deleteConsensusMetadata(clientStore, pruneHeight)
+		return []exported.Height{}, fmt.Errorf("failed to verify proof: %w", err)
 	}
 
 	newConsensusState := &ConsensusState{
@@ -320,16 +286,13 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		StateRoot:       header.NewStateRoot,
 	}
 
-	// Q: do we need to set client state with updated height?
-	setClientState(clientStore, cdc, cs)
-	// set consensus state in client store
 	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
-	// set metadata for this consensus state
 	setConsensusMetadata(ctx, clientStore, header.GetHeight())
+
 	height, ok := header.GetHeight().(clienttypes.Height)
 	if !ok {
-		panic(fmt.Sprintf("invalid height type %T", header.GetHeight()))
+		return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
 	}
 
-	return []exported.Height{height}
+	return []exported.Height{height}, nil
 }

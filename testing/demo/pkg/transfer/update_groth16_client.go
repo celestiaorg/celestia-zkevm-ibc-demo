@@ -67,9 +67,21 @@ func getHeader() (groth16.Header, error) {
 
 // getTrustedHeight returns the last trusted height that the Groth16 light client is aware of.
 func getTrustedHeight() (int64, error) {
+	clientState, err := getClientState()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get groth16 client state: %w", err)
+	}
+
+	// Get the latest height from the client state
+	height := clientState.LatestHeight
+	fmt.Printf("Height: %v\n", height)
+	return int64(height), nil
+}
+
+func getClientState() (*groth16.ClientState, error) {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
-		return 0, fmt.Errorf("failed to get client context: %w", err)
+		return nil, fmt.Errorf("failed to get client context: %w", err)
 	}
 
 	// Query the client state
@@ -78,25 +90,20 @@ func getTrustedHeight() (int64, error) {
 		ClientId: groth16ClientID,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to query client state: %w", err)
+		return nil, fmt.Errorf("failed to query client state: %w", err)
 	}
-
-	fmt.Printf("Client state type URL: %s\n", resp.ClientState.TypeUrl)
 
 	// Try to unpack the client state using the exported interface
 	var clientState exported.ClientState
 	if err := clientCtx.InterfaceRegistry.UnpackAny(resp.ClientState, &clientState); err != nil {
-		return 0, fmt.Errorf("failed to unpack client state: %w", err)
+		return nil, fmt.Errorf("failed to unpack client state: %w", err)
 	}
 
 	// Type assert to the Groth16 client state
 	groth16ClientState, ok := clientState.(*groth16.ClientState)
 	if !ok {
-		return 0, fmt.Errorf("failed to type assert to Groth16 client state, got type %T", clientState)
+		return nil, fmt.Errorf("failed to type assert to Groth16 client state, got type %T", clientState)
 	}
 
-	// Get the latest height from the client state
-	height := groth16ClientState.GetLatestClientHeight().GetRevisionHeight()
-	fmt.Printf("Height: %v\n", height)
-	return int64(height), nil
+	return groth16ClientState, nil
 }
