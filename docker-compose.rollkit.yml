@@ -115,8 +115,6 @@ services:
       # for Celestia (with IBC v2 enabled).
       - TENDERMINT_RPC_URL=http://simapp-validator:26657
       - RPC_URL=http://reth:8545
-      - CELESTIA_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
-      - SP1_PROVER=mock
     ports:
       - "50051:50051"
     depends_on:
