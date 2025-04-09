@@ -25,7 +25,7 @@ func updateGroth16LightClient() error {
 		return fmt.Errorf("failed to get header: %w", err)
 	}
 
-	clientMessage, err := cdctypes.NewAnyWithValue(&header)
+	clientMessage, err := cdctypes.NewAnyWithValue(header)
 	if err != nil {
 		return fmt.Errorf("failed to create any value: %w", err)
 	}
@@ -43,24 +43,23 @@ func updateGroth16LightClient() error {
 	return nil
 }
 
-func getHeader() (groth16.Header, error) {
+func getHeader() (*groth16.Header, error) {
 	mockProof := []byte{0}
 	trustedHeight, err := getTrustedHeight()
 	if err != nil {
-		return groth16.Header{}, fmt.Errorf("failed to get trusted height: %w", err)
+		return nil, fmt.Errorf("failed to get trusted height: %w", err)
 	}
 
-	header := groth16.Header{
+	header := &groth16.Header{
 		StateTransitionProof:      mockProof,
 		TrustedHeight:             trustedHeight,
-		TrustedCelestiaHeaderHash: []byte{},
+		TrustedCelestiaHeaderHash: []byte{}, // TODO: get trusted celestia header hash
 		NewStateRoot:              []byte{},
 		NewHeight:                 2,
 		NewCelestiaHeaderHash:     []byte{},
 		DataRoots:                 [][]byte{},
 		Timestamp:                 &timestamppb.Timestamp{},
 	}
-	fmt.Printf("Header: %v\n", header)
 
 	return header, nil
 }
