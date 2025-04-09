@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -18,7 +20,11 @@ func updateGroth16LightClient() error {
 		return fmt.Errorf("failed to get client context: %w", err)
 	}
 
-	header := getHeader()
+	header, err := getHeader()
+	if err != nil {
+		return fmt.Errorf("failed to get header: %w", err)
+	}
+
 	clientMessage, err := cdctypes.NewAnyWithValue(&header)
 	if err != nil {
 		return fmt.Errorf("failed to create any value: %w", err)
@@ -37,10 +43,16 @@ func updateGroth16LightClient() error {
 	return nil
 }
 
-func getHeader() groth16.Header {
-	return groth16.Header{
-		StateTransitionProof:      []byte{},
-		TrustedHeight:             1,
+func getHeader() (groth16.Header, error) {
+	mockProof := []byte{0}
+	trustedHeight, err := getTrustedHeight()
+	if err != nil {
+		return groth16.Header{}, fmt.Errorf("failed to get trusted height: %w", err)
+	}
+
+	header := groth16.Header{
+		StateTransitionProof:      mockProof,
+		TrustedHeight:             trustedHeight,
 		TrustedCelestiaHeaderHash: []byte{},
 		NewStateRoot:              []byte{},
 		NewHeight:                 2,
@@ -48,4 +60,43 @@ func getHeader() groth16.Header {
 		DataRoots:                 [][]byte{},
 		Timestamp:                 &timestamppb.Timestamp{},
 	}
+	fmt.Printf("Header: %v\n", header)
+
+	return header, nil
+}
+
+// getTrustedHeight returns the last trusted height that the Groth16 light client is aware of.
+func getTrustedHeight() (int64, error) {
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get client context: %w", err)
+	}
+
+	// Query the client state
+	queryClient := clienttypes.NewQueryClient(clientCtx)
+	resp, err := queryClient.ClientState(context.Background(), &clienttypes.QueryClientStateRequest{
+		ClientId: groth16ClientID,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to query client state: %w", err)
+	}
+
+	fmt.Printf("Client state type URL: %s\n", resp.ClientState.TypeUrl)
+
+	// Try to unpack the client state using the exported interface
+	var clientState exported.ClientState
+	if err := clientCtx.InterfaceRegistry.UnpackAny(resp.ClientState, &clientState); err != nil {
+		return 0, fmt.Errorf("failed to unpack client state: %w", err)
+	}
+
+	// Type assert to the Groth16 client state
+	groth16ClientState, ok := clientState.(*groth16.ClientState)
+	if !ok {
+		return 0, fmt.Errorf("failed to type assert to Groth16 client state, got type %T", clientState)
+	}
+
+	// Get the latest height from the client state
+	height := groth16ClientState.GetLatestClientHeight().GetRevisionHeight()
+	fmt.Printf("Height: %v\n", height)
+	return int64(height), nil
 }
