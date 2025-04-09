@@ -298,6 +298,5 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 
 	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
 	setConsensusMetadata(ctx, clientStore, header.GetHeight())
-
 	return []exported.Height{height}, nil
 }
