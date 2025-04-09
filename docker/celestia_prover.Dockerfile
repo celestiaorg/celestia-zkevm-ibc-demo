@@ -11,22 +11,27 @@ RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone SP1 repo and install succinct toolchain
-RUN mkdir -p /sp1
-ENV SP1_DIR=/sp1
-WORKDIR $SP1_DIR
-
+# Install SP1 toolchain
 RUN curl -Lv https://sp1.succinct.xyz | bash -x
-RUN $SP1_DIR/bin/sp1up
+RUN bash -c 'source /root/.bashrc && sp1up'
 
 RUN rustup toolchain list
 RUN rustup default stable
 
-# Clone the repo and build
+# Install just
+RUN cargo install just
+
+# Copy the repo
 WORKDIR /celestia_zkevm_ibc_demo/
 COPY . .
 
+# Build SP1 programs
+WORKDIR /celestia_zkevm_ibc_demo/solidity-ibc-eureka
+ENV PATH="/root/.sp1/bin:$PATH"
+RUN bash -c 'source /root/.bashrc && just build-sp1-programs'
+
 # Build celestia-prover binary
+WORKDIR /celestia_zkevm_ibc_demo
 RUN cargo build --bin celestia-prover --release --locked
 
 # Runtime stage
