@@ -17,7 +17,7 @@ use prover::{
     ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
 use reqwest::Url;
-use sp1_ics07_tendermint_prover::programs::{MembershipProgram, SP1Program, UpdateClientProgram};
+use sp1_ics07_tendermint_prover::programs::{MembershipProgram, UpdateClientProgram};
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
 use sp1_sdk::HashableKey;
 use std::env;
