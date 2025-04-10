@@ -16,6 +16,12 @@ import (
 
 func updateGroth16LightClient() error {
 	fmt.Printf("Updating Groth16 light client on EVM roll-up...\n")
+	consensusState, err := getConsensusState()
+	if err != nil {
+		return fmt.Errorf("failed to get consensus state: %w", err)
+	}
+	stateRoot := consensusState.GetStateRoot()
+	fmt.Printf("Groth16 light client current state root: %X\n", stateRoot)
 
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
@@ -44,6 +50,13 @@ func updateGroth16LightClient() error {
 		return fmt.Errorf("failed to update Groth16 light client on SimApp: %w", err)
 	}
 	fmt.Printf("Updated Groth16 light client on SimApp.\n")
+
+	consensusState, err = getConsensusState()
+	if err != nil {
+		return fmt.Errorf("failed to get consensus state: %w", err)
+	}
+	stateRoot = consensusState.GetStateRoot()
+	fmt.Printf("Groth16 light client new state root: %X\n", stateRoot)
 	return nil
 }
 
@@ -132,4 +145,32 @@ func getEVMStateRootHeightTimestamp() ([]byte, int64, time.Time, error) {
 	}
 
 	return header.Root.Bytes(), header.Number.Int64(), time.Unix(int64(header.Time), 0), nil
+}
+
+func getConsensusState() (*groth16.ConsensusState, error) {
+	clientCtx, err := utils.SetupClientContext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client context: %w", err)
+	}
+
+	queryClient := clienttypes.NewQueryClient(clientCtx)
+	resp, err := queryClient.ConsensusState(context.Background(), &clienttypes.QueryConsensusStateRequest{
+		ClientId:     groth16ClientID,
+		LatestHeight: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query consensus state: %w", err)
+	}
+
+	var consensusState exported.ConsensusState
+	if err := clientCtx.InterfaceRegistry.UnpackAny(resp.ConsensusState, &consensusState); err != nil {
+		return nil, fmt.Errorf("failed to unpack consensus state: %w", err)
+	}
+
+	groth16ConsensusState, ok := consensusState.(*groth16.ConsensusState)
+	if !ok {
+		return nil, fmt.Errorf("failed to type assert to Groth16 consensus state, got type %T", consensusState)
+	}
+
+	return groth16ConsensusState, nil
 }
