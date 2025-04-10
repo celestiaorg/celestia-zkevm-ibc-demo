@@ -187,23 +187,30 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 		return nil, fmt.Errorf("failed to get factory: %v", err)
 	}
 
+	fmt.Printf("Broadcasting transaction with gas: %d\n", gas)
+	fmt.Printf("Messages to broadcast: %v\n", msgs)
+
 	buffer := &bytes.Buffer{}
 	clientContext.Output = buffer
 	clientContext.WithOutput(buffer)
 
 	if err := tx.BroadcastTx(clientContext, factory, msgs...); err != nil {
+		fmt.Printf("Error broadcasting transaction: %v\n", err)
 		return &sdk.TxResponse{}, fmt.Errorf("failed to broadcast tx: %v", err)
 	}
 
 	if buffer.Len() == 0 {
+		fmt.Printf("Empty buffer after broadcast\n")
 		return nil, fmt.Errorf("empty buffer, transaction has not been executed yet")
 	}
 
 	var txResp sdk.TxResponse
 	if err := clientContext.Codec.UnmarshalJSON(buffer.Bytes(), &txResp); err != nil {
+		fmt.Printf("Error unmarshaling transaction response: %v\n", err)
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
 
+	fmt.Printf("Transaction broadcast response: %+v\n", txResp)
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -217,6 +224,7 @@ type User interface {
 // has been included in a block.
 func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
 	var resp sdk.TxResponse
+	fmt.Printf("Waiting for transaction %s to be included in a block...\n", txHash)
 
 	err := WaitForCondition(time.Second*300, time.Second*15, func() (bool, error) {
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
@@ -225,6 +233,10 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 			return false, err
 		}
 
+		fmt.Printf("Transaction found in block %d with code %d\n", fullyPopulatedTxResp.Height, fullyPopulatedTxResp.Code)
+		if fullyPopulatedTxResp.Code != 0 {
+			fmt.Printf("Transaction failed with code %d: %s\n", fullyPopulatedTxResp.Code, fullyPopulatedTxResp.RawLog)
+		}
 		resp = *fullyPopulatedTxResp
 		return true, nil
 	})

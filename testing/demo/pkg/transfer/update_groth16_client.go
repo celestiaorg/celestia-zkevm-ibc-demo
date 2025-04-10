@@ -40,8 +40,10 @@ func updateGroth16LightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to broadcast create client msg: %w", err)
 	}
-	fmt.Printf("Update client response: %v\n", resp)
-
+	if resp.Code != 0 {
+		return fmt.Errorf("failed to update Groth16 light client on SimApp: %w", err)
+	}
+	fmt.Printf("Updated Groth16 light client on SimApp.\n")
 	return nil
 }
 

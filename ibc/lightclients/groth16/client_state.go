@@ -238,16 +238,6 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 		return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
 	}
 
-	// Check if the consensus state has already been updated to this header.
-	consensusState, err := GetConsensusState(clientStore, cdc, header.GetHeight())
-	if err != nil {
-		return []exported.Height{}, fmt.Errorf("failed to retrieve consensus state: %w", err)
-	}
-	if consensusState != nil {
-		// state has already been updated to this header so this is a no-op
-		return []exported.Height{header.GetHeight()}, nil
-	}
-
 	// Check if this is a mock proof (all zeros)
 	isMockProof := bytes.Count(header.StateTransitionProof, []byte{0}) == len(header.StateTransitionProof)
 
