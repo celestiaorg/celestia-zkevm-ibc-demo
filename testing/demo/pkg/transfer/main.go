@@ -81,9 +81,6 @@ func transferBack() error {
 		return fmt.Errorf("failed to approve spend: %w", err)
 	}
 
-	// TODO: we could also save the tx hash when making the transfer
-	// and use it as the key for the MPT proof
-
 	// Get the contract addresses
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
