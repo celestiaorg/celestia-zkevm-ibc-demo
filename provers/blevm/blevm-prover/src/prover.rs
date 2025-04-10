@@ -166,7 +166,7 @@ impl BlockProver {
         stdin.write(&row_root_multiproof);
         stdin.write(&nmt_multiproofs);
         stdin.write(&selected_roots);
-        stdin.write_vec(input.rollup_block);
+        stdin.write(&input.rollup_block);
         Ok(stdin)
     }
 
