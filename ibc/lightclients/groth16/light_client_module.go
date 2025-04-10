@@ -81,7 +81,7 @@ func (l LightClientModule) UpdateState(ctx sdktypes.Context, clientID string, cl
 		panic(errorsmod.Wrap(clienttypes.ErrClientNotFound, clientID))
 	}
 
-	height, err := clientState.UpdateConsensusState(ctx, l.cdc, clientStore, clientMsg)
+	height, err := clientState.UpdateState(ctx, l.cdc, clientStore, clientMsg)
 	if err != nil {
 		panic(err)
 	}

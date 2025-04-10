@@ -227,8 +227,8 @@ func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.K
 	return nil
 }
 
-// UpdateConsensusState updates the consensus state.
-func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
+// UpdateState updates the consensus state and client state.
+func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
 	header, ok := clientMsg.(*Header)
 	if !ok {
 		return []exported.Height{}, fmt.Errorf("the only supported clientMsg type is Header")
@@ -288,8 +288,19 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 		StateRoot:       header.NewStateRoot,
 	}
 
-	fmt.Printf("Setting new consensus state with state root: %X\n", newConsensusState.StateRoot)
+	fmt.Printf("Setting new consensus state with state root: %X and height: %v and timestamp: %v\n", newConsensusState.StateRoot, header.GetHeight(), newConsensusState.HeaderTimestamp)
 	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
 	setConsensusMetadata(ctx, clientStore, header.GetHeight())
+
+	newClientState := &ClientState{
+		LatestHeight:               header.GetHeight().GetRevisionHeight(),
+		CodeCommitment:             cs.CodeCommitment,
+		GenesisStateRoot:           cs.GenesisStateRoot,
+		StateTransitionVerifierKey: cs.StateTransitionVerifierKey,
+		StateMembershipVerifierKey: cs.StateMembershipVerifierKey,
+	}
+	fmt.Printf("Setting new client state with height: %v\n", newClientState.LatestHeight)
+	setClientState(clientStore, cdc, newClientState)
+
 	return []exported.Height{height}, nil
 }

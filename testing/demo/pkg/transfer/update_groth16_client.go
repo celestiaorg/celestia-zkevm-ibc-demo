@@ -20,8 +20,7 @@ func updateGroth16LightClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
-	stateRoot := consensusState.GetStateRoot()
-	fmt.Printf("Groth16 light client current state root: %X\n", stateRoot)
+	fmt.Printf("Groth16 light client current timetstamp %v and state root %X\n", consensusState.GetHeaderTimestamp(), consensusState.GetStateRoot())
 
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
@@ -51,12 +50,11 @@ func updateGroth16LightClient() error {
 	}
 	fmt.Printf("Updated Groth16 light client on simapp.\n")
 
-	consensusState, err = getConsensusState()
+	newConsensusState, err := getConsensusState()
 	if err != nil {
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
-	stateRoot = consensusState.GetStateRoot()
-	fmt.Printf("Groth16 light client new state root: %X\n", stateRoot)
+	fmt.Printf("Groth16 light client current timetstamp %v and state root %X\n", newConsensusState.GetHeaderTimestamp(), newConsensusState.GetStateRoot())
 	return nil
 }
 
