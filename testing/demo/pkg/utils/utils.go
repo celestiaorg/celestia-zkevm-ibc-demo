@@ -203,7 +203,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 	if err := clientContext.Codec.UnmarshalJSON(buffer.Bytes(), &txResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
-
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -217,6 +216,7 @@ type User interface {
 // has been included in a block.
 func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxResponse, error) {
 	var resp sdk.TxResponse
+	fmt.Printf("Waiting for transaction %s to land in a block...\n", txHash)
 
 	err := WaitForCondition(time.Second*300, time.Second*15, func() (bool, error) {
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
@@ -225,6 +225,10 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 			return false, err
 		}
 
+		fmt.Printf("Transaction landed in block %d with code %d\n", fullyPopulatedTxResp.Height, fullyPopulatedTxResp.Code)
+		if fullyPopulatedTxResp.Code != 0 {
+			fmt.Printf("Transaction failed with code %d: %s\n", fullyPopulatedTxResp.Code, fullyPopulatedTxResp.RawLog)
+		}
 		resp = *fullyPopulatedTxResp
 		return true, nil
 	})

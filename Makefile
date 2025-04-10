@@ -76,6 +76,7 @@ demo:
 	@make start
 	@make setup
 	@make transfer
+	@make transfer-back
 .PHONY: demo
 
 ## start: Start all Docker containers for the demo.

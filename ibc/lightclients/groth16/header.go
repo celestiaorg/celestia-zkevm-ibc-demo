@@ -12,9 +12,7 @@ func (h *Header) ClientType() string {
 	return Groth16ClientType
 }
 
-// GetHeight returns the current height. It returns 0 if the tendermint
-// header is nil.
-// NOTE: the header.Header is checked to be non nil in ValidateBasic.
+// GetHeight returns the EVM height of this header.
 func (h *Header) GetHeight() exported.Height {
 	return clienttypes.NewHeight(0, uint64(h.NewHeight))
 }

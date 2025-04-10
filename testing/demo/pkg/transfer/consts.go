@@ -12,7 +12,7 @@ var (
 	// transferAmount is the amount of tokens to transfer.
 	transferAmount = math.NewInt(100)
 	// transferBackAmount is the amount of tokens to transfer back.
-	transferBackAmount = big.NewInt(50)
+	transferBackAmount = big.NewInt(1)
 )
 
 // Tokens

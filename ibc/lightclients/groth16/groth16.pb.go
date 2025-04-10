@@ -179,31 +179,31 @@ func (x *ConsensusState) GetStateRoot() []byte {
 	return nil
 }
 
-// Header defines a struct that is used to update the trusted state root of an
-// EVM roll-up.
+// Header defines a struct that is used to update the consensus state of the groth16 light client.
 type Header struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// serialized groth16 proof that the given state transition is valid
+	// StateTransitionProof is a serialized groth16 proof that the given state transition is valid.
+	// If a proof with 0 bytes is provided, it is assumed to be a mock proof.
 	StateTransitionProof []byte `protobuf:"bytes,1,opt,name=state_transition_proof,json=stateTransitionProof,proto3" json:"state_transition_proof,omitempty"`
-	// last verified height of the rollup. This is used to retrieve the previous
-	// state root with which the proof is verified against
+	// TrustedHeight is the last verified height of the rollup. This is used to retrieve the previous
+	// state root with which the proof is verified against.
 	TrustedHeight int64 `protobuf:"varint,2,opt,name=trusted_height,json=trustedHeight,proto3" json:"trusted_height,omitempty"`
-	// trusted header hash passed by the relayer
+	// TrustedCelestiaHeaderHash is the last verified Celestia header hash.
 	TrustedCelestiaHeaderHash []byte `protobuf:"bytes,3,opt,name=trusted_celestia_header_hash,json=trustedCelestiaHeaderHash,proto3" json:"trusted_celestia_header_hash,omitempty"`
-	// new state root, height and header hash of the rollup after the state transition has been
-	// applied
-	NewStateRoot          []byte `protobuf:"bytes,4,opt,name=new_state_root,json=newStateRoot,proto3" json:"new_state_root,omitempty"`
-	NewHeight             int64  `protobuf:"varint,5,opt,name=new_height,json=newHeight,proto3" json:"new_height,omitempty"`
+	// NewStateRoot is the new state root of the rollup after the state transition has been applied.
+	NewStateRoot []byte `protobuf:"bytes,4,opt,name=new_state_root,json=newStateRoot,proto3" json:"new_state_root,omitempty"`
+	// NewHeight is the new height of the rollup after the state transition has been applied.
+	NewHeight int64 `protobuf:"varint,5,opt,name=new_height,json=newHeight,proto3" json:"new_height,omitempty"`
+	// NewCelestiaHeaderHash is the new Celestia header hash after the state transition has been applied.
 	NewCelestiaHeaderHash []byte `protobuf:"bytes,6,opt,name=new_celestia_header_hash,json=newCelestiaHeaderHash,proto3" json:"new_celestia_header_hash,omitempty"`
 	// TODO: This is provided by the user at the moment but we can't trust them
 	// with this data. We need to get all the data roots from the
 	// the store.
 	DataRoots [][]byte `protobuf:"bytes,7,rep,name=data_roots,json=dataRoots,proto3" json:"data_roots,omitempty"`
-	// Timestamp is the timestamp of an EVM header at a particular block
-	// height.
+	// Timestamp is the timestamp of an EVM header at the new height.
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 }
 

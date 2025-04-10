@@ -135,6 +135,11 @@ func transferBack() error {
 		return fmt.Errorf("failed to send transfer back msg: %w", err)
 	}
 
+	err = updateGroth16LightClient()
+	if err != nil {
+		return fmt.Errorf("failed to update Groth16 light client: %w", err)
+	}
+
 	return nil
 }
 
@@ -257,7 +262,7 @@ func sendTransferBackMsg() error {
 		return fmt.Errorf("send transfer back msg failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs)
 	}
 
-	fmt.Printf("send transfer back msg success tx hash: %s\n", tx.Hash().Hex())
+	fmt.Printf("Submit transfer back msg successfully tx hash: %s\n", tx.Hash().Hex())
 	return nil
 }
 
