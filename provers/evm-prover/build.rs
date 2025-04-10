@@ -12,5 +12,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &["../../proto"],
         )?;
     build_program_with_args("../blevm/blevm", Default::default());
+    build_program_with_args("../blevm/blevm-aggregator", Default::default());
     Ok(())
 }
