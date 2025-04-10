@@ -47,9 +47,9 @@ func updateGroth16LightClient() error {
 		return fmt.Errorf("failed to broadcast create client msg: %w", err)
 	}
 	if resp.Code != 0 {
-		return fmt.Errorf("failed to update Groth16 light client on SimApp: %w", err)
+		return fmt.Errorf("failed to update Groth16 light client on simapp: %w", err)
 	}
-	fmt.Printf("Updated Groth16 light client on SimApp.\n")
+	fmt.Printf("Updated Groth16 light client on simapp.\n")
 
 	consensusState, err = getConsensusState()
 	if err != nil {
@@ -83,10 +83,10 @@ func getHeader() (*groth16.Header, error) {
 		Timestamp:                 timestamppb.New(timestamp),
 	}
 
-	fmt.Printf("Header: %v\n", header)
-	fmt.Printf("Header.newStateRoot: %X\n", header.NewStateRoot)
-	fmt.Printf("Header.newHeight: %v\n", header.NewHeight)
-	fmt.Printf("Header.timestamp: %v\n", header.Timestamp)
+	fmt.Printf("Header.NewHeight: %v\n", header.NewHeight)
+	fmt.Printf("Header.NewStateRoot: %X\n", header.NewStateRoot)
+	fmt.Printf("Header.Timestamp: %v\n", header.Timestamp)
+
 	return header, nil
 }
 
@@ -99,7 +99,6 @@ func getTrustedHeight() (int64, error) {
 
 	// Get the latest height from the client state
 	height := clientState.LatestHeight
-	fmt.Printf("Height: %v\n", height)
 	return int64(height), nil
 }
 

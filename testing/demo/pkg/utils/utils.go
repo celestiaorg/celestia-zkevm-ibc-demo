@@ -187,9 +187,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 		return nil, fmt.Errorf("failed to get factory: %v", err)
 	}
 
-	fmt.Printf("Broadcasting transaction with gas: %d\n", gas)
-	fmt.Printf("Messages to broadcast: %v\n", msgs)
-
 	buffer := &bytes.Buffer{}
 	clientContext.Output = buffer
 	clientContext.WithOutput(buffer)
@@ -209,8 +206,6 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 		fmt.Printf("Error unmarshaling transaction response: %v\n", err)
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
-
-	fmt.Printf("Transaction broadcast response: %+v\n", txResp)
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -233,7 +228,7 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 			return false, err
 		}
 
-		fmt.Printf("Transaction found in block %d with code %d\n", fullyPopulatedTxResp.Height, fullyPopulatedTxResp.Code)
+		fmt.Printf("Transaction landed in block %d with code %d\n", fullyPopulatedTxResp.Height, fullyPopulatedTxResp.Code)
 		if fullyPopulatedTxResp.Code != 0 {
 			fmt.Printf("Transaction failed with code %d: %s\n", fullyPopulatedTxResp.Code, fullyPopulatedTxResp.RawLog)
 		}

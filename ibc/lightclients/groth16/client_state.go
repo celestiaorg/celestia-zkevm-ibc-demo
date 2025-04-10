@@ -243,6 +243,7 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 
 	// If this is a mock proof, we don't need to verify it.
 	if !isMockProof {
+
 		// This is a real proof, so we need to verify it.
 		trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
 		if err != nil {
@@ -275,6 +276,7 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 			return []exported.Height{}, fmt.Errorf("failed to read proof: %w", err)
 		}
 
+		fmt.Printf("Verifying state transition proof...\n")
 		err = groth16.Verify(proof, vk, witness)
 		if err != nil {
 			return []exported.Height{}, fmt.Errorf("failed to verify proof: %w", err)
@@ -286,6 +288,7 @@ func (cs *ClientState) UpdateConsensusState(ctx sdktypes.Context, cdc codec.Bina
 		StateRoot:       header.NewStateRoot,
 	}
 
+	fmt.Printf("Setting new consensus state with state root: %X\n", newConsensusState.StateRoot)
 	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
 	setConsensusMetadata(ctx, clientStore, header.GetHeight())
 	return []exported.Height{height}, nil
