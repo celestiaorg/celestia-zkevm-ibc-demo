@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math/big"
@@ -12,6 +13,7 @@ import (
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
+	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -94,4 +96,45 @@ func getIBCERC20Address() (ethcommon.Address, error) {
 		return ethcommon.Address{}, fmt.Errorf("failed to get IBC ERC20 contract address: %w", err)
 	}
 	return ibcERC20Address, nil
+}
+
+// From https://medium.com/@zhuytt4/verify-the-owner-of-safe-wallet-with-eth-getproof-7edc450504ff
+func GetCommitmentsStorageKey(path []byte) ethcommon.Hash {
+	commitmentStorageSlot := ethcommon.FromHex(ics26router.IbcStoreStorageSlot)
+
+	pathHash := crypto.Keccak256(path)
+
+	// zero pad both to 32 bytes
+	paddedSlot := ethcommon.LeftPadBytes(commitmentStorageSlot, 32)
+
+	// keccak256(h(k) . slot)
+	return crypto.Keccak256Hash(pathHash, paddedSlot)
+}
+
+func packetCommitmentPath(clientId []byte, sequence uint64) []byte {
+	// Convert sequence to big endian bytes (8 bytes)
+	sequenceBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(sequenceBytes, sequence)
+
+	// The path is: clientId + uint8(1) + sequenceBytes
+	path := append(clientId, byte(1))
+	path = append(path, sequenceBytes...)
+
+	return path
+}
+
+// GetEvmEvent parses the logs in the given receipt and returns the first event that can be parsed
+func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log) (*T, error)) (event *T, err error) {
+	for _, l := range receipt.Logs {
+		event, err = parseFn(*l)
+		if err == nil && event != nil {
+			break
+		}
+	}
+
+	if event == nil {
+		err = fmt.Errorf("event not found")
+	}
+
+	return
 }
