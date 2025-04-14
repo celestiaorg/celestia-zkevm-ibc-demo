@@ -153,7 +153,7 @@ impl BlockProver {
         //let first_row_index: u64 = index.div_ceil(eds_size) - 1;
         // Trying this Diego's way
         let first_row_index: u64 = blob_from_chain.index.unwrap() / eds_size;
-        let ods_index = blob.index.unwrap() - (first_row_index * ods_size);
+        let ods_index = blob_from_chain.index.unwrap() - (first_row_index * ods_size);
 
         let range_response = self
             .celestia_client
