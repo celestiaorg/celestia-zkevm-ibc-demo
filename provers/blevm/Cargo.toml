@@ -23,8 +23,10 @@ reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-2024
     "optimism",
     "std",
 ] }
-celestia-types = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
-celestia-rpc = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
+celestia-types = "0.10"
+celestia-rpc = "0.9"
+sha3 = "0.10"
+eq-common = "0.1.4"
 tendermint-proto = "*"
 tendermint = "*"
 bincode = "1.3.3"

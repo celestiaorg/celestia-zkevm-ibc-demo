@@ -43,8 +43,10 @@ tonic-build = "0.12"
 tonic-reflection = "0.12"
 tracing = { version = "0.1", default-features = false }
 sp1-helper = "4.0.1"
-celestia-rpc = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
-celestia-types = { git = "https://github.com/S1nus/lumina.git", rev = "c2971dfbccc0b56a2ad61ea587ca84c11fcfb1a3" }
+celestia-types = "0.10"
+celestia-rpc = "0.9"
+sha3 = "0.10"
+eq-common = "0.1.4"
 
 # The rev in the following dependencies should match the commit used by the
 # solidity-ibc-eureka submodule in this repo.

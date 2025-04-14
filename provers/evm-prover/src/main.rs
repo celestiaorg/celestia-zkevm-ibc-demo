@@ -158,7 +158,7 @@ impl Prover for ProverService {
 
         println!(
             "proving from height {:?} to height {:?}",
-            latest_height, trusted_height
+            trusted_height, latest_height
         );
 
         if latest_height.as_u64() <= trusted_height {
@@ -170,9 +170,9 @@ impl Prover for ProverService {
         let mut inputs = vec![];
         for height in trusted_height + 1..=latest_height.as_u64() {
             let (inclusion_height, blob_commitment) =
-                get_inclusion_height(self.indexer_url.clone(), height)
-                    .await
-                    .unwrap();
+            get_inclusion_height(self.indexer_url.clone(), height)
+                .await
+                .unwrap();
             let client_executor_input = generate_client_input(
                 self.evm_rpc_url.clone(),
                 height,
@@ -180,15 +180,16 @@ impl Prover for ProverService {
                 self.custom_beneficiary.as_ref(),
                 self.opcode_tracking,
             )
-            .await
-            .unwrap();
+                .await
+                .unwrap();
             let hash: merkle::Hash = blob_commitment[..blob_commitment.len()].try_into().unwrap();
-            let commitment = Commitment(hash);
+            let commitment = Commitment::new(hash);
             let rollup_block = self
                 .prover
                 .get_blob(inclusion_height, commitment)
                 .await
                 .unwrap();
+
             let input = BlockProverInput {
                 inclusion_height,
                 client_executor_input,

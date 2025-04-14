@@ -1,12 +1,14 @@
-use crate::proofs::{generate_header_proofs, generate_row_proofs};
-use celestia_rpc::{BlobClient, Client, HeaderClient};
+use crate::proofs::generate_header_proofs;
+use celestia_rpc::{BlobClient, Client, HeaderClient, ShareClient};
 use celestia_types::{
     nmt::{Namespace, NamespaceProof},
     ExtendedHeader,
 };
 use celestia_types::{AppVersion, Blob, Commitment};
+use eq_common::KeccakInclusionToDataRootProofInput;
 use rsp_client_executor::io::EthClientExecutorInput;
 use serde::{Deserialize, Serialize};
+use sha3::{Digest, Keccak256};
 use sp1_sdk::{
     ExecutionReport, HashableKey, ProverClient, SP1Proof, SP1ProofWithPublicValues,
     SP1PublicValues, SP1Stdin, SP1VerifyingKey,
@@ -132,41 +134,60 @@ impl BlockProver {
             AppVersion::V3,
         )?;
 
+        let header = self
+            .celestia_client
+            .get_header(input.inclusion_height)
+            .await?;
+
+        let eds_row_roots = header.dah.row_roots();
+        let eds_size: u64 = eds_row_roots.len().try_into().unwrap();
+        let ods_size: u64 = eds_size / 2;
+
         // Get blob and header from Celestia
         let blob_from_chain = self
             .celestia_client
             .get_blob(input.inclusion_height, &blob.commitment)
             .await?;
 
-        println!("{:#?} {:#?}", blob_from_chain.commitment, blob.commitment);
+        let _index = blob_from_chain.index.unwrap();
+        //let first_row_index: u64 = index.div_ceil(eds_size) - 1;
+        // Trying this Diego's way
+        let first_row_index: u64 = blob_from_chain.index.unwrap() / eds_size;
+        let ods_index = blob.index.unwrap() - (first_row_index * ods_size);
 
-        let header = self
+        let range_response = self
             .celestia_client
-            .get_header(input.inclusion_height)
-            .await?;
+            .client
+            .share_get_range(&header, ods_index, ods_index + blob.shares_len() as u64)
+            .await
+            .expect("Failed getting shares");
+
+        range_response
+            .proof
+            .verify(header.dah.hash())
+            .expect("Failed verifying proof");
+
+        let keccak_hash: [u8; 32] = Keccak256::new().chain_update(&blob.data).finalize().into();
+
+        let proof_input = KeccakInclusionToDataRootProofInput {
+            data: blob.clone().data,
+            namespace_id: self.celestia_client.namespace,
+            share_proofs: range_response.clone().proof.share_proofs,
+            row_proof: range_response.clone().proof.row_proof,
+            data_root: header.dah.hash().as_bytes().try_into().unwrap(),
+            keccak_hash,
+        };
 
         // Generate all required proofs
         let (data_hash_bytes, data_hash_proof) = generate_header_proofs(&header)?;
 
-        let (row_root_multiproof, selected_roots) =
-            generate_row_proofs(&header, &blob_from_chain, blob_from_chain.index.unwrap())?;
-
-        let nmt_multiproofs = self
-            .celestia_client
-            .get_nmt_proofs(input.inclusion_height, &blob)
-            .await?;
-
         // Prepare stdin for the prover
         let mut stdin = SP1Stdin::new();
+        stdin.write(&proof_input);
         stdin.write(&client_executor_input);
-        stdin.write(&self.celestia_client.namespace);
         stdin.write(&header.header.hash());
         stdin.write_vec(data_hash_bytes);
         stdin.write(&data_hash_proof);
-        stdin.write(&row_root_multiproof);
-        stdin.write(&nmt_multiproofs);
-        stdin.write(&selected_roots);
-        stdin.write(&input.rollup_block);
         Ok(stdin)
     }
 

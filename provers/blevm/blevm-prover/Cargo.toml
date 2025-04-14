@@ -4,6 +4,8 @@ name = "blevm-prover"
 edition = { workspace = true }
 
 [dependencies]
+eq-common = { workspace = true }
+sha3 = {workspace=true}
 sp1-sdk = { workspace = true }
 clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
