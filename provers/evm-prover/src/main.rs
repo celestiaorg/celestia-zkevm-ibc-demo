@@ -170,9 +170,9 @@ impl Prover for ProverService {
         let mut inputs = vec![];
         for height in trusted_height + 1..=latest_height.as_u64() {
             let (inclusion_height, blob_commitment) =
-            get_inclusion_height(self.indexer_url.clone(), height)
-                .await
-                .unwrap();
+                get_inclusion_height(self.indexer_url.clone(), height)
+                    .await
+                    .unwrap();
             let client_executor_input = generate_client_input(
                 self.evm_rpc_url.clone(),
                 height,
@@ -180,8 +180,8 @@ impl Prover for ProverService {
                 self.custom_beneficiary.as_ref(),
                 self.opcode_tracking,
             )
-                .await
-                .unwrap();
+            .await
+            .unwrap();
             let hash: merkle::Hash = blob_commitment[..blob_commitment.len()].try_into().unwrap();
             let commitment = Commitment::new(hash);
             let rollup_block = self
