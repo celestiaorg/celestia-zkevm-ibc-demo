@@ -1,35 +1,36 @@
-use alloy::primitives::Address;
 use alloy::primitives::Bytes;
-use alloy::providers::ProviderBuilder;
 use alloy_sol_types::SolValue;
-use celestia_prover::prover::{SP1ICS07TendermintProver, SupportedProofType};
-use ibc_core_commitment_types::merkle::MerkleProof;
-use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
-use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use ibc_eureka_solidity_types::sp1_ics07::{
     IICS07TendermintMsgs::ClientState,
     IMembershipMsgs::{KVPair, MembershipOutput, MembershipProof, SP1MembershipProof},
     ISP1Msgs::SP1Proof,
 };
+use sp1_sdk::HashableKey;
+use std::env;
+use std::fs;
+use tonic::{transport::Server, Request, Response, Status};
+pub mod prover {
+    tonic::include_proto!("celestia.prover.v1");
+}
+use alloy::primitives::Address;
+use alloy::providers::ProviderBuilder;
+use celestia_prover::{
+    programs::{MembershipProgram, UpdateClientProgram},
+    prover::{SP1ICS07TendermintProver, SupportedProofType},
+};
+use ibc_core_commitment_types::merkle::MerkleProof;
+use ibc_eureka_solidity_types::sp1_ics07::sp1_ics07_tendermint;
+use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState as SolConsensusState;
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
     ProveStateTransitionRequest, ProveStateTransitionResponse,
 };
 use reqwest::Url;
-use sp1_ics07_tendermint_prover::programs::{MembershipProgram, UpdateClientProgram};
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
-use sp1_sdk::HashableKey;
-use std::env;
-use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 use tendermint_rpc::HttpClient;
-use tonic::{transport::Server, Request, Response, Status};
-
-pub mod prover {
-    tonic::include_proto!("celestia.prover.v1");
-}
 
 pub struct ProverService {
     tendermint_prover: SP1ICS07TendermintProver<UpdateClientProgram>,
@@ -135,7 +136,7 @@ impl Prover for ProverService {
         let proof = self.tendermint_prover.generate_proof(
             &client_state,
             &trusted_consensus_state,
-            &header.into(),
+            &header,
             now,
         );
         let elapsed = start_time.elapsed();
