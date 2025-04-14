@@ -301,6 +301,7 @@ func getMPTProof(path ethcommon.Hash, contractAddress ethcommon.Address) ([]byte
 		return nil, fmt.Errorf("failed to marshal proof: %w", err)
 	}
 
+	fmt.Printf("Submit transfer back msg successfully tx hash: %s\n", tx.Hash().Hex())
 	// fmt.Printf("Successfully retrieved MPT proof for key: %s\n", key)
 	return proofBytes, nil
 }
