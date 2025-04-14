@@ -102,16 +102,13 @@ func transferBack() error {
 	if err != nil {
 		return fmt.Errorf("failed to send transfer back msg: %w", err)
 	}
-
 	commitmentsStorageKey := GetCommitmentsStorageKey(packetCommitmentPath)
 
 	// Get the MPT proof
-	proof, err := getMPTProof(commitmentsStorageKey, ethcommon.HexToAddress(addresses.ICS26Router))
+	_, err = getMPTProof(commitmentsStorageKey, ethcommon.HexToAddress(addresses.ICS26Router))
 	if err != nil {
 		return fmt.Errorf("failed to get MPT proof: %w", err)
 	}
-	fmt.Printf("MPT proof: %v\n", proof)
-
 	err = updateGroth16LightClient()
 	if err != nil {
 		return fmt.Errorf("failed to update Groth16 light client: %w", err)
@@ -231,6 +228,7 @@ func sendTransferBackMsg() (error, []byte) {
 	if err != nil {
 		return fmt.Errorf("failed to get transaction receipt: %w", err), []byte{}
 	}
+
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
 		return fmt.Errorf("send transfer back msg failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs), []byte{}
 	}
@@ -239,9 +237,6 @@ func sendTransferBackMsg() (error, []byte) {
 	if err != nil {
 		return fmt.Errorf("failed to get send packet event: %w", err), []byte{}
 	}
-	fmt.Printf("send packet event: %v\n", event)
-	fmt.Print(event.Packet.Sequence, "SEQUENCE")
-	fmt.Print(event.Packet.SourceClient, "SOURCE CLIENT")
 
 	evmTransferBlockNumber = receipt.BlockNumber.Uint64()
 
@@ -263,8 +258,6 @@ func getMPTProof(path ethcommon.Hash, contractAddress ethcommon.Address) ([]byte
 	}
 	defer client.Close()
 
-	// Step 1: keccak256(path)
-
 	// Step 2: keccak256(pathHash ++ slot)
 	storageKey := crypto.Keccak256Hash(append(path.Bytes(), []byte(ics26router.IbcStoreStorageSlot)...))
 	fmt.Printf("path: %v\n", path)
@@ -282,7 +275,6 @@ func getMPTProof(path ethcommon.Hash, contractAddress ethcommon.Address) ([]byte
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MPT proof: %w", err)
 	}
-	fmt.Printf("MPT PROOF: %v\n", result)
 	// The result contains the account proof and storage proofs
 	// We need to extract the storage proof for our key
 	if len(result) < 2 {
@@ -290,7 +282,7 @@ func getMPTProof(path ethcommon.Hash, contractAddress ethcommon.Address) ([]byte
 	}
 
 	// The storage proof is in the second element of the result
-	storageProof, ok := result["result"].([]interface{})
+	storageProof, ok := result["storageProof"].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid storage proof format")
 	}
@@ -301,7 +293,6 @@ func getMPTProof(path ethcommon.Hash, contractAddress ethcommon.Address) ([]byte
 		return nil, fmt.Errorf("failed to marshal proof: %w", err)
 	}
 
-	fmt.Printf("Submit transfer back msg successfully tx hash: %s\n", tx.Hash().Hex())
-	// fmt.Printf("Successfully retrieved MPT proof for key: %s\n", key)
+	fmt.Printf("Successfully retrieved MPT proof for key: %s\n", key)
 	return proofBytes, nil
 }
