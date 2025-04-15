@@ -21,7 +21,7 @@ The `Info` endpoint returns the state transition and membership verification key
     grpcurl -plaintext localhost:50052 celestia.prover.v1.Prover/Info
     ```
 
-The `ProveStateTransition` endpoint invokes a state transition proof and returns an aggregate range proof:
+The `ProveStateTransition` endpoint generates a state transition proof for a range of EVM heights:
 
     ```shell
     grpcurl -plaintext -d '{"client_id":"08-groth16-0"}' localhost:50052 celestia.prover.v1.Prover/ProveStateTransition

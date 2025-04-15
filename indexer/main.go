@@ -163,13 +163,9 @@ func getLastProcessedHeight() (uint64, error) {
 	return height, err
 }
 
-// getMapping retrieves the Celestia height, blob index for a given Ethereum block number
-func getMapping(ethBlockNum uint64) (uint64, []byte, bool, error) {
-	var height uint64
-	var commitment []byte
-	var found bool
-
-	err := db.View(func(tx *bolt.Tx) error {
+// getMapping retrieves the Celestia block height and blob commitment for a given Ethereum block number
+func getMapping(ethBlockNum uint64) (celestiaHeight uint64, blobCommitment []byte, isFound bool, err error) {
+	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 
 		// Convert ethBlockNum to bytes
@@ -178,20 +174,19 @@ func getMapping(ethBlockNum uint64) (uint64, []byte, bool, error) {
 
 		v := b.Get(key)
 		if v == nil {
-			found = false
+			isFound = false
 			return nil
 		}
 
-		found = true
+		isFound = true
 		if len(v) < 8 {
 			return errors.New("invalid value length")
 		}
-		height = binary.LittleEndian.Uint64(v[:8])
-		commitment = v[8:]
+		celestiaHeight = binary.LittleEndian.Uint64(v[:8])
+		blobCommitment = v[8:]
 		return nil
 	})
-
-	return height, commitment, found, err
+	return
 }
 
 // decodeRollkitBlock decodes a Rollkit block
