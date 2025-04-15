@@ -166,10 +166,7 @@ impl Prover for ProverService {
 
         let mut inputs = vec![];
         let start_height = trusted_height + 1;
-        let end_height = std::cmp::min(
-            latest_height.as_u64(),
-            start_height + MAX_AGGREGATION_SIZE,
-        );
+        let end_height = std::cmp::min(latest_height.as_u64(), start_height + MAX_AGGREGATION_SIZE);
 
         println!(
             "proving from height {:?} to height {:?}",
