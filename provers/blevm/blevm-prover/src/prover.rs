@@ -53,13 +53,23 @@ pub struct BlockProverInput {
     pub rollup_block: Vec<u8>,
 }
 
-/// Handles interaction with Celestia network
+// CelestiaClient wraps the client and implements helpers for querying celestia
 pub struct CelestiaClient {
     client: Client,
     namespace: Namespace,
 }
 
 impl CelestiaClient {
+    /// Creates a new CelestiaClient with the provided configuration and namespace
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Configuration for connecting to a Celestia node
+    /// * `namespace` - The namespace to use for operations
+    ///
+    /// # Returns
+    ///
+    /// A new CelestiaClient instance or an error if connection fails
     pub async fn new(config: CelestiaConfig, namespace: Namespace) -> Result<Self, Box<dyn Error>> {
         let client = Client::new(&config.node_url, Some(&config.auth_token))
             .await
@@ -68,6 +78,16 @@ impl CelestiaClient {
         Ok(Self { client, namespace })
     }
 
+    /// Retrieves a blob from Celestia network at the specified height with given commitment
+    ///
+    /// # Arguments
+    ///
+    /// * `height` - The block height to query
+    /// * `blob_commitment` - The commitment hash of the blob to retrieve
+    ///
+    /// # Returns
+    ///
+    /// The requested blob or an error if retrieval fails
     pub async fn get_blob(
         &self,
         height: u64,
@@ -82,6 +102,15 @@ impl CelestiaClient {
         Ok(blob)
     }
 
+    /// Retrieves an extended header from Celestia network at the specified height
+    ///
+    /// # Arguments
+    ///
+    /// * `height` - The block height to query
+    ///
+    /// # Returns
+    ///
+    /// The extended header at the specified height or an error if retrieval fails
     pub async fn get_header(&self, height: u64) -> Result<ExtendedHeader, Box<dyn Error>> {
         let header = self
             .client
@@ -92,6 +121,16 @@ impl CelestiaClient {
         Ok(header)
     }
 
+    /// Retrieves Namespace Merkle Tree (NMT) proofs for a blob at the specified height
+    ///
+    /// # Arguments
+    ///
+    /// * `height` - The block height to query
+    /// * `blob` - The blob for which to retrieve proofs
+    ///
+    /// # Returns
+    ///
+    /// Vector of namespace proofs or an error if retrieval fails
     pub async fn get_nmt_proofs(
         &self,
         height: u64,
@@ -113,6 +152,17 @@ pub struct BlockProver {
 }
 
 impl BlockProver {
+    /// Creates a new BlockProver with the provided client and configuration
+    ///
+    /// # Arguments
+    ///
+    /// * `celestia_client` - Client for interacting with Celestia network
+    /// * `prover_config` - Configuration for the prover
+    /// * `aggregator_config` - Configuration for proof aggregation
+    ///
+    /// # Returns
+    ///
+    /// A new BlockProver instance
     pub fn new(
         celestia_client: CelestiaClient,
         prover_config: ProverConfig,
@@ -125,6 +175,15 @@ impl BlockProver {
         }
     }
 
+    /// Prepares SP1 standard input for proof generation
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Block prover input data containing inclusion height and block data
+    ///
+    /// # Returns
+    ///
+    /// Prepared SP1Stdin or an error
     async fn get_stdin(&self, input: BlockProverInput) -> Result<SP1Stdin, Box<dyn Error>> {
         let client_executor_input: EthClientExecutorInput =
             bincode::deserialize(&input.client_executor_input)?;
@@ -191,6 +250,16 @@ impl BlockProver {
         Ok(stdin)
     }
 
+    /// Retrieves blob data from Celestia at the specified height and commitment
+    ///
+    /// # Arguments
+    ///
+    /// * `inclusion_height` - Block height where the blob was included
+    /// * `blob_commitment` - Commitment hash of the blob to retrieve
+    ///
+    /// # Returns
+    ///
+    /// Blob data as bytes or an error
     pub async fn get_blob(
         &self,
         inclusion_height: u64,
@@ -203,6 +272,15 @@ impl BlockProver {
         Ok(blob.data)
     }
 
+    /// Prepares the standard input for proof aggregation
+    ///
+    /// # Arguments
+    ///
+    /// * `inputs` - Vector of aggregation inputs containing proofs and verification keys
+    ///
+    /// # Returns
+    ///
+    /// Prepared SP1Stdin for aggregation or an error
     async fn get_aggregate_stdin(
         &self,
         inputs: Vec<AggregationInput>,
@@ -237,6 +315,15 @@ impl BlockProver {
         Ok(stdin)
     }
 
+    /// Executes proof generation without creating a cryptographic proof
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Block prover input data
+    ///
+    /// # Returns
+    ///
+    /// Public values and execution report or an error
     pub async fn execute_generate_proof(
         &self,
         input: BlockProverInput,
@@ -251,6 +338,15 @@ impl BlockProver {
         Ok((public_values, execution_report))
     }
 
+    /// Generates a cryptographic proof for a block
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Block prover input data
+    ///
+    /// # Returns
+    ///
+    /// Proof with public values and verification key or an error
     pub async fn generate_proof(
         &self,
         input: BlockProverInput,
@@ -263,6 +359,15 @@ impl BlockProver {
         Ok((proof, vk))
     }
 
+    /// Executes proof aggregation without creating a cryptographic proof
+    ///
+    /// # Arguments
+    ///
+    /// * `inputs` - Vector of aggregation inputs containing proofs and verification keys
+    ///
+    /// # Returns
+    ///
+    /// Public values and execution report or an error
     pub async fn execute_aggregate_proofs(
         &self,
         inputs: Vec<AggregationInput>,
@@ -278,6 +383,14 @@ impl BlockProver {
     }
 
     /// Aggregates multiple proofs into a single proof
+    ///
+    /// # Arguments
+    ///
+    /// * `inputs` - Vector of aggregation inputs containing proofs and verification keys
+    ///
+    /// # Returns
+    ///
+    /// Aggregation output containing the aggregated proof or an error
     pub async fn aggregate_proofs(
         &self,
         inputs: Vec<AggregationInput>,
@@ -292,6 +405,14 @@ impl BlockProver {
     }
 
     /// Proves a range of blocks and aggregates their proofs
+    ///
+    /// # Arguments
+    ///
+    /// * `inputs` - Vector of block prover inputs for multiple blocks
+    ///
+    /// # Returns
+    ///
+    /// Aggregation output containing the aggregated proof or an error
     pub async fn prove_block_range(
         &self,
         inputs: Vec<BlockProverInput>,

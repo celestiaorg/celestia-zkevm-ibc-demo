@@ -26,13 +26,24 @@ Rollkit will include the data commitment as part of its header, making this exte
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /inclusion_height/{eth_block_number}` | Get the Celestia block height and blob index for a specific EVM block number |
+| `GET /inclusion_height/{eth_block_number}` | Get the Celestia block height and blob commitment for a specific EVM block number |
 | `GET /status` | Get the last processed Celestia block height |
 | `GET /health` | Health check endpoint |
 
 ## Testing and Verification
 
-To verify the service is running correctly, you can query the status endpoint:
+To verify the service is running correctly, you can query the health endpoint:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected response:
+```
+OK
+```
+
+You can also check the status of the indexer:
 
 ```bash
 curl http://localhost:8080/status
@@ -40,18 +51,18 @@ curl http://localhost:8080/status
 
 Expected response:
 ```json
-{"last_processed_celestia_height": 12345}
+{"last_processed_celestia_height": 864}
 ```
 
 You can also check if specific EVM blocks have been indexed:
 
 ```bash
-curl http://localhost:8080/inclusion_height/100
+curl http://localhost:8080/inclusion_height/32
 ```
 
 Expected response if found:
 ```json
-{"eth_block_number": 100, "celestia_height": 54321, "blob_index": 12345}
+{"eth_block_number":32,"celestia_height":16,"blob_commitment":"am1pW8KzYUBR2B5KNymVeHxPzw+XfaqkLRSK+Avhq0I="}
 ```
 
 ## Configuration

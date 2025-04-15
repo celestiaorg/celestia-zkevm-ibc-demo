@@ -6,7 +6,26 @@ use rsp_primitives::genesis::Genesis;
 use rsp_rpc_db::RpcDb;
 use std::sync::Arc;
 
-/// Generate client input for the specified block
+/// Generates the serialized client input for the execution of a specific block.
+///
+/// # Arguments
+///
+/// * `evm_rpc_url` - URL of the EVM RPC endpoint to connect to
+/// * `block_number` - The block number to execute
+/// * `genesis` - Genesis configuration for the chain
+/// * `custom_beneficiary` - Optional custom beneficiary address for block rewards
+/// * `opcode_tracking` - Whether to enable opcode tracking during execution
+///
+/// # Returns
+///
+/// Serialized client input as a vector of bytes, or an error if execution fails.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The custom beneficiary address cannot be parsed
+/// - Block execution fails
+/// - Client input serialization fails
 pub async fn generate_client_input(
     evm_rpc_url: String,
     block_number: u64,

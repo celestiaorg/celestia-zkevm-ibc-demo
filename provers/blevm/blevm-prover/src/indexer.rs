@@ -35,6 +35,23 @@ pub enum IndexerError {
     ServerError(String),
 }
 
+/// Queries the indexer to get the Celestia block height and blob commitment for a specific EVM block
+///
+/// # Arguments
+///
+/// * `indexer_url` - The base URL of the indexer service
+/// * `evm_block_height` - The Ethereum block height to query
+///
+/// # Returns
+///
+/// A tuple containing the Celestia block height and blob commitment, or an error
+///
+/// # Errors
+///
+/// Returns an `IndexerError` if:
+/// - The HTTP request fails
+/// - The block is not found
+/// - The server returns an error
 pub async fn get_inclusion_height(
     indexer_url: String,
     evm_block_height: u64,
