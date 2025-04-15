@@ -111,14 +111,16 @@ func GetCommitmentsStorageKey(path []byte) ethcommon.Hash {
 	return crypto.Keccak256Hash(pathHash, paddedSlot)
 }
 
-func packetCommitmentPath(clientId []byte, sequence uint64) []byte {
+func packetCommitmentPath(clientId string, sequence uint64) []byte {
 	// Convert sequence to big endian bytes (8 bytes)
 	sequenceBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(sequenceBytes, sequence)
 
-	// The path is: clientId + uint8(1) + sequenceBytes
-	path := append(clientId, byte(1))
-	path = append(path, sequenceBytes...)
+	// The path is: clientId bytes + uint8(1) + sequenceBytes
+	path := make([]byte, 0)
+	path = append(path, []byte(clientId)...) // Convert string to bytes first
+	path = append(path, byte(1))             // Marker byte for packet commitment
+	path = append(path, sequenceBytes...)    // Sequence in big endian
 
 	return path
 }

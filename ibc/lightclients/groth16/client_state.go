@@ -3,6 +3,7 @@ package groth16
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -22,6 +23,12 @@ import (
 const (
 	Groth16ClientType = ModuleName
 )
+
+type Proof struct {
+	Proof  []byte
+	MptKey []byte
+	Height uint64
+}
 
 // ClientState implements the exported.ClientState interface for Groth16 light clients.
 var _ exported.ClientState = (*ClientState)(nil)
@@ -98,10 +105,10 @@ func (cs *ClientState) verifyMembership(
 	value []byte,
 ) error {
 	// Path validation
-	merklePath, ok := path.(commitmenttypesv2.MerklePath)
-	if !ok {
-		return sdkerrors.Wrapf(commitmenttypes.ErrInvalidProof, "expected %T, got %T", commitmenttypesv2.MerklePath{}, path)
-	}
+	// merklePath, ok := path.(commitmenttypesv2.MerklePath)
+	// if !ok {
+	// 	return sdkerrors.Wrapf(commitmenttypes.ErrInvalidProof, "expected %T, got %T", commitmenttypesv2.MerklePath{}, path)
+	// }
 
 	consensusState, err := GetConsensusState(clientStore, cdc, height)
 	if err != nil {
@@ -110,10 +117,16 @@ func (cs *ClientState) verifyMembership(
 
 	// MPT takes keypath as []byte, so we concatenate the keys arrays
 	// TODO we might have to change this because based on tests the keypath is always one element
-	mptKey := merklePath.KeyPath[0]
+	// mptKey := merklePath.KeyPath[0]
+	decodedProof, err := deserializeProof(proof)
+	if err != nil {
+		return fmt.Errorf("failed to deserialize proof: %w", err)
+	}
+	mptKey := decodedProof.MptKey
+	mptProof := decodedProof.Proof
 
 	// Inclusion verification only supports MPT tries currently
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(consensusState.StateRoot, mptKey, proof)
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(consensusState.StateRoot, mptKey, mptProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
@@ -123,6 +136,15 @@ func (cs *ClientState) verifyMembership(
 	}
 
 	return nil
+}
+
+func deserializeProof(serializedProof []byte) (Proof, error) {
+	var proof Proof
+	err := json.Unmarshal(serializedProof, &proof)
+	if err != nil {
+		return Proof{}, fmt.Errorf("failed to deserialize proof: %w", err)
+	}
+	return proof, nil
 }
 
 // verifyNonMembership verifies a proof of the absence of a key in the Merkle tree.

@@ -60,6 +60,6 @@ func assertVerifierKeys() error {
 func getCallOpts() *bind.CallOpts {
 	return &bind.CallOpts{
 		Pending: false,
-		From:    ethcommon.HexToAddress(ethPrivateKey),
+		From:    ethcommon.HexToAddress(receiverPrivateKey),
 	}
 }

@@ -2,6 +2,7 @@ package mpt
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,6 +19,7 @@ func TestVerifyMerklePatriciaTrieProof(t *testing.T) {
 			proof, err := prover(kv.k)
 			require.NoError(t, err)
 			require.NotNil(t, proof)
+			fmt.Printf("proof list proof example: %v\n", proof)
 			proofBytes, err := ProofListToBytes(*proof)
 			require.NoError(t, err)
 

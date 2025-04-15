@@ -38,7 +38,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return err
 	}
 
-	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(receiverPrivateKey))
 	if err != nil {
 		return fmt.Errorf("failed to parse private key: %w", err)
 	}
