@@ -1,19 +1,17 @@
-# EVM to Celestia Inclusion Block Indexer
+# EVM to Celestia Indexer
 
 ## Overview
 
-This service indexes the mapping between EVM block heights and Celestia
-inclusion block heights for a [BeaconKit Rollkit
-rollup](https://github.com/rollkit/beacon-kit/tree/rollkit).
+This service indexes the mapping between EVM block heights and Celestia inclusion block heights and blob index in a
+[BeaconKit Rollkit rollup](https://github.com/rollkit/beacon-kit/tree/rollkit).
 
 It listens to Celestia blocks, decodes the beacon block in Simple Serialize
 (SSZ) format, and provides a queryable API for these mappings. The SSZ
 serialized beacon block is stored as the first transaction in the Rollkit
 block.
 
-This indexer serves as a temporary stopgap solution. Future versions of Rollkit
-will include the inclusion block as part of its header, making this external
-indexing service unnecessary.
+This indexer serves as a temporary stopgap solution. Future versions of
+Rollkit will include the data commitment as part of its header, making this external indexing service unnecessary.
 
 ## How It Works
 
@@ -28,14 +26,24 @@ indexing service unnecessary.
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /inclusion_height/{eth_block_number}` | Get the Celestia block height for a specific EVM block number |
-| `GET /mappings` | Get all indexed EVM block → Celestia height mappings |
+| `GET /inclusion_height/{eth_block_number}` | Get the Celestia block height and blob commitment for a specific EVM block number |
 | `GET /status` | Get the last processed Celestia block height |
 | `GET /health` | Health check endpoint |
 
 ## Testing and Verification
 
-To verify the service is running correctly, you can query the status endpoint:
+To verify the service is running correctly, you can query the health endpoint:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected response:
+```
+OK
+```
+
+You can also check the status of the indexer:
 
 ```bash
 curl http://localhost:8080/status
@@ -43,18 +51,18 @@ curl http://localhost:8080/status
 
 Expected response:
 ```json
-{"last_processed_celestia_height": 12345}
+{"last_processed_celestia_height": 864}
 ```
 
 You can also check if specific EVM blocks have been indexed:
 
 ```bash
-curl http://localhost:8080/inclusion_height/100
+curl http://localhost:8080/inclusion_height/32
 ```
 
 Expected response if found:
 ```json
-{"eth_block_number": 100, "celestia_height": 54321}
+{"eth_block_number":32,"celestia_height":16,"blob_commitment":"am1pW8KzYUBR2B5KNymVeHxPzw+XfaqkLRSK+Avhq0I="}
 ```
 
 ## Configuration

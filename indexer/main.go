@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -47,6 +48,12 @@ type Config struct {
 	APIPort           string
 	HTTPTimeout       time.Duration
 	ReconnectDelay    time.Duration
+}
+
+type InclusionHeightResponse struct {
+	EthBlockNumber uint64 `json:"eth_block_number"`
+	CelestiaHeight uint64 `json:"celestia_height"`
+	BlobCommitment []byte `json:"blob_commitment"`
 }
 
 // loadConfig loads configuration from environment variables
@@ -109,8 +116,8 @@ func setupDB() error {
 	return err
 }
 
-// storeMapping saves an Ethereum block number to Celestia height mapping
-func storeMapping(ethBlockNum uint64, celestiaHeight uint64) error {
+// storeMapping saves an Ethereum block number to Celestia height, blob index mapping
+func storeMapping(ethBlockNum uint64, celestiaHeight uint64, blobCommitment []byte) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 
@@ -119,8 +126,9 @@ func storeMapping(ethBlockNum uint64, celestiaHeight uint64) error {
 		binary.LittleEndian.PutUint64(key, ethBlockNum)
 
 		// Convert celestiaHeight to bytes
-		value := make([]byte, 8)
-		binary.LittleEndian.PutUint64(value, celestiaHeight)
+		value := make([]byte, 8+len(blobCommitment))
+		binary.LittleEndian.PutUint64(value[:8], celestiaHeight)
+		copy(value[8:], blobCommitment)
 
 		return b.Put(key, value)
 	})
@@ -155,12 +163,9 @@ func getLastProcessedHeight() (uint64, error) {
 	return height, err
 }
 
-// getCelestiaHeight retrieves the Celestia height for a given Ethereum block number
-func getCelestiaHeight(ethBlockNum uint64) (int64, bool, error) {
-	var celestiaHeight int64
-	var found bool
-
-	err := db.View(func(tx *bolt.Tx) error {
+// getMapping retrieves the Celestia block height and blob commitment for a given Ethereum block number
+func getMapping(ethBlockNum uint64) (celestiaHeight uint64, blobCommitment []byte, isFound bool, err error) {
+	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 
 		// Convert ethBlockNum to bytes
@@ -169,16 +174,19 @@ func getCelestiaHeight(ethBlockNum uint64) (int64, bool, error) {
 
 		v := b.Get(key)
 		if v == nil {
-			found = false
+			isFound = false
 			return nil
 		}
 
-		found = true
-		celestiaHeight = int64(binary.LittleEndian.Uint64(v))
+		isFound = true
+		if len(v) < 8 {
+			return errors.New("invalid value length")
+		}
+		celestiaHeight = binary.LittleEndian.Uint64(v[:8])
+		blobCommitment = v[8:]
 		return nil
 	})
-
-	return celestiaHeight, found, err
+	return
 }
 
 // decodeRollkitBlock decodes a Rollkit block
@@ -361,7 +369,7 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 		log.Printf("Found Ethereum block %d at Celestia height %d", ethBlockNum, height)
 
 		// Store the mapping
-		err = storeMapping(ethBlockNum, height)
+		err = storeMapping(ethBlockNum, height, blob.Commitment)
 		if err != nil {
 			log.Printf("Error storing mapping: %v", err)
 			continue
@@ -404,7 +412,7 @@ func startAPI(config Config) {
 		ethBlockNum := ethBlockNum64
 
 		// Get mapping from database
-		celestiaHeight, found, err := getCelestiaHeight(ethBlockNum)
+		celestiaHeight, blobCommitment, found, err := getMapping(ethBlockNum)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 			return
@@ -418,44 +426,20 @@ func startAPI(config Config) {
 		// Return the Celestia height
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"eth_block_number": %d, "celestia_height": %d}`, ethBlockNum, celestiaHeight)
-	}).Methods("GET")
+		response := InclusionHeightResponse{
+			EthBlockNumber: ethBlockNum,
+			CelestiaHeight: celestiaHeight,
+			BlobCommitment: blobCommitment,
+		}
 
-	// Get all mappings endpoint
-	router.HandleFunc("/mappings", func(w http.ResponseWriter, r *http.Request) {
-		mappings := make(map[string]int64)
-
-		err := db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(bucketName))
-			return b.ForEach(func(k, v []byte) error {
-				ethBlockNum := binary.LittleEndian.Uint64(k)
-				celestiaHeight := int64(binary.LittleEndian.Uint64(v))
-				mappings[fmt.Sprintf("%d", ethBlockNum)] = celestiaHeight
-				return nil
-			})
-		})
-
+		// Marshal to JSON and write the response
+		jsonData, err := json.Marshal(response)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+			// Handle error
+			http.Error(w, "Failed to generate response", http.StatusInternalServerError)
 			return
 		}
-
-		// Build a simple JSON response
-		response := strings.Builder{}
-		response.WriteString("{")
-		first := true
-		for ethBlock, celestiaHeight := range mappings {
-			if !first {
-				response.WriteString(",")
-			}
-			response.WriteString(fmt.Sprintf(`"%s":%d`, ethBlock, celestiaHeight))
-			first = false
-		}
-		response.WriteString("}")
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(response.String()))
+		w.Write(jsonData)
 	}).Methods("GET")
 
 	// Status endpoint
