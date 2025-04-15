@@ -31,6 +31,10 @@ Note that this requires the IBC light clients to be setup first:
     make setup
     ```
 
+The proving time for the ZK block range proof depends on the prover settings, i.e. prover network and mode.
+
+For reference in mock mode, the proof generation takes ~15 minutes for aggregating 10 blocks.
+
 ## Protobuf
 
 gRPC depends on proto defined types. These are stored in `proto/prover/v1` from the root directory.

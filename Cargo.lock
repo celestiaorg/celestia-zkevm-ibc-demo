@@ -8186,7 +8186,7 @@ dependencies = [
 [[package]]
 name = "rsp-client-executor"
 version = "0.1.0"
-source = "git+https://github.com/succinctlabs/rsp.git?branch=main#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
+source = "git+https://github.com/succinctlabs/rsp.git?rev=837a8c04a29deadb576a75fcf56136f26ce5dd4d#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
 dependencies = [
  "alloy-consensus 0.12.6",
  "alloy-evm",
@@ -8223,7 +8223,7 @@ dependencies = [
 [[package]]
 name = "rsp-host-executor"
 version = "0.1.0"
-source = "git+https://github.com/succinctlabs/rsp.git?branch=main#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
+source = "git+https://github.com/succinctlabs/rsp.git?rev=837a8c04a29deadb576a75fcf56136f26ce5dd4d#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
 dependencies = [
  "alloy-chains",
  "alloy-consensus 0.12.6",
@@ -8266,7 +8266,7 @@ dependencies = [
 [[package]]
 name = "rsp-mpt"
 version = "0.1.0"
-source = "git+https://github.com/succinctlabs/rsp.git?branch=main#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
+source = "git+https://github.com/succinctlabs/rsp.git?rev=837a8c04a29deadb576a75fcf56136f26ce5dd4d#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
@@ -8279,7 +8279,7 @@ dependencies = [
 [[package]]
 name = "rsp-primitives"
 version = "0.1.0"
-source = "git+https://github.com/succinctlabs/rsp.git?branch=main#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
+source = "git+https://github.com/succinctlabs/rsp.git?rev=837a8c04a29deadb576a75fcf56136f26ce5dd4d#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
 dependencies = [
  "alloy-genesis 0.12.6",
  "alloy-rpc-types 0.12.6",
@@ -8296,7 +8296,7 @@ dependencies = [
 [[package]]
 name = "rsp-rpc-db"
 version = "0.1.0"
-source = "git+https://github.com/succinctlabs/rsp.git?branch=main#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
+source = "git+https://github.com/succinctlabs/rsp.git?rev=837a8c04a29deadb576a75fcf56136f26ce5dd4d#837a8c04a29deadb576a75fcf56136f26ce5dd4d"
 dependencies = [
  "alloy-primitives",
  "alloy-provider 0.12.6",

@@ -5,7 +5,10 @@
 This service indexes the mapping between EVM block heights and Celestia inclusion block heights and blob index in a
 [BeaconKit Rollkit rollup](https://github.com/rollkit/beacon-kit/tree/rollkit).
 
-It listens to Celestia blocks, decodes the beacon block in Simple Serialize (SSZ) format, and provides a queryable API for these mappings. The SSZ serialized beacon block is stored as a the first transaction in the Rollkit block.
+It listens to Celestia blocks, decodes the beacon block in Simple Serialize
+(SSZ) format, and provides a queryable API for these mappings. The SSZ
+serialized beacon block is stored as the first transaction in the Rollkit
+block.
 
 This indexer serves as a temporary stopgap solution. Future versions of
 Rollkit will include the data commitment as part of its header, making this external indexing service unnecessary.

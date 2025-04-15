@@ -28,10 +28,10 @@ reth-primitives = { git = "https://github.com/sp1-patches/reth", tag = "rsp-2024
     "optimism",
     "std",
 ] }
-rsp-primitives = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
-rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
-rsp-host-executor = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
-rsp-rpc-db = { git = "https://github.com/succinctlabs/rsp.git", branch="main" }
+rsp-primitives = { git = "https://github.com/succinctlabs/rsp.git", rev= "837a8c04a29deadb576a75fcf56136f26ce5dd4d" }
+rsp-client-executor = { git = "https://github.com/succinctlabs/rsp.git", rev= "837a8c04a29deadb576a75fcf56136f26ce5dd4d" }
+rsp-host-executor = { git = "https://github.com/succinctlabs/rsp.git", rev= "837a8c04a29deadb576a75fcf56136f26ce5dd4d" }
+rsp-rpc-db = { git = "https://github.com/succinctlabs/rsp.git", rev= "837a8c04a29deadb576a75fcf56136f26ce5dd4d" }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 sp1-sdk = { version = "4.0.1", default-features = false }
 tendermint-rpc = "0.40"
