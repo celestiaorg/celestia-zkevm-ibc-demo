@@ -15,10 +15,20 @@ To then run the server (on port `:50052`):
     cargo run
     ```
 
-The only endpoint currently working is:
+The `Info` endpoint returns the state transition and membership verification keys:
 
     ```shell
     grpcurl -plaintext localhost:50052 celestia.prover.v1.Prover/Info
+    ```
+The `ProveStateTransition` endpoint invokes a state transition proof and returns an aggregate range proof:
+
+    ```shell
+    grpcurl -plaintext -d '{"client_id":"08-groth16-0"}' localhost:50052 celestia.prover.v1.Prover/ProveStateTransition
+    ```
+Note that this requires the IBC light clients to be setup first:
+
+    ```shell
+    make setup
     ```
 
 ## Protobuf

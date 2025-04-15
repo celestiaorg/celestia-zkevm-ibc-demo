@@ -52,6 +52,7 @@ pub async fn get_inclusion_height(
     );
 
     // Send the request
+    println!("indexer: requesting url - {}", url.clone());
     let response = client.get(&url).send().await?;
 
     // Handle different status codes
@@ -59,6 +60,8 @@ pub async fn get_inclusion_height(
         reqwest::StatusCode::OK => {
             // Parse the response body
             let data: InclusionHeightResponse = response.json().await?;
+            // Sanity check
+            assert!(data.eth_block_number == evm_block_height);
             Ok((data.celestia_height, data.blob_commitment))
         }
         reqwest::StatusCode::NOT_FOUND => Err(IndexerError::BlockNotFound),

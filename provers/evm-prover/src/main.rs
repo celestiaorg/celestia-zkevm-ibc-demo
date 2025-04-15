@@ -36,6 +36,8 @@ use ethers::{
 
 use ibc_proto::ibc::core::client::v1::query_client::QueryClient as ClientQueryClient;
 
+const MAX_AGGREGATION_SIZE: u64 = 10;
+
 pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
 pub const BLEVM_AGGREGATOR_ELF: &[u8] = include_elf!("blevm-aggregator");
 
@@ -156,11 +158,6 @@ impl Prover for ProverService {
             .get_trusted_height(inner_request.client_id.as_str())
             .await?;
 
-        println!(
-            "proving from height {:?} to height {:?}",
-            trusted_height, latest_height
-        );
-
         if latest_height.as_u64() <= trusted_height {
             return Err(Status::unimplemented(
                 "Trusted height is greater than latest height",
@@ -168,7 +165,18 @@ impl Prover for ProverService {
         }
 
         let mut inputs = vec![];
-        for height in trusted_height + 1..=latest_height.as_u64() {
+        let start_height = trusted_height + 1;
+        let end_height = std::cmp::min(
+            latest_height.as_u64(),
+            start_height + MAX_AGGREGATION_SIZE - 1,
+        );
+
+        println!(
+            "proving from height {:?} to height {:?}",
+            start_height, end_height
+        );
+
+        for height in start_height..=end_height {
             let (inclusion_height, blob_commitment) =
                 get_inclusion_height(self.indexer_url.clone(), height)
                     .await
@@ -201,6 +209,10 @@ impl Prover for ProverService {
         // Generate proofs and collect verifying keys
         let mut aggregation_inputs = vec![];
         for input in inputs {
+            println!(
+                "generating proof for inclusion height: {:?}",
+                input.inclusion_height
+            );
             let (proof, vk) = self.prover.generate_proof(input).await.unwrap();
             aggregation_inputs.push(AggregationInput {
                 proof,
@@ -208,6 +220,10 @@ impl Prover for ProverService {
             });
         }
 
+        println!(
+            "generating aggregation proof, size: {}",
+            aggregation_inputs.len()
+        );
         let aggregation_output = self
             .prover
             .aggregate_proofs(aggregation_inputs)
@@ -240,7 +256,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::]:50052".parse()?;
     let prover = ProverService::new().await?;
 
-    println!("BLEVM Prover Server listening on {}", addr);
+    println!("Prover Server listening on {}", addr);
 
     // Get the path to the proto descriptor file from the environment variable
     let proto_descriptor_path: String = env::var("EVM_PROTO_DESCRIPTOR_PATH")
