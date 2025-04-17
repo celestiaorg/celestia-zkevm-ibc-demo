@@ -8,6 +8,7 @@ PROJECT_NAME=$(shell basename "$(PWD)")
 HTTPS_GIT := https://github.com/celestiaorg/celestia-zkevm-ibc-demo
 SIMAPP_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp
 CELESTIA_PROVER_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover
+EVM_PROVER_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover
 
 # process linker flags
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=celestia-zkevm-ibc-demo \
@@ -137,6 +138,11 @@ build-indexer:
 	@cd indexer && go build $(BUILD_FLAGS) -o build/ .
 .PHONY: build-indexer
 
+## build-evm-prover: Build the EVM prover binary
+build-evm-prover:
+	@cargo build --release --bin evm-prover
+.PHONY: build-evm-prover
+
 ## install: Install the simapp binary into the $GOPATH/bin directory.
 install: install-simapp
 .PHONY: install
@@ -178,7 +184,7 @@ proto-format:
 .PHONY: proto-format
 
 ## docker: Build the all Docker images.
-docker: build-simapp-docker build-indexer-docker build-celestia-prover-docker
+docker: build-simapp-docker build-indexer-docker build-celestia-prover-docker build-evm-prover-docker
 .PHONY: docker
 
 ## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
@@ -197,8 +203,14 @@ build-celestia-prover-docker:
 	$(DOCKER) build -t $(CELESTIA_PROVER_GHCR_REPO) -f docker/celestia_prover.Dockerfile .
 .PHONY: build-celestia-prover-docker
 
+## build-evm-prover-docker: Build the EVM prover docker image from the current branch. Requires docker.
+build-evm-prover-docker: build-evm-prover
+	@echo "--> Building EVM prover Docker image"
+	$(DOCKER) build -t $(EVM_PROVER_GHCR_REPO) -f docker/evm_prover.Dockerfile .
+.PHONY: build-evm-prover-docker
+
 # publish: Publish all Docker images to GHCR. Requires Docker and authentication.
-publish: publish-simapp-docker publish-celestia-prover-docker
+publish: publish-simapp-docker publish-celestia-prover-docker publish-evm-prover-docker
 .PHONY: publish
 
 ## publish-simapp-docker: Publish the simapp docker image to GHCR. Requires Docker and authentication.
@@ -210,6 +222,11 @@ publish-simapp-docker:
 publish-celestia-prover-docker:
 	$(DOCKER) push $(CELESTIA_PROVER_GHCR_REPO)
 .PHONY: publish-celestia-prover-docker
+
+## publish-evm-prover-docker: Publish the EVM prover docker image. Requires docker.
+publish-evm-prover-docker:
+	$(DOCKER) push $(EVM_PROVER_GHCR_REPO)
+.PHONY: publish-evm-prover-docker
 
 ## lint: Run all linters; golangci-lint, markdownlint, hadolint, yamllint.
 lint:
