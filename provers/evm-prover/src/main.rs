@@ -249,7 +249,9 @@ impl Prover for ProverService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
-
+    if let Ok(mode) = env::var("SP1_PROVER") {
+        println!("SP1_Prover mode: {mode}");
+    };
     let addr = "[::]:50052".parse()?;
     let prover = ProverService::new().await?;
 
