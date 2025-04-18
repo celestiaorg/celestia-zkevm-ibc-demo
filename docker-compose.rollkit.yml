@@ -127,8 +127,7 @@ services:
   #     - rollkit-network
 
   evm-prover:
-    build:
-      dockerfile: ./docker/evm_prover.Dockerfile
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover:latest
     container_name: evm-prover
     volumes:
       - ./testing/files:/testapp_files
@@ -145,6 +144,7 @@ services:
       - CELESTIA_NODE_AUTH_TOKEN=${CELESTIA_NODE_AUTH_TOKEN:-}
       - CELESTIA_NAMESPACE=${CELESTIA_NAMESPACE:-0f0f0f0f0f0f0f0f0f0f}
       - GENESIS_PATH=/testapp_files/eth-genesis.json
+      - SP1_PROVER=mock
     ports:
       - "50052:50052"
     depends_on:
@@ -154,10 +154,8 @@ services:
       - rollkit-network
 
   indexer:
-    build:
-      context: ./indexer/
-      dockerfile: ../docker/indexer.Dockerfile
-    container_name: eth-celestia-indexer
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/indexer:latest
+    container_name: indexer
     restart: unless-stopped
     volumes:
       - ./.tmp/indexer-data:/data

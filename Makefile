@@ -9,6 +9,7 @@ HTTPS_GIT := https://github.com/celestiaorg/celestia-zkevm-ibc-demo
 SIMAPP_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp
 CELESTIA_PROVER_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/celestia-prover
 EVM_PROVER_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover
+INDEXER_GHCR_REPO := ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/indexer
 
 # process linker flags
 ldflags = -X github.com/cosmos/cosmos-sdk/version.Name=celestia-zkevm-ibc-demo \
@@ -189,24 +190,26 @@ docker: build-simapp-docker build-indexer-docker build-celestia-prover-docker bu
 
 ## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
 build-simapp-docker: build-simapp
-	@echo "--> Building Docker image"
-	$(DOCKER) build -t $(SIMAPP_GHCR_REPO) -f docker/simapp.Dockerfile .
+	@echo "--> Building simapp Docker image"
+	$(DOCKER) build -t $(SIMAPP_GHCR_REPO) --file docker/simapp.Dockerfile .
 .PHONY: build-simapp-docker
 
 ## build-indexer-docker: Build the indexer docker image. Requires docker.
 build-indexer-docker: build-indexer
-	@docker build -t eth-celestia-indexer -f docker/indexer.Dockerfile indexer
+	@echo "--> Building indexer Docker image"
+	$(DOCKER) build -t $(INDEXER_GHCR_REPO) --file docker/indexer.Dockerfile indexer
 .PHONY: build-indexer-docker
 
 ## build-celestia-prover-docker: Build the celestia prover docker image from the current branch. Requires docker.
 build-celestia-prover-docker:
-	$(DOCKER) build -t $(CELESTIA_PROVER_GHCR_REPO) -f docker/celestia_prover.Dockerfile .
+	@echo "--> Building celestia prover Docker image"
+	$(DOCKER) build -t $(CELESTIA_PROVER_GHCR_REPO) --file docker/celestia_prover.Dockerfile .
 .PHONY: build-celestia-prover-docker
 
 ## build-evm-prover-docker: Build the EVM prover docker image from the current branch. Requires docker.
 build-evm-prover-docker: build-evm-prover
 	@echo "--> Building EVM prover Docker image"
-	$(DOCKER) build -t $(EVM_PROVER_GHCR_REPO) -f docker/evm_prover.Dockerfile .
+	$(DOCKER) build -t $(EVM_PROVER_GHCR_REPO) --file docker/evm_prover.Dockerfile .
 .PHONY: build-evm-prover-docker
 
 # publish: Publish all Docker images to GHCR. Requires Docker and authentication.
