@@ -127,8 +127,7 @@ services:
   #     - rollkit-network
 
   evm-prover:
-    build:
-      dockerfile: ./docker/evm_prover.Dockerfile
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover:latest
     container_name: evm-prover
     volumes:
       - ./testing/files:/testapp_files
@@ -155,10 +154,8 @@ services:
       - rollkit-network
 
   indexer:
-    build:
-      context: ./indexer/
-      dockerfile: ../docker/indexer.Dockerfile
-    container_name: eth-celestia-indexer
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/indexer:latest
+    container_name: indexer
     restart: unless-stopped
     volumes:
       - ./.tmp/indexer-data:/data
