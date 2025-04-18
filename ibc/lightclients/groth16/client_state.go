@@ -18,6 +18,11 @@ import (
 	commitmenttypes "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types/v2"
 	"github.com/cosmos/ibc-go/v10/modules/core/exported"
+	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
@@ -25,9 +30,15 @@ const (
 )
 
 type Proof struct {
-	Proof  []byte
-	MptKey []byte
-	Height uint64
+	AccountProof []hexutil.Bytes `json:"accountProof"`
+	Address      common.Address  `json:"address"`
+	Balance      *hexutil.Big    `json:"balance"`
+	CodeHash     common.Hash     `json:"codeHash"`
+	Nonce        hexutil.Uint64  `json:"nonce"`
+	StorageHash  common.Hash     `json:"storageHash"`
+	StorageProof []hexutil.Bytes `json:"storageProof"`
+	StorageKey   common.Hash     `json:"storageKey"`
+	StorageValue hexutil.Big     `json:"storageValue"`
 }
 
 // ClientState implements the exported.ClientState interface for Groth16 light clients.
@@ -105,34 +116,53 @@ func (cs *ClientState) verifyMembership(
 	value []byte,
 ) error {
 	// Path validation
-	// merklePath, ok := path.(commitmenttypesv2.MerklePath)
-	// if !ok {
-	// 	return sdkerrors.Wrapf(commitmenttypes.ErrInvalidProof, "expected %T, got %T", commitmenttypesv2.MerklePath{}, path)
-	// }
-
 	consensusState, err := GetConsensusState(clientStore, cdc, height)
 	if err != nil {
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 
-	// MPT takes keypath as []byte, so we concatenate the keys arrays
-	// TODO we might have to change this because based on tests the keypath is always one element
-	// mptKey := merklePath.KeyPath[0]
-	decodedProof, err := deserializeProof(proof)
+	var decodedProof Proof
+	err = json.Unmarshal(proof, &decodedProof)
 	if err != nil {
 		return fmt.Errorf("failed to deserialize proof: %w", err)
 	}
-	mptKey := decodedProof.MptKey
-	mptProof := decodedProof.Proof
 
-	// Inclusion verification only supports MPT tries currently
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(consensusState.StateRoot, mptKey, mptProof)
+	address := crypto.Keccak256(decodedProof.Address.Bytes())
+	// Verify account proof against the state root
+	accountValue, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), address, decodedProof.AccountProof)
+	if err != nil {
+		return fmt.Errorf("inclusion verification failed: %w", err)
+	}
+	// check that the account proof value is correct
+	accountClaimed := []any{uint64(decodedProof.Nonce), decodedProof.Balance.ToInt().Bytes(), decodedProof.StorageHash, decodedProof.CodeHash}
+	accountClaimedValue, err := rlp.EncodeToBytes(accountClaimed)
+	if err != nil {
+		return fmt.Errorf("failed to encode reconstructed account value from proof: %w", err)
+	}
+
+	if !bytes.Equal(accountValue, accountClaimedValue) {
+		return fmt.Errorf("reconstructed account value from proof does not match the verified value")
+	}
+
+	commitmentPath := crypto.Keccak256(decodedProof.StorageKey.Bytes())
+	// Verify that the commitment exists in the storage proof
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(decodedProof.StorageHash, commitmentPath, decodedProof.StorageProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
 
-	if !bytes.Equal(value, verifiedValue) {
-		return fmt.Errorf("retrieved value does not match the value passed to the client")
+	fmt.Printf("verifiedValue: %x\n", verifiedValue)
+	fmt.Printf("value: %x\n", value)
+
+	// RLP encode the value passed to the client
+	rlpValue, err := rlp.EncodeToBytes(value)
+	if err != nil {
+		return fmt.Errorf("failed to encode value: %w", err)
+	}
+
+	if !bytes.Equal(verifiedValue, rlpValue) {
+		// add the value to the error message with retrieved value and format it properly
+		return fmt.Errorf("retrieved value%x does not match the value passed to the client: %x", verifiedValue, rlpValue)
 	}
 
 	return nil
@@ -173,8 +203,13 @@ func (cs *ClientState) verifyNonMembership(
 	// TODO we might have to change this because based on tests the keypath is always one element
 	mptKey := append(merklePath.KeyPath[0], merklePath.KeyPath[1]...)
 
+	decodedProof, err := deserializeProof(proof)
+	if err != nil {
+		return fmt.Errorf("failed to deserialize proof: %w", err)
+	}
+
 	// Inclusion verification only supports MPT tries currently
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(consensusState.StateRoot, mptKey, proof)
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), mptKey, decodedProof.AccountProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}

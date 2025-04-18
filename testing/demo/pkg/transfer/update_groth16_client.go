@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
@@ -14,32 +15,32 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func updateGroth16LightClient() error {
+func updateGroth16LightClient(evmTransferBlockNumber uint64) (error, uint64) {
 	fmt.Printf("Updating Groth16 light client on EVM roll-up...\n")
 
 	clientState, err := getClientState()
 	if err != nil {
-		return fmt.Errorf("failed to get client state: %w", err)
+		return fmt.Errorf("failed to get client state: %w", err), 0
 	}
 	consensusState, err := getConsensusState()
 	if err != nil {
-		return fmt.Errorf("failed to get consensus state: %w", err)
+		return fmt.Errorf("failed to get consensus state: %w", err), 0
 	}
 	fmt.Printf("Groth16 light client current height %v and state root %X\n", clientState.LatestHeight, consensusState.GetStateRoot())
 
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
-		return fmt.Errorf("failed to get client context: %w", err)
+		return fmt.Errorf("failed to get client context: %w", err), 0
 	}
 
-	header, err := getHeader()
+	header, err := getHeader(evmTransferBlockNumber)
 	if err != nil {
-		return fmt.Errorf("failed to get header: %w", err)
+		return fmt.Errorf("failed to get header: %w", err), 0
 	}
 
 	clientMessage, err := cdctypes.NewAnyWithValue(header)
 	if err != nil {
-		return fmt.Errorf("failed to create any value: %w", err)
+		return fmt.Errorf("failed to create any value: %w", err), 0
 	}
 
 	resp, err := utils.BroadcastMessages(clientCtx, sender, 200_000, &clienttypes.MsgUpdateClient{
@@ -48,33 +49,33 @@ func updateGroth16LightClient() error {
 		Signer:        sender,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to broadcast create client msg: %w", err)
+		return fmt.Errorf("failed to broadcast create client msg: %w", err), 0
 	}
 	if resp.Code != 0 {
-		return fmt.Errorf("failed to update Groth16 light client on simapp: %w", err)
+		return fmt.Errorf("failed to update Groth16 light client on simapp: %w", err), 0
 	}
 
 	newConsensusState, err := getConsensusState()
 	if err != nil {
-		return fmt.Errorf("failed to get consensus state: %w", err)
+		return fmt.Errorf("failed to get consensus state: %w", err), 0
 	}
 	newClientState, err := getClientState()
 	if err != nil {
-		return fmt.Errorf("failed to get client state: %w", err)
+		return fmt.Errorf("failed to get client state: %w", err), 0
 	}
 	fmt.Printf("Updated Groth16 light client on simapp. New height: %v state root %X\n", newClientState.LatestHeight, newConsensusState.GetStateRoot())
 
-	return nil
+	return nil, newClientState.LatestHeight
 }
 
-func getHeader() (*groth16.Header, error) {
+func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	mockProof := []byte{0}
 	trustedHeight, err := getTrustedHeight()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get trusted height: %w", err)
 	}
 
-	newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp()
+	newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp(evmTransferBlockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EVM state root, height, and timestamp: %w", err)
 	}
@@ -135,13 +136,13 @@ func getClientState() (*groth16.ClientState, error) {
 	return groth16ClientState, nil
 }
 
-func getEVMStateRootHeightTimestamp() ([]byte, int64, time.Time, error) {
+func getEVMStateRootHeightTimestamp(evmTransferBlockNumber uint64) ([]byte, int64, time.Time, error) {
 	client, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return nil, 0, time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
 	}
 
-	header, err := client.HeaderByNumber(context.Background(), nil)
+	header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(evmTransferBlockNumber)))
 	if err != nil {
 		return nil, 0, time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
 	}
