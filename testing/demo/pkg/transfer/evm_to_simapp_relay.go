@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"cosmossdk.io/math"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcchanneltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
@@ -12,7 +14,7 @@ import (
 )
 
 // relayByTx implements the logic of an IBC relayer for a MsgTransfer from EVM roll-up to SimApp.
-func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof Proof, groth16ClientHeight uint64) error {
+func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof ProofCommitment, groth16ClientHeight uint64) error {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
@@ -33,19 +35,17 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 		return fmt.Errorf("failed to execute MsgRecvPacket: %v", msgRecvPacketResponse.RawLog)
 	}
 
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get Cosmos transaction: %w", err)
-	// }
-
 	return nil
 }
 
 // ethereum event type
-func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof Proof, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
+func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommitment, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
 	// TODO: make sure the payload value is correct and compatible with the ibcPacket
-	fmt.Println("source client: ", event.Packet.SourceClient)
-	fmt.Println("destination client: ", event.Packet.DestClient)
-	payloadValue := event.Packet.Payloads[0].Value
+	payloadValue, err := getPayloadValueForSimapp(event)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get payload value: %w", err)
+	}
+	// event.Packet.Payloads
 	ibcPacket := ibcchanneltypesv2.Packet{
 		Sequence:          event.Packet.Sequence,
 		SourceClient:      event.Packet.SourceClient,
@@ -77,4 +77,22 @@ func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof Proof, gro
 	}
 
 	return &msgRecvPacket, nil
+}
+
+func getPayloadValueForSimapp(event *ics26router.ContractSendPacket) ([]byte, error) {
+	// TODO: change to actual transfer amount
+	denomNow := "0xCF4fCaC55a3Eb0860Fce5c9328D4F0316F4A6735"
+	coin := sdktypes.NewCoin(denomNow, math.NewInt(50))
+	transferPayload := transfertypes.FungibleTokenPacketData{
+		Denom:    coin.Denom,
+		Amount:   coin.Amount.String(),
+		Sender:   receiver,
+		Receiver: sender,
+		Memo:     "transfer back memo",
+	}
+	payloadValue, err := transfertypes.EncodeABIFungibleTokenPacketData(&transferPayload)
+	if err != nil {
+		return []byte{}, err
+	}
+	return payloadValue, nil
 }

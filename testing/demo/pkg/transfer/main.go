@@ -1,17 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
-	"math/big"
 
 	// "math/big"
 	"os"
 	"time"
 
-	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/mpt"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 
@@ -27,7 +24,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // Global variable to store the MPT proof
@@ -53,7 +49,7 @@ type EthGetProofResponse struct {
 	StorageProof []StorageProof `json:"storageProof"`
 }
 
-type Proof struct {
+type ProofCommitment struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
 	Address      common.Address  `json:"address"`
 	Balance      *hexutil.Big    `json:"balance"`
@@ -143,16 +139,14 @@ func transferBack() error {
 	if err != nil {
 		return fmt.Errorf("failed to send transfer back msg: %w", err)
 	}
-	commitmentsStorageKey := GetCommitmentsStorageKey(packetCommitmentPath)
-	fmt.Println("packetCommitmentPath: ", packetCommitmentPath)
 
 	// Get the MPT proof
-	proof, err := getMPTProof(commitmentsStorageKey, addresses.ICS26Router)
+	proof, err := getMPTProof(packetCommitmentPath, addresses.ICS26Router)
 	if err != nil {
 		return fmt.Errorf("failed to get MPT proof: %w", err)
 	}
 
-	err, _ = updateGroth16LightClient(evmTransferBlockNumber)
+	err = updateGroth16LightClient(evmTransferBlockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to update Groth16 light client: %w", err)
 	}
@@ -161,6 +155,11 @@ func transferBack() error {
 	err = relayFromEvmToSimapp(sendPacketEvent, proof, evmTransferBlockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to relay from EVM to SimApp: %w", err)
+	}
+
+	err = queryBalance()
+	if err != nil {
+		return fmt.Errorf("failed to query balance: %w", err)
 	}
 
 	return nil
@@ -234,6 +233,7 @@ func sendTransferBackMsg() (error, []byte, *ics26router.ContractSendPacket) {
 	if err != nil {
 		return fmt.Errorf("failed to get IBC ERC20 contract address: %w", err), []byte{}, nil
 	}
+	fmt.Println("ibcERC20Address: ", ibcERC20Address)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
@@ -283,80 +283,48 @@ func sendTransferBackMsg() (error, []byte, *ics26router.ContractSendPacket) {
 		return fmt.Errorf("send transfer back msg failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs), []byte{}, nil
 	}
 
+	// Parse the send packet event from the receipt
 	sendPacketEvent, err := GetEvmEvent(receipt, ics26Contract.ParseSendPacket)
 	if err != nil {
 		return fmt.Errorf("failed to get send packet event: %w", err), []byte{}, nil
 	}
 
-	// concatenate sourceClient and sequence
+	// Generate the path for the packet commitment which is required for the commitment proof generation
 	packetCommitmentPath := packetCommitmentPath(sendPacketEvent.Packet.SourceClient, sendPacketEvent.Packet.Sequence)
-
-	// get the commitment for the packet commitment path to make sure the path is correct
-	var ethPath [32]byte
-	copy(ethPath[:], crypto.Keccak256(packetCommitmentPath))
-	commitment, err := ics26Contract.GetCommitment(getCallOpts(), ethPath)
-	if err != nil {
-		return fmt.Errorf("failed to get commitment for the packet commitment path: %w", err), []byte{}, nil
-	}
-
-	fmt.Println("sendPacketEvent.ClientId: ", sendPacketEvent.ClientId)
-	fmt.Println("sendPacketEvent.Packet.Sequence: ", sendPacketEvent.Packet.Sequence)
-
-	// query packet acknowledgement commitment
-	packetAcknowledgementCommitment, err := ics26Contract.QueryPacketCommitment(getCallOpts(), sendPacketEvent.Packet.SourceClient, sendPacketEvent.Packet.Sequence)
-	if err != nil {
-		return fmt.Errorf("failed to get packet acknowledgement commitment: %w", err), []byte{}, nil
-	}
-	fmt.Printf("packetAcknowledgementCommitment: %x\n", packetAcknowledgementCommitment)
-	fmt.Printf("commitment from ICS26Router contract: %x\n", commitment)
-	// rlp encode the commitment
-	commitmentBytes, err := rlp.EncodeToBytes(packetAcknowledgementCommitment)
-	if err != nil {
-		return fmt.Errorf("failed to rlp encode commitment: %w", err), []byte{}, nil
-	}
-	fmt.Println("commitmentBytes:", commitmentBytes)
 
 	fmt.Printf("Submit transfer back msg successfully tx hash: %s\n", tx.Hash().Hex())
 	return nil, packetCommitmentPath, sendPacketEvent
 }
 
 // getMPTProof queries the Reth node for a Merkle Patricia Trie proof for a given key
-func getMPTProof(path ethcommon.Hash, contractAddress string) (Proof, error) {
-	// Connect to the Reth node
+func getMPTProof(packetCommitmentPath []byte, contractAddress string) (ProofCommitment, error) {
+	commitmentsStorageKey := GetCommitmentsStorageKey(packetCommitmentPath)
+
 	client, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return Proof{}, fmt.Errorf("failed to connect to Reth node: %w", err)
+		return ProofCommitment{}, fmt.Errorf("failed to connect to Reth node: %w", err)
 	}
 	defer client.Close()
 
-	// Step 3: format args
-	fmt.Printf("evmTransferBlockNumber: %d\n", evmTransferBlockNumber)
-	// blockHex := hexutil.EncodeUint64(evmTransferBlockNumber)
-	executionNumberHex := fmt.Sprintf("0x%x", evmTransferBlockNumber)
-	fmt.Printf("executionNumberHex: %s\n", executionNumberHex)
-	fmt.Printf("executionNumberHex2", hexutil.EncodeUint64(evmTransferBlockNumber))
-
-	fmt.Printf("eth_getProof args: %s, %v, %s\n", contractAddress, []string{path.Hex()}, executionNumberHex)
-
-	// Step 4: call eth_getProof
+	// Generate the proof for the given path
 	var result EthGetProofResponse
-	err = client.Client().Call(&result, "eth_getProof", contractAddress, []string{path.Hex()}, hexutil.EncodeUint64(evmTransferBlockNumber))
+	err = client.Client().Call(&result, "eth_getProof", contractAddress, []string{commitmentsStorageKey.Hex()}, hexutil.EncodeUint64(evmTransferBlockNumber))
 	if err != nil {
-		return Proof{}, fmt.Errorf("failed to get MPT proof: %w", err)
+		return ProofCommitment{}, fmt.Errorf("failed to get MPT proof: %w", err)
 	}
 
 	// Find the proof for our specific storage key
 	var targetProof StorageProof
 	for _, proof := range result.StorageProof {
-		if proof.Key == path {
+		if proof.Key == commitmentsStorageKey {
 			targetProof = proof
 			break
 		} else {
-			return Proof{}, fmt.Errorf("proof key does not match the path: %x", proof.Key)
+			return ProofCommitment{}, fmt.Errorf("proof key does not match the path: %x", proof.Key)
 		}
 	}
 
-	proof := Proof{
+	proof := ProofCommitment{
 		AccountProof: result.AccountProof,
 		Address:      result.Address,
 		Balance:      result.Balance,

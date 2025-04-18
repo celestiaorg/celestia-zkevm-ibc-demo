@@ -15,32 +15,32 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func updateGroth16LightClient(evmTransferBlockNumber uint64) (error, uint64) {
+func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
 	fmt.Printf("Updating Groth16 light client on EVM roll-up...\n")
 
 	clientState, err := getClientState()
 	if err != nil {
-		return fmt.Errorf("failed to get client state: %w", err), 0
+		return fmt.Errorf("failed to get client state: %w", err)
 	}
 	consensusState, err := getConsensusState()
 	if err != nil {
-		return fmt.Errorf("failed to get consensus state: %w", err), 0
+		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 	fmt.Printf("Groth16 light client current height %v and state root %X\n", clientState.LatestHeight, consensusState.GetStateRoot())
 
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
-		return fmt.Errorf("failed to get client context: %w", err), 0
+		return fmt.Errorf("failed to get client context: %w", err)
 	}
 
 	header, err := getHeader(evmTransferBlockNumber)
 	if err != nil {
-		return fmt.Errorf("failed to get header: %w", err), 0
+		return fmt.Errorf("failed to get header: %w", err)
 	}
 
 	clientMessage, err := cdctypes.NewAnyWithValue(header)
 	if err != nil {
-		return fmt.Errorf("failed to create any value: %w", err), 0
+		return fmt.Errorf("failed to create any value: %w", err)
 	}
 
 	resp, err := utils.BroadcastMessages(clientCtx, sender, 200_000, &clienttypes.MsgUpdateClient{
@@ -49,23 +49,23 @@ func updateGroth16LightClient(evmTransferBlockNumber uint64) (error, uint64) {
 		Signer:        sender,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to broadcast create client msg: %w", err), 0
+		return fmt.Errorf("failed to broadcast create client msg: %w", err)
 	}
 	if resp.Code != 0 {
-		return fmt.Errorf("failed to update Groth16 light client on simapp: %w", err), 0
+		return fmt.Errorf("failed to update Groth16 light client on simapp: %w", err)
 	}
 
 	newConsensusState, err := getConsensusState()
 	if err != nil {
-		return fmt.Errorf("failed to get consensus state: %w", err), 0
+		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 	newClientState, err := getClientState()
 	if err != nil {
-		return fmt.Errorf("failed to get client state: %w", err), 0
+		return fmt.Errorf("failed to get client state: %w", err)
 	}
 	fmt.Printf("Updated Groth16 light client on simapp. New height: %v state root %X\n", newClientState.LatestHeight, newConsensusState.GetStateRoot())
 
-	return nil, newClientState.LatestHeight
+	return nil
 }
 
 func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
