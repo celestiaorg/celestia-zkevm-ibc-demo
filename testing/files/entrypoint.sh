@@ -66,7 +66,7 @@ overwrite="Y"
 # 	printf "\nAn existing folder at '%s' was found. You can choose to delete this folder and start a new local node with new keys from genesis. When declined, the existing local node is started. \n" $HOMEDIR
 # 	echo "Overwrite the existing configuration and start a new local node? [y/n]"
 # 	read -r overwrite
-# else	
+# else
 # overwrite="Y"
 # fi
 
@@ -80,7 +80,7 @@ if [[ $overwrite == "y" || $overwrite == "Y" ]]; then
 		--home $HOMEDIR \
 		--consensus-key-algo $CONSENSUS_KEY_ALGO
 	./build/bin/beacond genesis add-premined-deposit --home $HOMEDIR
-	./build/bin/beacond genesis collect-premined-deposits --home $HOMEDIR 
+	./build/bin/beacond genesis collect-premined-deposits --home $HOMEDIR
 	./build/bin/beacond genesis execution-payload "$ETH_GENESIS" --home $HOMEDIR
 fi
 
@@ -93,7 +93,7 @@ BEACON_START_CMD="./build/bin/beacond start --pruning=nothing "$TRACE" \
 --log_level $LOGLEVEL --api.enabled-unsafe-cors \
 --rollkit.aggregator --rollkit.da_address http://celestia-network-bridge:26658 --rpc.laddr tcp://127.0.0.1:36657 --grpc.address 127.0.0.1:9290 --p2p.laddr "0.0.0.0:36656" \
 --api.enable --api.swagger --minimum-gas-prices=0.0001abgt --rollkit.da_auth_token ${DA_AUTH_TOKEN} --rollkit.da_namespace 00000000000000000000000000000000000000b7b24d9321578eb83626 \
---home $HOMEDIR --beacon-kit.engine.jwt-secret-path ${JWT_SECRET_PATH}"
+--home $HOMEDIR --beacon-kit.engine.jwt-secret-path ${JWT_SECRET_PATH} --rollkit.block_time 6s"
 
 # Conditionally add the rpc-dial-url flag if RPC_DIAL_URL is not empty
 if [ -n "$RPC_DIAL_URL" ]; then
