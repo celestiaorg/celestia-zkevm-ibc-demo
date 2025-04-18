@@ -88,16 +88,6 @@ impl ProverService {
 
         let genesis = Genesis::Custom(genesis_json);
 
-        // Add a check here to ensure that the indexer_url is reachable. It has an endpoint called /status that should return a response like this:
-        // {"last_processed_celestia_height": 142}
-        let response = reqwest::get(indexer_url.clone() + "/status").await?;
-        if !response.status().is_success() {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Indexer is not reachable",
-            )));
-        }
-
         Ok(ProverService {
             evm_rpc_url,
             evm_client,
