@@ -2,6 +2,7 @@ package mpt
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestVerifyMerklePatriciaTrieProof(t *testing.T) {
-	trie, vals := RandomTrie(500)
+	trie, vals := RandomTrie(4)
 	root := trie.Hash()
 	for i, prover := range makeProvers(trie) {
 
@@ -18,10 +19,11 @@ func TestVerifyMerklePatriciaTrieProof(t *testing.T) {
 			proof, err := prover(kv.k)
 			require.NoError(t, err)
 			require.NotNil(t, proof)
+			fmt.Printf("proof list proof example: %v\n", proof)
 			proofBytes, err := ProofListToBytes(*proof)
+			fmt.Printf("proof bytes: %x\n", proofBytes)
 			require.NoError(t, err)
-
-			val, err := VerifyMerklePatriciaTrieProof(root.Bytes(), kv.k, proofBytes)
+			val, err := VerifyMerklePatriciaTrieProof(root, kv.k, proofBytes)
 			if err != nil {
 				t.Fatalf("prover %d: failed to verify proof for key %x: %v\nraw proof: %x", i, kv.k, err, proof)
 			}

@@ -38,7 +38,7 @@ func relayByTx(sourceTxHash string, targetClientID string) error {
 		return err
 	}
 
-	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(receiverPrivateKey))
 	if err != nil {
 		return fmt.Errorf("failed to parse private key: %w", err)
 	}
@@ -116,7 +116,7 @@ func getCelestiaProverResponse(event SendPacketEvent) (*proverclient.ProveStateM
 }
 
 func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMembershipResponse) (msgRecvPacket ics26router.IICS26RouterMsgsMsgRecvPacket, err error) {
-	// TODO: instead of using getPayloadValue, we should decode the encodedPacketHex and convert the payload into a FungibleTokenPacketData. This isn't trivial to do because there is no utility method to decode the encodedPacketHex and ABI encode it.
+	// TODO: instead of using getwhat Value, we should decode the encodedPacketHex and convert the payload into a FungibleTokenPacketData. This isn't trivial to do because there is no utility method to decode the encodedPacketHex and ABI encode it.
 	value, err := getPayloadValue()
 	if err != nil {
 		return ics26router.IICS26RouterMsgsMsgRecvPacket{}, fmt.Errorf("failed to get payload value: %w", err)

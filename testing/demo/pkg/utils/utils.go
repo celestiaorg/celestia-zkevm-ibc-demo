@@ -203,6 +203,9 @@ func BroadcastMessages(clientContext client.Context, user string, gas uint64, ms
 	if err := clientContext.Codec.UnmarshalJSON(buffer.Bytes(), &txResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal tx response: %v", err)
 	}
+	if txResp.Code != 0 {
+		return nil, fmt.Errorf("transaction failed with code %d: %s", txResp.Code, txResp.RawLog)
+	}
 	return getFullyPopulatedResponse(clientContext, txResp.TxHash)
 }
 
@@ -222,6 +225,7 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
 		if err != nil {
 			fmt.Printf("Still waiting for tx %s... (Error: %v)\n", txHash, err)
+			fmt.Println("Error: ", err)
 			return false, err
 		}
 

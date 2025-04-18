@@ -35,7 +35,7 @@ func updateTendermintLightClient() error {
 	if err != nil {
 		return err
 	}
-	faucet, err := crypto.ToECDSA(ethcommon.FromHex(ethPrivateKey))
+	faucet, err := crypto.ToECDSA(ethcommon.FromHex(receiverPrivateKey))
 	if err != nil {
 		return err
 	}
