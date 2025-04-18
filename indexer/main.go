@@ -211,8 +211,6 @@ func decodeEthBlockNumber(data []byte) (uint64, error) {
 
 // startIndexer starts the indexing service that listens for new Celestia blocks and extracts Ethereum block numbers
 func startIndexer(ctx context.Context, config Config) {
-	// Add to wait group before any possible returns
-	wg.Add(1)
 	defer wg.Done()
 
 	nsBytes, err := hex.DecodeString(config.CelestiaNamespace)
@@ -385,8 +383,6 @@ func processHeight(ctx context.Context, c *client.Client, namespace share.Namesp
 
 // startAPI starts the HTTP API server
 func startAPI(config Config) {
-	// Add to wait group before any possible returns
-	wg.Add(1)
 	defer wg.Done()
 
 	router := mux.NewRouter()
@@ -513,10 +509,12 @@ func main() {
 	}()
 
 	// Start the API service
+	wg.Add(1)
 	go startAPI(config)
 	log.Println("API service started")
 
 	// Start the indexer service
+	wg.Add(1)
 	go startIndexer(ctx, config)
 	log.Println("Indexer service started")
 

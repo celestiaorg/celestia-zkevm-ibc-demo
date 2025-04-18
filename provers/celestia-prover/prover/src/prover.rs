@@ -15,7 +15,7 @@ use sp1_sdk::{
     EnvProver, ProverClient, SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
 };
 
-/// A prover for for [`SP1Program`] programs.
+/// A prover for [`SP1Program`] programs.
 #[allow(clippy::module_name_repetitions)]
 pub struct SP1ICS07TendermintProver<T: SP1Program> {
     /// [`sp1_sdk::ProverClient`] for generating proofs.
