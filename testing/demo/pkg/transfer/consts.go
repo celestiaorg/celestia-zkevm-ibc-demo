@@ -45,4 +45,6 @@ const (
 	ethereumRPC = "http://localhost:8545/"
 	// celestiaProverRPC is the RPC endpoint for the Celestia prover.
 	celestiaProverRPC = "localhost:50051"
+	// evmProverRPC is the RPC endpoint for the EVM prover.
+	evmProverRPC = "localhost:50052"
 )

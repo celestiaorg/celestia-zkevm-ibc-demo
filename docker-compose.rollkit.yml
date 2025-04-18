@@ -150,6 +150,8 @@ services:
     depends_on:
       beacond:
         condition: service_started
+      indexer:
+        condition: service_healthy
     networks:
       - rollkit-network
 

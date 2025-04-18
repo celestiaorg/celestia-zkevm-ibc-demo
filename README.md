@@ -51,6 +51,15 @@ NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Cel
     make install-dependencies
     ```
 
+1. Build the docker images
+
+    ```shell
+    make build-celestia-prover-docker
+    make build-evm-prover-docker
+    make build-indexer-docker
+    make build-simapp-docker
+    ```
+
 1. Run the demo
 
     ```shell
