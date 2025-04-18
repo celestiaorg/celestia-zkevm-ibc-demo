@@ -106,10 +106,9 @@ func getProof() ([]byte, error) {
 		return nil, fmt.Errorf("failed to connect to prover: %w", err)
 	}
 	defer conn.Close()
-
 	client := proverclient.NewProverClient(conn)
-	fmt.Printf("Requesting evm-prover state transition proof...\n")
 
+	fmt.Printf("Requesting evm-prover state transition proof...\n")
 	resp, err := client.ProveStateTransition(context.Background(), &proverclient.ProveStateTransitionRequest{ClientId: groth16ClientID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
