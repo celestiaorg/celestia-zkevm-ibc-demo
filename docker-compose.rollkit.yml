@@ -38,8 +38,6 @@ services:
       --datadir /.tmp/eth-home
       --ipcpath /.tmp/eth-home/eth-engine.ipc
       --rpc.eth-proof-window 120000
-      --dev
-      --dev.block-time 6s
     networks:
       - rollkit-network
 
