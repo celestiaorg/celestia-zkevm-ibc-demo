@@ -138,9 +138,6 @@ func getMsgRecvPacket(event SendPacketEvent, resp *proverclient.ProveStateMember
 		},
 	}
 
-	// packetCommitment := getPacketCommitment(ibcPacket)
-	// fmt.Printf("Packet commitment: %x\n", packetCommitment)
-
 	return ics26router.IICS26RouterMsgsMsgRecvPacket{
 		Packet:          ibcPacket,
 		ProofCommitment: resp.Proof,

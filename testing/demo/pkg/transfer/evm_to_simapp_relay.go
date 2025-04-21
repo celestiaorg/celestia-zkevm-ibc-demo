@@ -40,12 +40,13 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 
 // ethereum event type
 func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommitment, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
-	// TODO: make sure the payload value is correct and compatible with the ibcPacket
-	payloadValue, err := getPayloadValueForSimapp(event)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get payload value: %w", err)
+	var transferPayload ics26router.IICS26RouterMsgsPayload
+	// log all payloads
+	for _, payload := range event.Packet.Payloads {
+		fmt.Println("payload: ", payload)
+		transferPayload = payload
+		fmt.Println("transferPayload: ", transferPayload)
 	}
-	// event.Packet.Payloads
 	ibcPacket := ibcchanneltypesv2.Packet{
 		Sequence:          event.Packet.Sequence,
 		SourceClient:      event.Packet.SourceClient,
@@ -53,14 +54,15 @@ func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommi
 		TimeoutTimestamp:  event.Packet.TimeoutTimestamp,
 		Payloads: []ibcchanneltypesv2.Payload{
 			{
-				SourcePort:      transfertypes.PortID,
-				DestinationPort: transfertypes.PortID,
-				Version:         transfertypes.V1,
-				Encoding:        transfertypes.EncodingABI,
-				Value:           payloadValue,
+				SourcePort:      transferPayload.SourcePort,
+				DestinationPort: transferPayload.DestPort,
+				Version:         transferPayload.Version,
+				Encoding:        transferPayload.Encoding,
+				Value:           transferPayload.Value,
 			},
 		},
 	}
+
 	serializedProof, err := json.Marshal(proof)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize proof: %w", err)
@@ -81,7 +83,7 @@ func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommi
 
 func getPayloadValueForSimapp(event *ics26router.ContractSendPacket) ([]byte, error) {
 	// TODO: change to actual transfer amount
-	denomNow := "0xCF4fCaC55a3Eb0860Fce5c9328D4F0316F4A6735"
+	denomNow := "transfer/07-tendermint-0/stake"
 	coin := sdktypes.NewCoin(denomNow, math.NewInt(50))
 	transferPayload := transfertypes.FungibleTokenPacketData{
 		Denom:    coin.Denom,

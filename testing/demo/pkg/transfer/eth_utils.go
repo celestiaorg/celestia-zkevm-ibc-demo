@@ -15,11 +15,45 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+type StorageProof struct {
+	// The key of the storage
+	Key common.Hash `json:"key"`
+	// The value of the storage
+	Value hexutil.Big `json:"value"`
+	// The proof of the storage
+	Proof []hexutil.Bytes `json:"proof"`
+}
+
+type EthGetProofResponse struct {
+	AccountProof []hexutil.Bytes `json:"accountProof"`
+	Address      common.Address  `json:"address"`
+	Balance      *hexutil.Big    `json:"balance"`
+	CodeHash     common.Hash     `json:"codeHash"`
+	Nonce        hexutil.Uint64  `json:"nonce"`
+
+	StorageHash  common.Hash    `json:"storageHash"`
+	StorageProof []StorageProof `json:"storageProof"`
+}
+
+type ProofCommitment struct {
+	AccountProof []hexutil.Bytes `json:"accountProof"`
+	Address      common.Address  `json:"address"`
+	Balance      *hexutil.Big    `json:"balance"`
+	CodeHash     common.Hash     `json:"codeHash"`
+	Nonce        hexutil.Uint64  `json:"nonce"`
+	StorageHash  common.Hash     `json:"storageHash"`
+	StorageProof []hexutil.Bytes `json:"storageProof"`
+	StorageKey   common.Hash     `json:"storageKey"`
+	StorageValue hexutil.Big     `json:"storageValue"`
+}
 
 func getTransactOpts(key *ecdsa.PrivateKey, chain ethereum.Ethereum) *bind.TransactOpts {
 	ethClient, err := ethclient.Dial(chain.RPC)
@@ -139,4 +173,47 @@ func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log
 	}
 
 	return
+}
+
+// getMPTProof queries the Reth node for a Merkle Patricia Trie proof for a given key
+func getMPTProof(packetCommitmentPath []byte, contractAddress string) (ProofCommitment, error) {
+	commitmentsStorageKey := GetCommitmentsStorageKey(packetCommitmentPath)
+
+	client, err := ethclient.Dial(ethereumRPC)
+	if err != nil {
+		return ProofCommitment{}, fmt.Errorf("failed to connect to Reth node: %w", err)
+	}
+	defer client.Close()
+
+	// Generate the proof for the given path
+	var result EthGetProofResponse
+	err = client.Client().Call(&result, "eth_getProof", contractAddress, []string{commitmentsStorageKey.Hex()}, hexutil.EncodeUint64(evmTransferBlockNumber))
+	if err != nil {
+		return ProofCommitment{}, fmt.Errorf("failed to get MPT proof: %w", err)
+	}
+
+	// Find the proof for our specific storage key
+	var targetProof StorageProof
+	for _, proof := range result.StorageProof {
+		if proof.Key == commitmentsStorageKey {
+			targetProof = proof
+			break
+		} else {
+			return ProofCommitment{}, fmt.Errorf("proof key does not match the path: %x", proof.Key)
+		}
+	}
+
+	proof := ProofCommitment{
+		AccountProof: result.AccountProof,
+		Address:      result.Address,
+		Balance:      result.Balance,
+		CodeHash:     result.CodeHash,
+		Nonce:        result.Nonce,
+		StorageHash:  result.StorageHash,
+		StorageProof: targetProof.Proof,
+		StorageKey:   targetProof.Key,
+		StorageValue: targetProof.Value,
+	}
+
+	return proof, nil
 }

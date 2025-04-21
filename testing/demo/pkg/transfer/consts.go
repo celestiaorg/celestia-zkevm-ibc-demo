@@ -8,7 +8,7 @@ import (
 
 var (
 	// initialBalance is the initial balance of the sender on SimApp.
-	initialBalance = math.NewInt(274883996352)
+	simappInitialBalance = math.NewInt(274883996352)
 	// transferAmount is the amount of tokens to transfer.
 	transferAmount = math.NewInt(100)
 	// transferBackAmount is the amount of tokens to transfer back.
