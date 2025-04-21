@@ -19,14 +19,6 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Cache sp1
-        uses: actions/cache@v4
-        with:
-          path: ~/.sp1
-          key: sp1-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            sp1-${{ runner.os }}-
-
       - name: "Set up environment"
         uses: ./.github/setup
 
