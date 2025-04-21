@@ -59,8 +59,8 @@ jobs:
         run: cargo fmt --check
         working-directory: ./provers/evm-prover/
 
-  build-evm-prover:
-    name: build-evm-prover
+  check-evm-prover:
+    name: check-evm-prover
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -91,12 +91,12 @@ jobs:
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
 
-      - name: Build
+      - name: Check evm-prover
         run: cargo check --release --locked
         working-directory: ./provers/evm-prover
 
-  build-celestia-prover:
-    name: build-celestia-prover
+  check-celestia-prover:
+    name: check-celestia-prover
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -139,6 +139,6 @@ jobs:
         run: just build-sp1-programs
         working-directory: ./solidity-ibc-eureka
 
-      - name: Build celestia prover
+      - name: Check celestia prover
         run: cargo check --release --locked
         working-directory: ./provers/celestia-prover/
