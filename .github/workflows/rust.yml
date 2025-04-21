@@ -19,6 +19,14 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Cache sp1
+        uses: actions/cache@v4
+        with:
+          path: ~/.sp1
+          key: sp1-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            sp1-${{ runner.os }}-
+
       - name: "Set up environment"
         uses: ./.github/setup
 
@@ -70,6 +78,13 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Cache SP1 programs
+        id: cache-sp1-programs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+          key: ${{ runner.os }}-relayer-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'provers/blevm/**') }}
       - name: "Set up environment"
         uses: ./.github/setup
 
@@ -97,6 +112,14 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Cache SP1 programs
+        id: cache-sp1-programs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.sp1/target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+          key: ${{ runner.os }}-relayer-${{ hashFiles('solidity-ibc-eureka/Cargo.lock', 'solidity-ibc-eureka/Cargo.toml', 'solidity-ibc-eureka/programs/**', 'solidity-ibc-eureka/abi/**') }}
 
       - name: "Set up environment"
         uses: ./.github/setup
