@@ -75,7 +75,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ./target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+            target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+            ~/.rustup/
+            ~/.sp1/
           key: ${{ runner.os }}-sp1-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'provers/blevm/**') }}
       - name: "Set up environment"
         uses: ./.github/setup
@@ -111,7 +113,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ./target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+            solidity-ibc-eureka/target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+            ~/.rustup/
+            ~/.sp1/
           key: ${{ runner.os }}-sp1-${{ hashFiles('solidity-ibc-eureka/Cargo.lock', 'solidity-ibc-eureka/Cargo.toml', 'solidity-ibc-eureka/programs/**', 'solidity-ibc-eureka/abi/**') }}
 
       - name: "Set up environment"
