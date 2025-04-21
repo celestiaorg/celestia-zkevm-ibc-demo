@@ -81,6 +81,7 @@ jobs:
         uses: ./.github/setup
 
       - name: Install SP1 toolchain
+        if: (steps.cache-sp1-programs.outputs.cache-hit != 'true')
         shell: bash
         run: |
           curl -L https://sp1.succinct.xyz | bash
@@ -116,6 +117,7 @@ jobs:
       - name: "Set up environment"
         uses: ./.github/setup
       - name: Install SP1 toolchain
+        if: (steps.cache-sp1-programs.outputs.cache-hit != 'true')
         shell: bash
         run: |
           curl -L https://sp1.succinct.xyz | bash
@@ -129,6 +131,7 @@ jobs:
           just-version: "1.40.0"
 
       - name: Build SP1 programs in solidity-ibc-eureka
+        if: (steps.cache-sp1-programs.outputs.cache-hit != 'true')
         run: just build-sp1-programs
         working-directory: ./solidity-ibc-eureka
 
