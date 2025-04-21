@@ -16,6 +16,9 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: "Set up environment"
         uses: ./.github/setup
 
@@ -37,6 +40,9 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
       - name: "Set up environment"
         uses: ./.github/setup
@@ -60,8 +66,13 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: "Set up environment"
         uses: ./.github/setup
+
       - name: Install SP1 toolchain
         shell: bash
         run: |
@@ -70,7 +81,7 @@ jobs:
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
       - name: Build
-        run: cargo build --release --locked
+        run: cargo check --release --locked
         working-directory: ./provers/blevm/blevm/
 
   build-blevm-script:
@@ -80,6 +91,9 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: "Set up environment"
         uses: ./.github/setup
 
@@ -92,7 +106,7 @@ jobs:
           rustc +succinct --version
 
       - name: Build
-        run: cargo build --release --locked
+        run: cargo check --release --locked
         working-directory: ./provers/blevm/script/
 
   build-celestia-prover:
@@ -104,6 +118,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
       - name: "Set up environment"
         uses: ./.github/setup
@@ -125,5 +142,5 @@ jobs:
         working-directory: ./solidity-ibc-eureka
 
       - name: Build celestia prover
-        run: cargo build --release --locked
+        run: cargo check --release --locked
         working-directory: ./provers/celestia-prover/
