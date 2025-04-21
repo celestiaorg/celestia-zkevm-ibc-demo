@@ -34,8 +34,8 @@ jobs:
         run: cargo fmt --check
         working-directory: .
 
-  lint-blevm:
-    name: lint-blevm
+  lint-evm-prover:
+    name: lint-evm-prover
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -57,10 +57,10 @@ jobs:
 
       - name: Run cargo fmt
         run: cargo fmt --check
-        working-directory: ./provers/blevm/
+        working-directory: ./provers/evm-prover/
 
-  build-blevm:
-    name: build-blevm
+  build-evm-prover:
+    name: build-evm-prover
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -80,34 +80,10 @@ jobs:
           ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
-      - name: Build
-        run: cargo check --release --locked
-        working-directory: ./provers/blevm/blevm/
-
-  build-blevm-script:
-    name: build-blevm-script
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: "Set up environment"
-        uses: ./.github/setup
-
-      - name: Install SP1 toolchain
-        shell: bash
-        run: |
-          curl -L https://sp1.succinct.xyz | bash
-          ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
-          ~/.sp1/bin/cargo-prove prove --version
-          rustc +succinct --version
 
       - name: Build
         run: cargo check --release --locked
-        working-directory: ./provers/blevm/script/
+        working-directory: ./provers/evm-prover
 
   build-celestia-prover:
     name: build-celestia-prover
