@@ -43,9 +43,7 @@ func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommi
 	var transferPayload ics26router.IICS26RouterMsgsPayload
 	// log all payloads
 	for _, payload := range event.Packet.Payloads {
-		fmt.Println("payload: ", payload)
 		transferPayload = payload
-		fmt.Println("transferPayload: ", transferPayload)
 	}
 	ibcPacket := ibcchanneltypesv2.Packet{
 		Sequence:          event.Packet.Sequence,

@@ -48,6 +48,11 @@ func transferSimAppToEVM() error {
 		return fmt.Errorf("failed to assert verifier keys: %w", err)
 	}
 
+	err = updateBalances()
+	if err != nil {
+		return fmt.Errorf("failed to update balances: %w", err)
+	}
+
 	msg, err := createMsgSendPacket()
 	if err != nil {
 		return fmt.Errorf("failed to create msg send packet: %w", err)
@@ -82,6 +87,11 @@ func transferBack() error {
 		return fmt.Errorf("failed to approve spend: %w", err)
 	}
 
+	err = updateBalances()
+	if err != nil {
+		return fmt.Errorf("failed to update balances: %w", err)
+	}
+
 	// Get the contract addresses
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
@@ -97,12 +107,14 @@ func transferBack() error {
 	}
 	defer ethClient.Close()
 
-	err, packetCommitmentPath, sendPacketEvent := sendTransferBackMsg()
+	err, sendPacketEvent, evmTransferBlockNumber := sendTransferBackMsg()
 	if err != nil {
 		return fmt.Errorf("failed to send transfer back msg: %w", err)
 	}
 
-	// Get the MPT proof
+	// Generate the path for the packet commitment which is required for the commitment proof generation
+	packetCommitmentPath := packetCommitmentPath(sendPacketEvent.Packet.SourceClient, sendPacketEvent.Packet.Sequence)
+
 	proof, err := getMPTProof(packetCommitmentPath, addresses.ICS26Router)
 	if err != nil {
 		return fmt.Errorf("failed to get MPT proof: %w", err)
@@ -113,7 +125,6 @@ func transferBack() error {
 		return fmt.Errorf("failed to update Groth16 light client: %w", err)
 	}
 
-	// everything in proof should be 32 byte value (uint256 or bytes32)
 	err = relayFromEvmToSimapp(sendPacketEvent, proof, evmTransferBlockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to relay from EVM to SimApp: %w", err)
@@ -185,41 +196,40 @@ func approveSpend() error {
 	return nil
 }
 
-func sendTransferBackMsg() (error, []byte, *ics26router.ContractSendPacket) {
+func sendTransferBackMsg() (error, *ics26router.ContractSendPacket, uint64) {
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
-		return fmt.Errorf("failed to get contract addresses: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to get contract addresses: %w", err), nil, 0
 	}
 
 	ibcERC20Address, err := getIBCERC20Address()
 	if err != nil {
-		return fmt.Errorf("failed to get IBC ERC20 contract address: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to get IBC ERC20 contract address: %w", err), nil, 0
 	}
-	fmt.Println("ibcERC20Address: ", ibcERC20Address)
 
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return fmt.Errorf("failed to connect to Ethereum: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to connect to Ethereum: %w", err), nil, 0
 	}
 
 	ics20Contract, err := ics20transfer.NewContract(ethcommon.HexToAddress(addresses.ICS20Transfer), ethClient)
 	if err != nil {
-		return err, []byte{}, nil
+		return fmt.Errorf("failed to get ICS20Transfer contract address: %w", err), nil, 0
 	}
 
 	ics26Contract, err := ics26router.NewContract(ethcommon.HexToAddress(addresses.ICS26Router), ethClient)
 	if err != nil {
-		return fmt.Errorf("failed to get ICS26Router contract address: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to get ICS26Router contract address: %w", err), nil, 0
 	}
 
 	privateKey, err := crypto.ToECDSA(ethcommon.FromHex(receiverPrivateKey))
 	if err != nil {
-		return fmt.Errorf("failed to parse private key: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to parse private key: %w", err), nil, 0
 	}
 
 	eth, err := ethereum.NewEthereum(context.Background(), ethereumRPC, nil, privateKey)
 	if err != nil {
-		return fmt.Errorf("failed to create Ethereum client: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to create Ethereum client: %w", err), nil, 0
 	}
 
 	msg := ics20transfer.IICS20TransferMsgsSendTransferMsg{
@@ -232,28 +242,25 @@ func sendTransferBackMsg() (error, []byte, *ics26router.ContractSendPacket) {
 	}
 	tx, err := ics20Contract.SendTransfer(getTransactOpts(privateKey, eth), msg)
 	if err != nil {
-		return fmt.Errorf("failed to create transaction: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to create transaction: %w", err), nil, 0
 	}
 
 	receipt, err := getTxReciept(context.Background(), eth, tx.Hash())
 	if err != nil {
-		return fmt.Errorf("failed to get transaction receipt: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to get transaction receipt: %w", err), nil, 0
 	}
 	evmTransferBlockNumber = receipt.BlockNumber.Uint64()
 
 	if receipt.Status != ethtypes.ReceiptStatusSuccessful {
-		return fmt.Errorf("send transfer back msg failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs), []byte{}, nil
+		return fmt.Errorf("send transfer back msg failed with status: %v tx hash: %s block number: %d gas used: %d logs: %v", receipt.Status, receipt.TxHash.Hex(), receipt.BlockNumber.Uint64(), receipt.GasUsed, receipt.Logs), nil, 0
 	}
 
 	// Parse the send packet event from the receipt
 	sendPacketEvent, err := GetEvmEvent(receipt, ics26Contract.ParseSendPacket)
 	if err != nil {
-		return fmt.Errorf("failed to get send packet event: %w", err), []byte{}, nil
+		return fmt.Errorf("failed to get send packet event: %w", err), nil, 0
 	}
 
-	// Generate the path for the packet commitment which is required for the commitment proof generation
-	packetCommitmentPath := packetCommitmentPath(sendPacketEvent.Packet.SourceClient, sendPacketEvent.Packet.Sequence)
-
 	fmt.Printf("Submit transfer back msg successfully tx hash: %s\n", tx.Hash().Hex())
-	return nil, packetCommitmentPath, sendPacketEvent
+	return nil, sendPacketEvent, receipt.BlockNumber.Uint64()
 }
