@@ -15,21 +15,19 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var initialBalanceOnSimapp math.Int
-
-func queryBalance() error {
-	err := queryBalanceOnSimApp()
+func queryAndAssertBalances() error {
+	err := assertBalanceOnSimApp()
 	if err != nil {
-		return fmt.Errorf("failed to query balance on SimApp: %w", err)
+		return fmt.Errorf("failed to assert balance on SimApp: %w", err)
 	}
-	err = queryBalanceOnEthereum()
+	err = assertBalanceOnEthereum()
 	if err != nil {
 		return fmt.Errorf("failed to query balance on Ethereum: %w", err)
 	}
 	return nil
 }
 
-func queryBalanceOnSimApp() error {
+func assertBalanceOnSimApp() error {
 	currentBalance, err := getSimappUserBalance()
 	if err != nil {
 		return fmt.Errorf("failed to get balance for SimApp: %w", err)
@@ -66,9 +64,7 @@ func queryBalanceOnSimApp() error {
 	return nil
 }
 
-var initialBalanceOnEvm = math.NewInt(0)
-
-func queryBalanceOnEthereum() error {
+func assertBalanceOnEthereum() error {
 	userBalance, ibcERC20, ICS20TransferAddress, err := getEvmUserBalance()
 	if err != nil {
 		return fmt.Errorf("failed to get balance for Ethereum: %w", err)

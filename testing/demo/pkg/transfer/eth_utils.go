@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// StorageProof is the proof of the storage of the commitment of the packet on the Ethereum chain.
 type StorageProof struct {
 	// The key of the storage
 	Key common.Hash `json:"key"`
@@ -32,6 +33,7 @@ type StorageProof struct {
 	Proof []hexutil.Bytes `json:"proof"`
 }
 
+// EthGetProofResponse is the response from the eth_getProof RPC call.
 type EthGetProofResponse struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
 	Address      common.Address  `json:"address"`
@@ -43,6 +45,7 @@ type EthGetProofResponse struct {
 	StorageProof []StorageProof `json:"storageProof"`
 }
 
+// ProofCommitment is the proof of the commitment of the packet on the Ethereum chain.
 type ProofCommitment struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
 	Address      common.Address  `json:"address"`
@@ -145,6 +148,7 @@ func GetCommitmentsStorageKey(path []byte) ethcommon.Hash {
 	return crypto.Keccak256Hash(pathHash, paddedSlot)
 }
 
+// packetCommitmentPath returns the path of the packet commitment on the EVM chain.
 func packetCommitmentPath(clientId string, sequence uint64) []byte {
 	// Convert sequence to big endian bytes (8 bytes)
 	sequenceBytes := make([]byte, 8)

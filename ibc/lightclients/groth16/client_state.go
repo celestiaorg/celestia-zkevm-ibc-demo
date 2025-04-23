@@ -29,7 +29,8 @@ const (
 	Groth16ClientType = ModuleName
 )
 
-type Proof struct {
+// ProofCommitment is the proof of the commitment of the packet on the Ethereum chain.
+type ProofCommitment struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
 	Address      common.Address  `json:"address"`
 	Balance      *hexutil.Big    `json:"balance"`
@@ -121,60 +122,48 @@ func (cs *ClientState) verifyMembership(
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 
-	var decodedProof Proof
-	err = json.Unmarshal(proof, &decodedProof)
+	var deserializedProof ProofCommitment
+	err = json.Unmarshal(proof, &deserializedProof)
 	if err != nil {
-		return fmt.Errorf("failed to deserialize proof: %w", err)
+		return fmt.Errorf("failed to deserialize mpt proof: %w", err)
 	}
 
-	address := crypto.Keccak256(decodedProof.Address.Bytes())
+	ICS26RouterAddress := crypto.Keccak256(deserializedProof.Address.Bytes())
 	// Verify account proof against the state root
-	accountValue, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), address, decodedProof.AccountProof)
+	accountClaimedValue, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), ICS26RouterAddress, deserializedProof.AccountProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
-	// check that the account proof value is correct
-	accountClaimed := []any{uint64(decodedProof.Nonce), decodedProof.Balance.ToInt().Bytes(), decodedProof.StorageHash, decodedProof.CodeHash}
-	accountClaimedValue, err := rlp.EncodeToBytes(accountClaimed)
+	// Verify that the account proof value is correct
+	accountClaimed := []any{uint64(deserializedProof.Nonce), deserializedProof.Balance.ToInt().Bytes(), deserializedProof.StorageHash, deserializedProof.CodeHash}
+	expectedAccountClaimedValue, err := rlp.EncodeToBytes(accountClaimed)
 	if err != nil {
-		return fmt.Errorf("failed to encode reconstructed account value from proof: %w", err)
+		return fmt.Errorf("failed to rlp encode reconstructed account value: %w", err)
 	}
 
-	if !bytes.Equal(accountValue, accountClaimedValue) {
-		return fmt.Errorf("reconstructed account value from proof does not match the verified value")
+	if !bytes.Equal(accountClaimedValue, expectedAccountClaimedValue) {
+		return fmt.Errorf("expected account claimed value does not match the verified value")
 	}
 
-	commitmentPath := crypto.Keccak256(decodedProof.StorageKey.Bytes())
+	commitmentPath := crypto.Keccak256(deserializedProof.StorageKey.Bytes())
 	// Verify that the commitment exists in the storage proof
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(decodedProof.StorageHash, commitmentPath, decodedProof.StorageProof)
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(deserializedProof.StorageHash, commitmentPath, deserializedProof.StorageProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
 
-	fmt.Printf("verifiedValue: %x\n", verifiedValue)
-	fmt.Printf("value: %x\n", value)
-
-	// RLP encode the value passed to the client
-	rlpValue, err := rlp.EncodeToBytes(value)
+	// RLP encode the expected value passed to the client
+	expectedValue, err := rlp.EncodeToBytes(value)
 	if err != nil {
 		return fmt.Errorf("failed to encode value: %w", err)
 	}
 
-	if !bytes.Equal(verifiedValue, rlpValue) {
+	if !bytes.Equal(verifiedValue, expectedValue) {
 		// add the value to the error message with retrieved value and format it properly
-		return fmt.Errorf("retrieved value%x does not match the value passed to the client: %x", verifiedValue, rlpValue)
+		return fmt.Errorf("verified value%x does not match the expected value: %x", verifiedValue, expectedValue)
 	}
 
 	return nil
-}
-
-func deserializeProof(serializedProof []byte) (Proof, error) {
-	var proof Proof
-	err := json.Unmarshal(serializedProof, &proof)
-	if err != nil {
-		return Proof{}, fmt.Errorf("failed to deserialize proof: %w", err)
-	}
-	return proof, nil
 }
 
 // verifyNonMembership verifies a proof of the absence of a key in the Merkle tree.
@@ -199,11 +188,11 @@ func (cs *ClientState) verifyNonMembership(
 		return sdkerrors.Wrapf(commitmenttypes.ErrInvalidProof, "expected %T, got %T", commitmenttypesv2.MerklePath{}, path)
 	}
 
-	// MPT takes keypath as []byte, so we concatenate the keys arrays
-	// TODO we might have to change this because based on tests the keypath is always one element
+	// NOTE: this verification implementation is not correct, mpt getProof doesn't handle non-membership proofs
 	mptKey := append(merklePath.KeyPath[0], merklePath.KeyPath[1]...)
 
-	decodedProof, err := deserializeProof(proof)
+	var decodedProof ProofCommitment
+	err = json.Unmarshal(proof, &decodedProof)
 	if err != nil {
 		return fmt.Errorf("failed to deserialize proof: %w", err)
 	}

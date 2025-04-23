@@ -10,7 +10,6 @@ import (
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/ethereum"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ibcerc20"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
@@ -35,7 +34,7 @@ func main() {
 			log.Fatal("Failed to transfer from EVM roll-up to SimApp: ", err)
 		}
 	} else if os.Args[1] == "query-balance" {
-		err := queryBalance()
+		err := queryAndAssertBalances()
 		if err != nil {
 			log.Fatal("Failed to query balance: ", err)
 		}
@@ -73,7 +72,7 @@ func transferSimAppToEVM() error {
 		return fmt.Errorf("failed to relay IBC transaction: %w", err)
 	}
 
-	err = queryBalance()
+	err = queryAndAssertBalances()
 	if err != nil {
 		return fmt.Errorf("failed to query balance: %w", err)
 	}
@@ -92,15 +91,11 @@ func transferBack() error {
 		return fmt.Errorf("failed to update balances: %w", err)
 	}
 
-	// Get the contract addresses
 	addresses, err := utils.ExtractDeployedContractAddresses()
 	if err != nil {
 		return fmt.Errorf("failed to get contract addresses: %w", err)
 	}
 
-	// Get the latest transaction hash from the ICS20Transfer contract
-	// This is a simplified approach - in a real implementation, you would need to
-	// determine the exact transaction that represents the transfer
 	ethClient, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Ethereum: %w", err)
@@ -112,7 +107,7 @@ func transferBack() error {
 		return fmt.Errorf("failed to send transfer back msg: %w", err)
 	}
 
-	// Generate the path for the packet commitment which is required for the commitment proof generation
+	// Generate the path for the packet commitment which is required for the commitment proof generation.
 	packetCommitmentPath := packetCommitmentPath(sendPacketEvent.Packet.SourceClient, sendPacketEvent.Packet.Sequence)
 
 	proof, err := getMPTProof(packetCommitmentPath, addresses.ICS26Router)
@@ -130,7 +125,7 @@ func transferBack() error {
 		return fmt.Errorf("failed to relay from EVM to SimApp: %w", err)
 	}
 
-	err = queryBalance()
+	err = queryAndAssertBalances()
 	if err != nil {
 		return fmt.Errorf("failed to query balance: %w", err)
 	}

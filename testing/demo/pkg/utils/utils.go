@@ -225,7 +225,6 @@ func getFullyPopulatedResponse(cc client.Context, txHash string) (*sdk.TxRespons
 		fullyPopulatedTxResp, err := authtx.QueryTx(cc, txHash)
 		if err != nil {
 			fmt.Printf("Still waiting for tx %s... (Error: %v)\n", txHash, err)
-			fmt.Println("Error: ", err)
 			return false, err
 		}
 

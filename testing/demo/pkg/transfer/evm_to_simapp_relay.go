@@ -4,10 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"cosmossdk.io/math"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	"github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcchanneltypesv2 "github.com/cosmos/ibc-go/v10/modules/core/04-channel/v2/types"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
@@ -26,7 +23,7 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 	}
 
 	// we can broadcast the msgrecvpacket to the simapp chain
-	msgRecvPacketResponse, err := utils.BroadcastMessages(clientCtx, cosmosRelayer, 200_000, msgRecvPacket)
+	msgRecvPacketResponse, err := utils.BroadcastMessages(clientCtx, sender, 200_000, msgRecvPacket)
 	if err != nil {
 		return fmt.Errorf("failed to broadcast MsgRecvPacket: %w", err)
 	}
@@ -40,11 +37,7 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 
 // ethereum event type
 func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommitment, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
-	var transferPayload ics26router.IICS26RouterMsgsPayload
-	// log all payloads
-	for _, payload := range event.Packet.Payloads {
-		transferPayload = payload
-	}
+	transferPayload := event.Packet.Payloads[0]
 	ibcPacket := ibcchanneltypesv2.Packet{
 		Sequence:          event.Packet.Sequence,
 		SourceClient:      event.Packet.SourceClient,
@@ -73,26 +66,8 @@ func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommi
 			RevisionNumber: 0,
 			RevisionHeight: groth16ClientHeight,
 		},
-		Signer: cosmosRelayer,
+		Signer: sender,
 	}
 
 	return &msgRecvPacket, nil
-}
-
-func getPayloadValueForSimapp(event *ics26router.ContractSendPacket) ([]byte, error) {
-	// TODO: change to actual transfer amount
-	denomNow := "transfer/07-tendermint-0/stake"
-	coin := sdktypes.NewCoin(denomNow, math.NewInt(50))
-	transferPayload := transfertypes.FungibleTokenPacketData{
-		Denom:    coin.Denom,
-		Amount:   coin.Amount.String(),
-		Sender:   receiver,
-		Receiver: sender,
-		Memo:     "transfer back memo",
-	}
-	payloadValue, err := transfertypes.EncodeABIFungibleTokenPacketData(&transferPayload)
-	if err != nil {
-		return []byte{}, err
-	}
-	return payloadValue, nil
 }
