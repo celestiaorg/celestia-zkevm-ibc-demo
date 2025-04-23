@@ -1,7 +1,6 @@
 use blevm_prover::indexer::get_inclusion_height;
 use blevm_prover::prover::{
-    AggregationInput, AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient,
-    CelestiaConfig, ProverConfig,
+    AggregatorConfig, BlockProver, BlockProverInput, CelestiaClient, CelestiaConfig, ProverConfig,
 };
 use blevm_prover::rsp::generate_client_input;
 use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
@@ -203,29 +202,9 @@ impl Prover for ProverService {
             inputs.push(input);
         }
 
-        // Generate proofs and collect verifying keys
-        let mut aggregation_inputs = vec![];
-        for input in inputs {
-            println!(
-                "generating proof for inclusion height: {:?}",
-                input.inclusion_height
-            );
-            let (proof, vk) = self.prover.generate_proof(input).await.unwrap();
-            aggregation_inputs.push(AggregationInput {
-                proof,
-                vk: vk.clone(),
-            });
-        }
+        println!("generating aggregation proof, size: {}", inputs.len());
 
-        println!(
-            "generating aggregation proof, size: {}",
-            aggregation_inputs.len()
-        );
-        let aggregation_output = self
-            .prover
-            .aggregate_proofs(aggregation_inputs)
-            .await
-            .unwrap();
+        let aggregation_output = self.prover.prove_block_range(inputs).await.unwrap();
 
         let response = ProveStateTransitionResponse {
             proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),
