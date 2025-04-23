@@ -15,7 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-var previousBalanceOnSimapp math.Int
+var initialBalanceOnSimapp math.Int
+
 func queryBalance() error {
 	err := queryBalanceOnSimApp()
 	if err != nil {
@@ -34,56 +35,70 @@ func queryBalanceOnSimApp() error {
 		return fmt.Errorf("failed to get balance for SimApp: %w", err)
 	}
 
-	// If the balance is increased, we're transferring from EVM to SimApp
-	if currentBalance.GT(previousBalanceOnSimapp) {
-		netTransferAmount := currentBalance.Sub(previousBalanceOnSimapp)
-		fmt.Printf("currentBalance: %v\n", currentBalance)
-		expectedBalance := previousBalanceOnSimapp.Add(netTransferAmount)
-		fmt.Printf("expectedBalance: %v\n", expectedBalance)
+	difference := currentBalance.Sub(initialBalanceOnSimapp)
+
+	switch {
+	case difference.IsPositive():
+		// Received tokens from EVM
+		netTransferAmount := currentBalance.Sub(initialBalanceOnSimapp)
+		expectedBalance := initialBalanceOnSimapp.Add(netTransferAmount)
 		if !currentBalance.Equal(expectedBalance) {
-			return fmt.Errorf("sender balance on SimApp not match expected balance: %v != %v", currentBalance.Int64(), expectedBalance.Int64())
+			return fmt.Errorf("sender balance on SimApp does not match expected balance: %v != %v\n", currentBalance, expectedBalance)
 		}
-		fmt.Printf("Initial balance on Simapp: %v\nCurrent balance on SimApp: %v\nBalance increase on SimApp (transfer amount + gas fees): %v\n", previousBalanceOnSimapp, currentBalance.Int64(), currentBalance.Sub(previousBalanceOnSimapp).Int64())
-		// otherwise, we're transferring from SimApp to EVM
-	} else if currentBalance.LT(previousBalanceOnSimapp) {
-		expectedBalance := previousBalanceOnSimapp.Sub(currentBalance)
+		fmt.Printf("Initial balance on SimApp: %v\n", initialBalanceOnSimapp)
+		fmt.Printf("Current balance on SimApp: %v\n", currentBalance.Int64())
+		fmt.Printf("Received %v tokens after the gas fees from EVM\n", difference)
+
+	case difference.IsNegative():
+		// Sent tokens to EVM
+		expectedBalance := initialBalanceOnSimapp.Sub(currentBalance)
 		if currentBalance.LT(expectedBalance) {
-			return fmt.Errorf("sender balance on SimApp not match expected balance: %v != %v", currentBalance.Int64(), expectedBalance.Int64())
+			return fmt.Errorf("sender balance on SimApp does not match expected balance: %v != %v\n", currentBalance, expectedBalance)
 		}
-		fmt.Printf("Initial balance on SimApp: %v\nCurrent balance on SimApp: %v\nDifference on SimApp (transfer amount + gas fees): %v\n", previousBalanceOnSimapp, currentBalance.Int64(), previousBalanceOnSimapp.Sub(currentBalance).Int64())
+		fmt.Printf("Initial balance on SimApp: %v\n", initialBalanceOnSimapp)
+		fmt.Printf("Current balance on SimApp: %v\n", currentBalance)
+		fmt.Printf("Sent %v tokens including gas fees to EVM chain\n", difference.Neg())
+
+	default:
+		fmt.Printf("Balance unchanged: %v\n", currentBalance)
 	}
 
 	return nil
 }
 
-var previousBalanceOnEvmChain math.Int
+var initialBalanceOnEvm = math.NewInt(0)
+
 func queryBalanceOnEthereum() error {
 	userBalance, ibcERC20, ICS20TransferAddress, err := getEvmUserBalance()
 	if err != nil {
 		return fmt.Errorf("failed to get balance for Ethereum: %w", err)
 	}
 
-	fmt.Printf("receiver: %s\n", receiver)
-	fmt.Printf("user balance: %v\n", userBalance.Int64())
+	difference := userBalance.Sub(initialBalanceOnEvm)
 
-	// In balance increased, we're transferring from SimApp to Ethereum
-	if userBalance.Int64() > previousBalanceOnEvmChain.Int64() {
-
-		expectecBalance := previousBalanceOnEvmChain.Add(transferAmount)
+	switch {
+	case difference.IsPositive():
+		// Received tokens from SimApp
+		expectecBalance := initialBalanceOnEvm.Add(transferAmount)
 		if userBalance.Int64() != expectecBalance.Int64() {
-			fmt.Printf("user balance on Ethereum does not match expected balance: %v != %v", userBalance.Int64(), expectecBalance.Int64())
+			fmt.Printf("user balance on Ethereum does not match expected balance: %v != %v\n", userBalance, expectecBalance)
+		}
+		fmt.Printf("Initial balance on EVM chain: %v\n", initialBalanceOnEvm)
+		fmt.Printf("Current balance on EVM chain: %v\n", userBalance)
+		fmt.Printf("Received %v tokens from SimApp\n", difference)
+	case difference.IsNegative():
+		// Sent tokens to SimApp
+		expectecBalance := initialBalanceOnEvm.Sub(math.NewInt(transferBackAmount.Int64()))
+		if userBalance.Int64() != expectecBalance.Int64() {
+			fmt.Printf("user balance on Ethereum does not match expected balance: %v != %v\n", userBalance, expectecBalance)
 		}
 
-		fmt.Printf("Initial balance on Ethereum: %v\nCurrent balance on Ethereum: %v\nBalance increased on Ethereum by: %v\n", previousBalanceOnEvmChain, userBalance.Int64(), expectecBalance.Sub(previousBalanceOnEvmChain).Int64())
-	} else if userBalance.Int64() < previousBalanceOnEvmChain.Int64() {
+		fmt.Printf("Initial balance on EVM chain: %v\n", initialBalanceOnEvm)
+		fmt.Printf("Current balance on EVM chain: %v\n", userBalance)
+		fmt.Printf("Sent %v tokens to SimApp chain\n", difference.Neg())
 
-		expectecBalance := previousBalanceOnEvmChain.Sub(math.NewInt(transferBackAmount.Int64()))
-		fmt.Printf("expectecBalance: %v\n", expectecBalance)
-		if userBalance.Int64() != expectecBalance.Int64() {
-			fmt.Printf("user balance on Ethereum does not match expected balance: %v != %v", userBalance.Int64(), expectecBalance.Int64())
-		}
-
-		fmt.Printf("Initial balance on Ethereum: %v\nCurrent balance on Ethereum: %v\nBalance decrease on Ethereum: %v\n", previousBalanceOnEvmChain, userBalance.Int64(), userBalance.Sub(previousBalanceOnEvmChain).Int64())
+	default:
+		fmt.Printf("Balance unchanged: %v\n", userBalance)
 	}
 
 	ics20TransferBalance, err := ibcERC20.BalanceOf(nil, ethcommon.HexToAddress(ICS20TransferAddress))
@@ -91,7 +106,7 @@ func queryBalanceOnEthereum() error {
 		return fmt.Errorf("failed to get ICS20 contract balance on Ethereum: %w", err)
 	}
 	if ics20TransferBalance.Int64() != 0 {
-		return fmt.Errorf("ICS20 contract balance on Ethereum is not zero: %v", ics20TransferBalance.Int64())
+		return fmt.Errorf("ICS20 contract balance on Ethereum is not zero: %v\n", ics20TransferBalance.Int64())
 	}
 
 	return nil
@@ -137,8 +152,9 @@ func getEvmUserBalance() (math.Int, *ibcerc20.Contract, string, error) {
 
 	denomOnEthereum := transfertypes.NewDenom(denom, transfertypes.NewHop(transfertypes.PortID, tendermintClientID))
 	ibcERC20Address, err := ics20Transfer.IbcERC20Contract(nil, denomOnEthereum.Path())
-	if err != nil {
-		return math.NewInt(0), nil, "", fmt.Errorf("failed to get IBCERC20 contract address: %w", err)
+	if ibcERC20Address == (ethcommon.Address{}) {
+		fmt.Printf("IBCErc20 contract has not been deployed for the specified denom: %s\n", denomOnEthereum.Path())
+		return math.NewInt(0), nil, "", nil
 	}
 
 	ibcERC20, err := ibcerc20.NewContract(ibcERC20Address, ethClient)
@@ -183,11 +199,11 @@ func getEvmUserBalance() (math.Int, *ibcerc20.Contract, string, error) {
 
 func updateBalances() error {
 	var err error
-	previousBalanceOnSimapp, err = getSimappUserBalance()
+	initialBalanceOnSimapp, err = getSimappUserBalance()
 	if err != nil {
 		return fmt.Errorf("failed to get balance for SimApp: %w", err)
 	}
-	previousBalanceOnEvmChain, _, _, err = getEvmUserBalance()
+	initialBalanceOnEvm, _, _, err = getEvmUserBalance()
 	if err != nil {
 		return fmt.Errorf("failed to get balance for EVM: %w", err)
 	}
