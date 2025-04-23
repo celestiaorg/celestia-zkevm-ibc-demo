@@ -16,6 +16,9 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: "Set up environment"
         uses: ./.github/setup
 
@@ -31,12 +34,15 @@ jobs:
         run: cargo fmt --check
         working-directory: .
 
-  lint-blevm:
-    name: lint-blevm
+  lint-evm-prover:
+    name: lint-evm-prover
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
       - name: "Set up environment"
         uses: ./.github/setup
@@ -51,52 +57,46 @@ jobs:
 
       - name: Run cargo fmt
         run: cargo fmt --check
-        working-directory: ./provers/blevm/
+        working-directory: ./provers/evm-prover/
 
-  build-blevm:
-    name: build-blevm
+  check-evm-prover:
+    name: check-evm-prover
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache SP1 programs
+        id: cache-sp1-programs
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+            ~/.rustup/
+            ~/.sp1/
+          key: ${{ runner.os }}-sp1-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'provers/blevm/**') }}
       - name: "Set up environment"
         uses: ./.github/setup
+
       - name: Install SP1 toolchain
+        if: (steps.cache-sp1-programs.outputs.cache-hit != 'true')
         shell: bash
         run: |
           curl -L https://sp1.succinct.xyz | bash
           ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
           ~/.sp1/bin/cargo-prove prove --version
           rustc +succinct --version
-      - name: Build
-        run: cargo build --release --locked
-        working-directory: ./provers/blevm/blevm/
 
-  build-blevm-script:
-    name: build-blevm-script
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+      - name: Check evm-prover
+        run: cargo check --release --locked
+        working-directory: ./provers/evm-prover
 
-      - name: "Set up environment"
-        uses: ./.github/setup
-
-      - name: Install SP1 toolchain
-        shell: bash
-        run: |
-          curl -L https://sp1.succinct.xyz | bash
-          ~/.sp1/bin/sp1up --version ${{env.SP1_VERSION}} --token ${{ secrets.GITHUB_TOKEN }}
-          ~/.sp1/bin/cargo-prove prove --version
-          rustc +succinct --version
-
-      - name: Build
-        run: cargo build --release --locked
-        working-directory: ./provers/blevm/script/
-
-  build-celestia-prover:
-    name: build-celestia-prover
+  check-celestia-prover:
+    name: check-celestia-prover
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -105,9 +105,23 @@ jobs:
         with:
           submodules: true
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache SP1 programs
+        id: cache-sp1-programs
+        uses: actions/cache@v4
+        with:
+          path: |
+            solidity-ibc-eureka/target/elf-compilation/riscv32im-succinct-zkvm-elf/release/*
+            ~/.rustup/
+            ~/.sp1/
+          key: ${{ runner.os }}-sp1-${{ hashFiles('solidity-ibc-eureka/Cargo.lock', 'solidity-ibc-eureka/Cargo.toml', 'solidity-ibc-eureka/programs/**', 'solidity-ibc-eureka/abi/**') }}
+
       - name: "Set up environment"
         uses: ./.github/setup
       - name: Install SP1 toolchain
+        if: (steps.cache-sp1-programs.outputs.cache-hit != 'true')
         shell: bash
         run: |
           curl -L https://sp1.succinct.xyz | bash
@@ -121,9 +135,10 @@ jobs:
           just-version: "1.40.0"
 
       - name: Build SP1 programs in solidity-ibc-eureka
+        if: (steps.cache-sp1-programs.outputs.cache-hit != 'true')
         run: just build-sp1-programs
         working-directory: ./solidity-ibc-eureka
 
-      - name: Build celestia prover
-        run: cargo build --release --locked
+      - name: Check celestia prover
+        run: cargo check --release --locked
         working-directory: ./provers/celestia-prover/

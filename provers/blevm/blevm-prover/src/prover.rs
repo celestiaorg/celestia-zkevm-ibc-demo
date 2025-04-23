@@ -9,6 +9,7 @@ use eq_common::KeccakInclusionToDataRootProofInput;
 use rsp_client_executor::io::EthClientExecutorInput;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use sp1_sdk::Prover;
 use sp1_sdk::{
     ExecutionReport, HashableKey, ProverClient, SP1Proof, SP1ProofWithPublicValues,
     SP1PublicValues, SP1Stdin, SP1VerifyingKey,
@@ -396,12 +397,24 @@ impl BlockProver {
         inputs: Vec<AggregationInput>,
     ) -> Result<AggregationOutput, Box<dyn Error>> {
         let stdin = self.get_aggregate_stdin(inputs).await?;
-        let client: sp1_sdk::EnvProver = ProverClient::from_env();
-        // Generate the aggregated proof
-        let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
-        let proof = client.prove(&pk, &stdin).groth16().run()?;
+        let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "cpu".to_string());
 
-        Ok(AggregationOutput { proof })
+        if mode == "mock" {
+            let mock_prover = sp1_sdk::CpuProver::mock();
+            let (pk, _) = mock_prover.setup(self.aggregator_config.elf_bytes);
+            let proof = mock_prover
+                .prove(&pk, &stdin)
+                .deferred_proof_verification(false)
+                .run()?;
+
+            Ok(AggregationOutput { proof })
+        } else {
+            let client: sp1_sdk::EnvProver = ProverClient::from_env();
+            let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
+            let proof = client.prove(&pk, &stdin).groth16().run()?;
+
+            Ok(AggregationOutput { proof })
+        }
     }
 
     /// Proves a range of blocks and aggregates their proofs
