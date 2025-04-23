@@ -202,7 +202,8 @@ impl Prover for ProverService {
 
         println!("generating aggregation proof, size: {}", inputs.len());
 
-        let aggregation_output: blevm_prover::prover::AggregationOutput = self.prover.prove_block_range(inputs).await.unwrap();
+        let aggregation_output: blevm_prover::prover::AggregationOutput =
+            self.prover.prove_block_range(inputs).await.unwrap();
 
         let response = ProveStateTransitionResponse {
             proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),
