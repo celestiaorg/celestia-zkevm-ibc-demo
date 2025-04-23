@@ -35,8 +35,6 @@ use ethers::{
 
 use ibc_proto::ibc::core::client::v1::query_client::QueryClient as ClientQueryClient;
 
-const MAX_AGGREGATION_SIZE: u64 = 10;
-
 pub const BLEVM_ELF: &[u8] = include_elf!("blevm");
 pub const BLEVM_AGGREGATOR_ELF: &[u8] = include_elf!("blevm-aggregator");
 
@@ -165,7 +163,7 @@ impl Prover for ProverService {
 
         let mut inputs = vec![];
         let start_height = trusted_height + 1;
-        let end_height = std::cmp::min(latest_height.as_u64(), start_height + MAX_AGGREGATION_SIZE);
+        let end_height = latest_height.as_u64();
 
         println!(
             "proving from height {:?} to height {:?}",
@@ -204,7 +202,7 @@ impl Prover for ProverService {
 
         println!("generating aggregation proof, size: {}", inputs.len());
 
-        let aggregation_output = self.prover.prove_block_range(inputs).await.unwrap();
+        let aggregation_output: blevm_prover::prover::AggregationOutput = self.prover.prove_block_range(inputs).await.unwrap();
 
         let response = ProveStateTransitionResponse {
             proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),
