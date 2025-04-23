@@ -147,7 +147,7 @@ func getEvmUserBalance() (math.Int, *ibcerc20.Contract, string, error) {
 	}
 
 	denomOnEthereum := transfertypes.NewDenom(denom, transfertypes.NewHop(transfertypes.PortID, tendermintClientID))
-	ibcERC20Address, err := ics20Transfer.IbcERC20Contract(nil, denomOnEthereum.Path())
+	ibcERC20Address, _ := ics20Transfer.IbcERC20Contract(nil, denomOnEthereum.Path())
 	if ibcERC20Address == (ethcommon.Address{}) {
 		fmt.Printf("IBCErc20 contract has not been deployed for the specified denom: %s\n", denomOnEthereum.Path())
 		return math.NewInt(0), nil, "", nil
