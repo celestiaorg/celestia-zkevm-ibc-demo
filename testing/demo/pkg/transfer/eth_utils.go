@@ -141,7 +141,7 @@ func GetCommitmentsStorageKey(path []byte) ethcommon.Hash {
 
 	pathHash := crypto.Keccak256(path)
 
-	// zero pad both to 32 bytes
+	// zero pad to 32 bytes
 	paddedSlot := ethcommon.LeftPadBytes(commitmentStorageSlot, 32)
 
 	// keccak256(h(k) . slot)
