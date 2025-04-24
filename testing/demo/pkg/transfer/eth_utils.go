@@ -176,7 +176,7 @@ func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log
 		err = fmt.Errorf("event not found")
 	}
 
-	return
+	return event, err
 }
 
 // getMPTProof queries the Reth node for a Merkle Patricia Trie proof for a given key
