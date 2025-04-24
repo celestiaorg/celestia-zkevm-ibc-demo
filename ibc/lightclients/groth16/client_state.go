@@ -159,8 +159,7 @@ func (cs *ClientState) verifyMembership(
 	}
 
 	if !bytes.Equal(verifiedValue, expectedValue) {
-		// add the value to the error message with retrieved value and format it properly
-		return fmt.Errorf("verified value%x does not match the expected value: %x", verifiedValue, expectedValue)
+		return fmt.Errorf("verified value: %X does not match the expected value: %X", verifiedValue, expectedValue)
 	}
 
 	return nil
