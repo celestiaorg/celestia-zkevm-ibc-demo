@@ -22,7 +22,7 @@ func queryAndAssertBalances() error {
 	}
 	err = assertBalanceOnEthereum()
 	if err != nil {
-		return fmt.Errorf("failed to query balance on Ethereum: %w", err)
+		return fmt.Errorf("failed to assert balance on Ethereum: %w", err)
 	}
 	return nil
 }
