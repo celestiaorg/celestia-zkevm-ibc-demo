@@ -20,8 +20,9 @@ func VerifyMerklePatriciaTrieProof(rootHash ethcommon.Hash, key []byte, proof []
 	return trie.VerifyProof(rootHash, key, proofDB)
 }
 
-// ReconstructProofDB calculates the node hashes sets them as keys in the db and
-// each decoded hexNode from the proof list as a value
+// ReconstructProofDB iterates over all nodes in proof and returns a database of key value pairs where:
+// - key is the node hash if the node is larger than 32 bytes, otherwise the node itself
+// - value is the node encoded as hex
 func ReconstructProofDB(proof []hexutil.Bytes) (ethdb.Database, error) {
 	proofDB := rawdb.NewMemoryDatabase()
 	for i, encodedNode := range proof {
