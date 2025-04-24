@@ -30,7 +30,7 @@ func ReconstructProofDB(proof []hexutil.Bytes) (ethdb.Database, error) {
 			nodeKey = crypto.Keccak256(encodedNode)
 		}
 		if err := proofDB.Put(nodeKey, encodedNode); err != nil {
-			return nil, fmt.Errorf("failed to load account proof node %d into mem db: %w", i, err)
+			return nil, fmt.Errorf("failed to load proof node %d into mem db: %w", i, err)
 		}
 	}
 
