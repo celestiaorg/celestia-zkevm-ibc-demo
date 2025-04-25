@@ -173,7 +173,7 @@ impl Prover for ProverService {
         for height in start_height..=end_height {
             let (inclusion_height, blob_commitment) = {
                 let mut retries = 0;
-                const MAX_RETRIES: u32 = 3;
+                const MAX_RETRIES: u32 = 10;
                 const RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(5);
 
                 loop {
