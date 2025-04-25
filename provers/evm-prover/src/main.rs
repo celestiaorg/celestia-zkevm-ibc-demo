@@ -82,7 +82,6 @@ impl ProverService {
         // Setup keys using the single client instance
         let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
 
-        // Pass the sp1_client to BlockProver::new
         let prover = BlockProver::new(
             celestia_client,
             prover_config,
