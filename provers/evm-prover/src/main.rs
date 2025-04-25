@@ -171,10 +171,34 @@ impl Prover for ProverService {
         );
 
         for height in start_height..=end_height {
-            let (inclusion_height, blob_commitment) =
-                get_inclusion_height(self.indexer_url.clone(), height)
-                    .await
-                    .unwrap();
+            let (inclusion_height, blob_commitment) = {
+                let mut retries = 0;
+                const MAX_RETRIES: u32 = 10;
+                const RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(5);
+
+                loop {
+                    match get_inclusion_height(self.indexer_url.clone(), height).await {
+                        Ok(result) => break result,
+                        Err(blevm_prover::indexer::IndexerError::BlockNotFound)
+                            if retries < MAX_RETRIES =>
+                        {
+                            retries += 1;
+                            println!(
+                                "Block not found for height {}, retrying ({}/{})...",
+                                height, retries, MAX_RETRIES
+                            );
+                            tokio::time::sleep(RETRY_DELAY).await;
+                            continue;
+                        }
+                        Err(e) => {
+                            return Err(Status::internal(format!(
+                                "Failed to get inclusion height: {}",
+                                e
+                            )))
+                        }
+                    }
+                }
+            };
             let client_executor_input = generate_client_input(
                 self.evm_rpc_url.clone(),
                 height,
