@@ -52,7 +52,7 @@ pub struct BlevmAggOutput {
 
 The current architecture uses an indexer for Rollkit which:
 - Maps EVM block heights to their inclusion heights in Celestia
-- Stores raw block data submitted to Celestia
+- Stores pointers i.e inclusion height, blob commitment to data submitted to Celestia
 - Provides these as inputs for proving inclusion
 
 This mapping is used by the EVM Prover to locate the Celestia inclusion block when generating proofs.
