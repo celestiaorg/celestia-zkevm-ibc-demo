@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use sp1_sdk::Prover;
 use sp1_sdk::{
-    ExecutionReport, HashableKey, ProverClient, SP1Proof, SP1ProofWithPublicValues,
-    SP1PublicValues, SP1Stdin, SP1VerifyingKey,
+    ExecutionReport, HashableKey, SP1Proof, SP1ProofWithPublicValues, SP1PublicValues, SP1Stdin,
+    SP1VerifyingKey,
 };
 use std::error::Error;
 
