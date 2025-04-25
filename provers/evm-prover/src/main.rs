@@ -6,7 +6,7 @@ use blevm_prover::rsp::generate_client_input;
 use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
 use prost::Message;
 use rsp_primitives::genesis::Genesis;
-use sp1_sdk::include_elf;
+use sp1_sdk::{include_elf, HashableKey, ProverClient, SP1VerifyingKey};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -47,6 +47,7 @@ pub struct ProverService {
     genesis: Genesis,
     custom_beneficiary: Option<String>,
     opcode_tracking: bool,
+    aggregator_vkey: SP1VerifyingKey,
 }
 
 impl ProverService {
@@ -85,6 +86,9 @@ impl ProverService {
 
         let genesis = Genesis::Custom(genesis_json);
 
+        let client = ProverClient::from_env();
+        let (_, aggregator_vkey) = client.setup(BLEVM_AGGREGATOR_ELF);
+
         Ok(ProverService {
             evm_rpc_url,
             evm_client,
@@ -94,6 +98,7 @@ impl ProverService {
             genesis,
             custom_beneficiary,
             opcode_tracking,
+            aggregator_vkey,
         })
     }
 
@@ -133,7 +138,7 @@ impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         let response = InfoResponse {
             state_membership_verifier_key: "".to_string(),
-            state_transition_verifier_key: "".to_string(),
+            state_transition_verifier_key: hex::encode(self.aggregator_vkey.bytes32()),
         };
 
         Ok(Response::new(response))
