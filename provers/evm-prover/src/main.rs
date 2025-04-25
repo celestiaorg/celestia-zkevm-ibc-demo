@@ -179,13 +179,23 @@ impl Prover for ProverService {
                 loop {
                     match get_inclusion_height(self.indexer_url.clone(), height).await {
                         Ok(result) => break result,
-                        Err(blevm_prover::indexer::IndexerError::BlockNotFound) if retries < MAX_RETRIES => {
+                        Err(blevm_prover::indexer::IndexerError::BlockNotFound)
+                            if retries < MAX_RETRIES =>
+                        {
                             retries += 1;
-                            println!("Block not found for height {}, retrying ({}/{})...", height, retries, MAX_RETRIES);
+                            println!(
+                                "Block not found for height {}, retrying ({}/{})...",
+                                height, retries, MAX_RETRIES
+                            );
                             tokio::time::sleep(RETRY_DELAY).await;
                             continue;
                         }
-                        Err(e) => return Err(Status::internal(format!("Failed to get inclusion height: {}", e))),
+                        Err(e) => {
+                            return Err(Status::internal(format!(
+                                "Failed to get inclusion height: {}",
+                                e
+                            )))
+                        }
                     }
                 }
             };
