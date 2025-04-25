@@ -144,7 +144,7 @@ impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         let response = InfoResponse {
             state_membership_verifier_key: "".to_string(),
-            state_transition_verifier_key: hex::encode(self.aggregator_vkey.bytes32()),
+            state_transition_verifier_key: self.aggregator_vkey.bytes32(),
         };
 
         Ok(Response::new(response))
