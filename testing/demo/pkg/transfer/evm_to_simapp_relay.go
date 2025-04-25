@@ -11,7 +11,7 @@ import (
 )
 
 // relayByTx implements the logic of an IBC relayer for a MsgTransfer from EVM roll-up to SimApp.
-func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof ProofCommitment, groth16ClientHeight uint64) error {
+func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof MptProof, groth16ClientHeight uint64) error {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return fmt.Errorf("failed to setup client context: %v", err)
@@ -36,7 +36,7 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 }
 
 // ethereum event type
-func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof ProofCommitment, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
+func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof MptProof, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
 	transferPayload := event.Packet.Payloads[0]
 	ibcPacket := ibcchanneltypesv2.Packet{
 		Sequence:          event.Packet.Sequence,

@@ -118,55 +118,67 @@ func (cs *ClientState) verifyMembership(
 	_ uint64,
 	_ uint64,
 	proof []byte,
-	path exported.Path,
+	_ exported.Path,
 	value []byte,
 ) error {
-	// Path validation
+	// Get consensus state for verification
 	consensusState, err := GetConsensusState(clientStore, cdc, height)
 	if err != nil {
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 
+	// Deserialize the MPT proof
 	var deserializedProof MptProof
-	err = json.Unmarshal(proof, &deserializedProof)
-	if err != nil {
+	if err := json.Unmarshal(proof, &deserializedProof); err != nil {
 		return fmt.Errorf("failed to deserialize mpt proof: %w", err)
 	}
 
-	// Verify ICS26Router contract account proof against the state root
+	// Verify ICS26Router contract account exists in state
 	ICS26RouterAddress := crypto.Keccak256(deserializedProof.Address.Bytes())
-	verifiedAccountState, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), ICS26RouterAddress, deserializedProof.AccountProof)
+	verifiedAccountState, err := mpt.VerifyMerklePatriciaTrieProof(
+		ethcommon.BytesToHash(consensusState.StateRoot),
+		ICS26RouterAddress,
+		deserializedProof.AccountProof,
+	)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
 
-	// Reconstruct the contract state from the proof
-	accountState := []any{uint64(deserializedProof.Nonce), deserializedProof.Balance.ToInt().Bytes(), deserializedProof.StorageHash, deserializedProof.CodeHash}
-	// RLP encode the reconstructed contract state to make it compatible with the expected value
+	// Reconstruct and verify account state
+	accountState := []any{
+		uint64(deserializedProof.Nonce),
+		deserializedProof.Balance.ToInt().Bytes(),
+		deserializedProof.StorageHash,
+		deserializedProof.CodeHash,
+	}
 	encodedAccountState, err := rlp.EncodeToBytes(accountState)
 	if err != nil {
 		return fmt.Errorf("failed to rlp encode reconstructed account value: %w", err)
 	}
-
 	if !bytes.Equal(verifiedAccountState, encodedAccountState) {
-		return fmt.Errorf("expected account claimed value: %x does not match the verified value: %x", encodedAccountState, verifiedAccountState)
+		return fmt.Errorf("expected account claimed value: %x does not match the verified value: %x",
+			encodedAccountState, verifiedAccountState)
 	}
 
+	// Verify packet commitment exists in contract storage
 	commitmentPath := crypto.Keccak256(deserializedProof.StorageKey.Bytes())
-	// Verify that the packet commitment exists in the storage proof
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(deserializedProof.StorageHash, commitmentPath, deserializedProof.StorageProof)
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(
+		deserializedProof.StorageHash,
+		commitmentPath,
+		deserializedProof.StorageProof,
+	)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
 
-	// RLP encode the expected value passed to the client
+	// Verify storage value matches expected
 	expectedValue, err := rlp.EncodeToBytes(value)
 	if err != nil {
 		return fmt.Errorf("failed to encode value: %w", err)
 	}
-
 	if !bytes.Equal(verifiedValue, expectedValue) {
-		return fmt.Errorf("verified value: %x does not match the expected value: %x", verifiedValue, expectedValue)
+		return fmt.Errorf("verified value: %x does not match the expected value: %x",
+			verifiedValue, expectedValue)
 	}
 
 	return nil

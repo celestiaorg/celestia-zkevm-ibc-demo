@@ -23,7 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// StorageProof is the proof of the storage of the commitment of the packet on the Ethereum chain.
+// StorageProof contains MPT proof for a specific storage slot.
+// It verifies the existence and value of a storage key in the EVM state.
 type StorageProof struct {
 	// The key of the storage
 	Key common.Hash `json:"key"`
