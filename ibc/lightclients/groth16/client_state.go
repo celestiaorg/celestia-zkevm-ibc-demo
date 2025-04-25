@@ -3,6 +3,7 @@ package groth16
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,11 +18,34 @@ import (
 	commitmenttypes "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
 	commitmenttypesv2 "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types/v2"
 	"github.com/cosmos/ibc-go/v10/modules/core/exported"
+	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
 	Groth16ClientType = ModuleName
 )
+
+// MptProof contains the Merkle Patricia Trie proofs for packet commitment verification.
+// It includes both account and storage proofs from eth_getProof response.
+// Ref: https://eips.ethereum.org/EIPS/eip-1186
+type MptProof struct {
+	// The account proof is used to verify the account state of the ICS26Router contract.
+	AccountProof []hexutil.Bytes `json:"accountProof"`
+	Address      common.Address  `json:"address"`
+	Balance      *hexutil.Big    `json:"balance"`
+	CodeHash     common.Hash     `json:"codeHash"`
+	Nonce        hexutil.Uint64  `json:"nonce"`
+
+	// Storage proof for the packet commitment in ICS26Router contract storage.
+	StorageHash  common.Hash     `json:"storageHash"`
+	StorageProof []hexutil.Bytes `json:"storageProof"`
+	StorageKey   common.Hash     `json:"storageKey"`
+	StorageValue hexutil.Big     `json:"storageValue"`
+}
 
 // ClientState implements the exported.ClientState interface for Groth16 light clients.
 var _ exported.ClientState = (*ClientState)(nil)
@@ -94,32 +118,67 @@ func (cs *ClientState) verifyMembership(
 	_ uint64,
 	_ uint64,
 	proof []byte,
-	path exported.Path,
+	_ exported.Path,
 	value []byte,
 ) error {
-	// Path validation
-	merklePath, ok := path.(commitmenttypesv2.MerklePath)
-	if !ok {
-		return sdkerrors.Wrapf(commitmenttypes.ErrInvalidProof, "expected %T, got %T", commitmenttypesv2.MerklePath{}, path)
-	}
-
+	// Get consensus state for verification
 	consensusState, err := GetConsensusState(clientStore, cdc, height)
 	if err != nil {
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 
-	// MPT takes keypath as []byte, so we concatenate the keys arrays
-	// TODO we might have to change this because based on tests the keypath is always one element
-	mptKey := merklePath.KeyPath[0]
+	// Deserialize the MPT proof
+	var deserializedProof MptProof
+	if err := json.Unmarshal(proof, &deserializedProof); err != nil {
+		return fmt.Errorf("failed to deserialize mpt proof: %w", err)
+	}
 
-	// Inclusion verification only supports MPT tries currently
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(consensusState.StateRoot, mptKey, proof)
+	// Verify ICS26Router contract account exists in state
+	ICS26RouterAddress := crypto.Keccak256(deserializedProof.Address.Bytes())
+	verifiedAccountState, err := mpt.VerifyMerklePatriciaTrieProof(
+		ethcommon.BytesToHash(consensusState.StateRoot),
+		ICS26RouterAddress,
+		deserializedProof.AccountProof,
+	)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
 
-	if !bytes.Equal(value, verifiedValue) {
-		return fmt.Errorf("retrieved value does not match the value passed to the client")
+	// Reconstruct and verify account state
+	accountState := []any{
+		uint64(deserializedProof.Nonce),
+		deserializedProof.Balance.ToInt().Bytes(),
+		deserializedProof.StorageHash,
+		deserializedProof.CodeHash,
+	}
+	encodedAccountState, err := rlp.EncodeToBytes(accountState)
+	if err != nil {
+		return fmt.Errorf("failed to rlp encode reconstructed account value: %w", err)
+	}
+	if !bytes.Equal(verifiedAccountState, encodedAccountState) {
+		return fmt.Errorf("expected account claimed value: %x does not match the verified value: %x",
+			encodedAccountState, verifiedAccountState)
+	}
+
+	// Verify packet commitment exists in contract storage
+	commitmentPath := crypto.Keccak256(deserializedProof.StorageKey.Bytes())
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(
+		deserializedProof.StorageHash,
+		commitmentPath,
+		deserializedProof.StorageProof,
+	)
+	if err != nil {
+		return fmt.Errorf("inclusion verification failed: %w", err)
+	}
+
+	// Verify storage value matches expected
+	expectedValue, err := rlp.EncodeToBytes(value)
+	if err != nil {
+		return fmt.Errorf("failed to encode value: %w", err)
+	}
+	if !bytes.Equal(verifiedValue, expectedValue) {
+		return fmt.Errorf("verified value: %x does not match the expected value: %x",
+			verifiedValue, expectedValue)
 	}
 
 	return nil
@@ -147,12 +206,17 @@ func (cs *ClientState) verifyNonMembership(
 		return sdkerrors.Wrapf(commitmenttypes.ErrInvalidProof, "expected %T, got %T", commitmenttypesv2.MerklePath{}, path)
 	}
 
-	// MPT takes keypath as []byte, so we concatenate the keys arrays
-	// TODO we might have to change this because based on tests the keypath is always one element
+	// NOTE: this verification implementation is not correct, mpt getProof doesn't handle non-membership proofs
 	mptKey := append(merklePath.KeyPath[0], merklePath.KeyPath[1]...)
 
+	var decodedProof MptProof
+	err = json.Unmarshal(proof, &decodedProof)
+	if err != nil {
+		return fmt.Errorf("failed to deserialize mpt proof: %w", err)
+	}
+
 	// Inclusion verification only supports MPT tries currently
-	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(consensusState.StateRoot, mptKey, proof)
+	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), mptKey, decodedProof.AccountProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
@@ -17,7 +18,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func updateGroth16LightClient() error {
+func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
 	fmt.Printf("Updating Groth16 light client on EVM roll-up...\n")
 
 	clientState, err := getClientState()
@@ -35,7 +36,7 @@ func updateGroth16LightClient() error {
 		return fmt.Errorf("failed to get client context: %w", err)
 	}
 
-	header, err := getHeader()
+	header, err := getHeader(evmTransferBlockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to get header: %w", err)
 	}
@@ -70,7 +71,7 @@ func updateGroth16LightClient() error {
 	return nil
 }
 
-func getHeader() (*groth16.Header, error) {
+func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	stateTransitionProof, err := getProof()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get proof: %w", err)
@@ -80,7 +81,7 @@ func getHeader() (*groth16.Header, error) {
 		return nil, fmt.Errorf("failed to get trusted height: %w", err)
 	}
 
-	newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp()
+	newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp(evmTransferBlockNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EVM state root, height, and timestamp: %w", err)
 	}
@@ -161,13 +162,13 @@ func getClientState() (*groth16.ClientState, error) {
 	return groth16ClientState, nil
 }
 
-func getEVMStateRootHeightTimestamp() ([]byte, int64, time.Time, error) {
+func getEVMStateRootHeightTimestamp(evmTransferBlockNumber uint64) ([]byte, int64, time.Time, error) {
 	client, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
 		return nil, 0, time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
 	}
 
-	header, err := client.HeaderByNumber(context.Background(), nil)
+	header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(evmTransferBlockNumber)))
 	if err != nil {
 		return nil, 0, time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
 	}

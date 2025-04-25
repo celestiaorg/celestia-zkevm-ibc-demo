@@ -7,12 +7,10 @@ import (
 )
 
 var (
-	// initialBalance is the initial balance of the sender on SimApp.
-	initialBalance = math.NewInt(274883996352)
 	// transferAmount is the amount of tokens to transfer.
 	transferAmount = math.NewInt(100)
 	// transferBackAmount is the amount of tokens to transfer back.
-	transferBackAmount = big.NewInt(1)
+	transferBackAmount = big.NewInt(100)
 )
 
 // Tokens
@@ -27,8 +25,8 @@ const (
 	sender = "cosmos1ltvzpwf3eg8e9s7wzleqdmw02lesrdex9jgt0q"
 	// receiver is an address on the EVM chain that will receive funds via the MsgTransfer.
 	receiver = "0xaF9053bB6c4346381C77C2FeD279B17ABAfCDf4d"
-	// ethPrivateKey is the private key for receiver.
-	ethPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
+	// receiverPrivateKey is the private key for receiver.
+	receiverPrivateKey = "0x82bfcfadbf1712f6550d8d2c00a39f05b33ec78939d0167be2a737d691f33a6a"
 )
 
 // Client IDs
