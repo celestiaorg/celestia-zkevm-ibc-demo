@@ -1,6 +1,6 @@
 # EVM Prover
 
-The EVM Prover implements the Prover service for EVM rollups, creating zero-knowledge range proofs for state membership and state transitions. It uses the following SP1 programs to generate these range proofs.
+The EVM Prover implements the Prover service for EVM rollups, creating zero-knowledge range proofs for state transitions. It uses the following SP1 programs to generate these range proofs:
 
 ## SP1 Programs
 
