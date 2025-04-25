@@ -150,6 +150,7 @@ pub struct BlockProver {
     celestia_client: CelestiaClient,
     prover_config: ProverConfig,
     aggregator_config: AggregatorConfig,
+    sp1_client: sp1_sdk::EnvProver,
 }
 
 impl BlockProver {
@@ -160,6 +161,7 @@ impl BlockProver {
     /// * `celestia_client` - Client for interacting with Celestia network
     /// * `prover_config` - Configuration for the prover
     /// * `aggregator_config` - Configuration for proof aggregation
+    /// * `sp1_client` - The SP1 prover client instance
     ///
     /// # Returns
     ///
@@ -168,11 +170,13 @@ impl BlockProver {
         celestia_client: CelestiaClient,
         prover_config: ProverConfig,
         aggregator_config: AggregatorConfig,
+        sp1_client: sp1_sdk::EnvProver,
     ) -> Self {
         Self {
             celestia_client,
             prover_config,
             aggregator_config,
+            sp1_client,
         }
     }
 
@@ -329,7 +333,7 @@ impl BlockProver {
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
-        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        let client = &self.sp1_client;
         let stdin = self.get_stdin(input).await?;
         let (public_values, execution_report) = client
             .execute(self.prover_config.elf_bytes, &stdin)
@@ -352,8 +356,7 @@ impl BlockProver {
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey), Box<dyn Error>> {
-        // Generate and return the proof
-        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        let client = &self.sp1_client;
         let (pk, vk) = client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
         let proof = client.prove(&pk, &stdin).compressed().run()?;
@@ -373,7 +376,7 @@ impl BlockProver {
         &self,
         inputs: Vec<AggregationInput>,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
-        let client: sp1_sdk::EnvProver = ProverClient::from_env();
+        let client = &self.sp1_client;
         let stdin = self.get_aggregate_stdin(inputs).await?;
         let (public_values, execution_report) = client
             .execute(self.aggregator_config.elf_bytes, &stdin)
@@ -409,7 +412,7 @@ impl BlockProver {
 
             Ok(AggregationOutput { proof })
         } else {
-            let client: sp1_sdk::EnvProver = ProverClient::from_env();
+            let client = &self.sp1_client;
             let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
             let proof = client.prove(&pk, &stdin).groth16().run()?;
 

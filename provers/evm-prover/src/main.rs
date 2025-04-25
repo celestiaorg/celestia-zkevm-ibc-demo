@@ -76,7 +76,19 @@ impl ProverService {
         let namespace = Namespace::new_v0(&hex::decode(namespace_hex)?)?;
         let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
 
-        let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
+        // Create the SP1 client once
+        let sp1_client = ProverClient::from_env();
+
+        // Setup keys using the single client instance
+        let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
+
+        // Pass the sp1_client to BlockProver::new
+        let prover = BlockProver::new(
+            celestia_client,
+            prover_config,
+            aggregator_config,
+            sp1_client,
+        );
 
         let custom_beneficiary = env::var("CUSTOM_BENEFICIARY").ok();
         let opcode_tracking = env::var("OPCODE_TRACKING").is_ok();
@@ -85,9 +97,6 @@ impl ProverService {
         let genesis_json = fs::read_to_string(&genesis_path)?;
 
         let genesis = Genesis::Custom(genesis_json);
-
-        let client = ProverClient::from_env();
-        let (_, aggregator_vkey) = client.setup(BLEVM_AGGREGATOR_ELF);
 
         Ok(ProverService {
             evm_rpc_url,
