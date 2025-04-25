@@ -37,6 +37,7 @@ services:
       --authrpc.jwtsecret /testapp_files/jwt.hex
       --datadir /.tmp/eth-home
       --ipcpath /.tmp/eth-home/eth-engine.ipc
+      --rpc.eth-proof-window 120000
     networks:
       - rollkit-network
 
@@ -128,25 +129,35 @@ services:
   evm-prover:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/evm-prover:latest
     container_name: evm-prover
+    volumes:
+      - ./testing/files:/testapp_files
+      - ./.tmp:/.tmp
     environment:
       # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
       # for Celestia (with IBC Eurekea enabled).
-      - TENDERMINT_RPC_URL=http://simapp-validator:26657
+      - SIMAPP_RPC_URL=grpc://simapp-validator:9090
+      - INDEXER_URL=http://indexer:8080
       - RPC_URL=http://reth:8545
       - EVM_PROTO_DESCRIPTOR_PATH=proto_descriptor.bin
+      - EVM_RPC_URL=http://reth:8545
+      - CELESTIA_NODE_URL=http://celestia-network-bridge:26658
+      - CELESTIA_NODE_AUTH_TOKEN=${CELESTIA_NODE_AUTH_TOKEN:-}
+      - CELESTIA_NAMESPACE=${CELESTIA_NAMESPACE:-0f0f0f0f0f0f0f0f0f0f}
+      - GENESIS_PATH=/testapp_files/eth-genesis.json
+      - SP1_PROVER=mock
     ports:
       - "50052:50052"
     depends_on:
       beacond:
         condition: service_started
+      indexer:
+        condition: service_healthy
     networks:
       - rollkit-network
 
   indexer:
-    build:
-      context: ./indexer/
-      dockerfile: ../docker/indexer.Dockerfile
-    container_name: eth-celestia-indexer
+    image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/indexer:latest
+    container_name: indexer
     restart: unless-stopped
     volumes:
       - ./.tmp/indexer-data:/data

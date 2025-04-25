@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
+	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -69,7 +72,10 @@ func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
 }
 
 func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
-	mockProof := []byte{0}
+	stateTransitionProof, err := getProof()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get proof: %w", err)
+	}
 	trustedHeight, err := getTrustedHeight()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get trusted height: %w", err)
@@ -81,7 +87,7 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	}
 
 	header := &groth16.Header{
-		StateTransitionProof:      mockProof,
+		StateTransitionProof:      stateTransitionProof,
 		TrustedHeight:             trustedHeight,
 		TrustedCelestiaHeaderHash: []byte{},
 		NewStateRoot:              newStateRoot,
@@ -92,6 +98,26 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	}
 
 	return header, nil
+}
+
+// getProof queries EVM prover for a state transition proof.
+func getProof() ([]byte, error) {
+	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to prover: %w", err)
+	}
+	defer conn.Close()
+	client := proverclient.NewProverClient(conn)
+
+	fmt.Printf("Requesting evm-prover state transition proof...\n")
+	resp, err := client.ProveStateTransition(context.Background(), &proverclient.ProveStateTransitionRequest{ClientId: groth16ClientID})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
+	}
+	fmt.Printf("Received evm-prover state transition proof.\n")
+	fmt.Printf("Proof: %v\n", resp.Proof)
+	fmt.Printf("Public values: %v\n", resp.PublicValues)
+	return resp.Proof, nil
 }
 
 // getTrustedHeight returns the last trusted height that the Groth16 light client is aware of.
