@@ -76,7 +76,6 @@ impl ProverService {
         let namespace = Namespace::new_v0(&hex::decode(namespace_hex)?)?;
         let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
 
-        // Create the SP1 client once
         let sp1_client = ProverClient::from_env();
 
         let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
