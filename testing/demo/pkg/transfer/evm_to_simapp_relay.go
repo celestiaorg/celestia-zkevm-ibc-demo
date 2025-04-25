@@ -22,7 +22,6 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 		return fmt.Errorf("failed to create MsgRecvPacket: %w", err)
 	}
 
-	// we can broadcast the msgrecvpacket to the simapp chain
 	msgRecvPacketResponse, err := utils.BroadcastMessages(clientCtx, sender, 200_000, msgRecvPacket)
 	if err != nil {
 		return fmt.Errorf("failed to broadcast MsgRecvPacket: %w", err)
