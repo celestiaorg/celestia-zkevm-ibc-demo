@@ -45,8 +45,8 @@ type EthGetProofResponse struct {
 	StorageProof []StorageProof `json:"storageProof"`
 }
 
-// ProofCommitment is the proof of the commitment of the packet on the Ethereum chain.
-type ProofCommitment struct {
+// MptProof is the proof of the commitment of the packet on the EVM chain.
+type MptProof struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
 	Address      common.Address  `json:"address"`
 	Balance      *hexutil.Big    `json:"balance"`
@@ -176,16 +176,16 @@ func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log
 		err = fmt.Errorf("event not found")
 	}
 
-	return event, err
+	return event, nil
 }
 
 // getMPTProof queries the Reth node for a Merkle Patricia Trie proof for a given key
-func getMPTProof(packetCommitmentPath []byte, contractAddress string) (ProofCommitment, error) {
+func getMPTProof(packetCommitmentPath []byte, contractAddress string, evmTransferBlockNumber uint64) (MptProof, error) {
 	commitmentsStorageKey := GetCommitmentsStorageKey(packetCommitmentPath)
 
 	client, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return ProofCommitment{}, fmt.Errorf("failed to connect to Reth node: %w", err)
+		return MptProof{}, fmt.Errorf("failed to connect to Reth node: %w", err)
 	}
 	defer client.Close()
 
@@ -193,7 +193,7 @@ func getMPTProof(packetCommitmentPath []byte, contractAddress string) (ProofComm
 	var result EthGetProofResponse
 	err = client.Client().Call(&result, "eth_getProof", contractAddress, []string{commitmentsStorageKey.Hex()}, hexutil.EncodeUint64(evmTransferBlockNumber))
 	if err != nil {
-		return ProofCommitment{}, fmt.Errorf("failed to get MPT proof: %w", err)
+		return MptProof{}, fmt.Errorf("failed to get MPT proof: %w", err)
 	}
 
 	// Find the proof for our specific storage key
@@ -203,11 +203,11 @@ func getMPTProof(packetCommitmentPath []byte, contractAddress string) (ProofComm
 			targetProof = proof
 			break
 		} else {
-			return ProofCommitment{}, fmt.Errorf("proof key does not match the path: %x", proof.Key)
+			return MptProof{}, fmt.Errorf("proof key does not match the path: %x", proof.Key)
 		}
 	}
 
-	proof := ProofCommitment{
+	proof := MptProof{
 		AccountProof: result.AccountProof,
 		Address:      result.Address,
 		Balance:      result.Balance,

@@ -15,7 +15,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func queryAndAssertBalances() error {
+var (
+	// initialBalanceOnSimapp is the initial balance of the sender on SimApp before the transfer.
+	initialBalanceOnSimapp math.Int
+	// initialBalanceOnEvm is the initial balance of the sender on EVM before the transfer.
+	initialBalanceOnEvm math.Int
+)
+
+func assertBalances() error {
 	err := assertBalanceOnSimApp()
 	if err != nil {
 		return fmt.Errorf("failed to assert balance on SimApp: %w", err)

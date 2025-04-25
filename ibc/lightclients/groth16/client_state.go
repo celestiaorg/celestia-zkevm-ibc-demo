@@ -29,13 +29,18 @@ const (
 	Groth16ClientType = ModuleName
 )
 
-// ProofCommitment is the proof of the commitment of the packet on the Ethereum chain.
-type ProofCommitment struct {
+// MptProof contains the Merkle Patricia Trie proofs for packet commitment verification.
+// It includes both account and storage proofs from eth_getProof response.
+// Ref: https://eips.ethereum.org/EIPS/eip-1186
+type MptProof struct {
+	// The account proof is used to verify the account state of the ICS26Router contract.
 	AccountProof []hexutil.Bytes `json:"accountProof"`
 	Address      common.Address  `json:"address"`
 	Balance      *hexutil.Big    `json:"balance"`
 	CodeHash     common.Hash     `json:"codeHash"`
 	Nonce        hexutil.Uint64  `json:"nonce"`
+
+	// Storage proof for the packet commitment in ICS26Router contract storage.
 	StorageHash  common.Hash     `json:"storageHash"`
 	StorageProof []hexutil.Bytes `json:"storageProof"`
 	StorageKey   common.Hash     `json:"storageKey"`
@@ -122,31 +127,33 @@ func (cs *ClientState) verifyMembership(
 		return fmt.Errorf("failed to get consensus state: %w", err)
 	}
 
-	var deserializedProof ProofCommitment
+	var deserializedProof MptProof
 	err = json.Unmarshal(proof, &deserializedProof)
 	if err != nil {
 		return fmt.Errorf("failed to deserialize mpt proof: %w", err)
 	}
 
+	// Verify ICS26Router contract account proof against the state root
 	ICS26RouterAddress := crypto.Keccak256(deserializedProof.Address.Bytes())
-	// Verify account proof against the state root
-	accountClaimedValue, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), ICS26RouterAddress, deserializedProof.AccountProof)
+	verifiedAccountState, err := mpt.VerifyMerklePatriciaTrieProof(ethcommon.BytesToHash(consensusState.StateRoot), ICS26RouterAddress, deserializedProof.AccountProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
 	}
-	// Verify that the account proof value is correct
-	accountClaimed := []any{uint64(deserializedProof.Nonce), deserializedProof.Balance.ToInt().Bytes(), deserializedProof.StorageHash, deserializedProof.CodeHash}
-	expectedAccountClaimedValue, err := rlp.EncodeToBytes(accountClaimed)
+
+	// Reconstruct the contract state from the proof
+	accountState := []any{uint64(deserializedProof.Nonce), deserializedProof.Balance.ToInt().Bytes(), deserializedProof.StorageHash, deserializedProof.CodeHash}
+	// RLP encode the reconstructed contract state to make it compatible with the expected value
+	encodedAccountState, err := rlp.EncodeToBytes(accountState)
 	if err != nil {
 		return fmt.Errorf("failed to rlp encode reconstructed account value: %w", err)
 	}
 
-	if !bytes.Equal(accountClaimedValue, expectedAccountClaimedValue) {
-		return fmt.Errorf("expected account claimed value does not match the verified value")
+	if !bytes.Equal(verifiedAccountState, encodedAccountState) {
+		return fmt.Errorf("expected account claimed value: %x does not match the verified value: %x", encodedAccountState, verifiedAccountState)
 	}
 
 	commitmentPath := crypto.Keccak256(deserializedProof.StorageKey.Bytes())
-	// Verify that the commitment exists in the storage proof
+	// Verify that the packet commitment exists in the storage proof
 	verifiedValue, err := mpt.VerifyMerklePatriciaTrieProof(deserializedProof.StorageHash, commitmentPath, deserializedProof.StorageProof)
 	if err != nil {
 		return fmt.Errorf("inclusion verification failed: %w", err)
@@ -159,7 +166,7 @@ func (cs *ClientState) verifyMembership(
 	}
 
 	if !bytes.Equal(verifiedValue, expectedValue) {
-		return fmt.Errorf("verified value: %X does not match the expected value: %X", verifiedValue, expectedValue)
+		return fmt.Errorf("verified value: %x does not match the expected value: %x", verifiedValue, expectedValue)
 	}
 
 	return nil
@@ -190,10 +197,10 @@ func (cs *ClientState) verifyNonMembership(
 	// NOTE: this verification implementation is not correct, mpt getProof doesn't handle non-membership proofs
 	mptKey := append(merklePath.KeyPath[0], merklePath.KeyPath[1]...)
 
-	var decodedProof ProofCommitment
+	var decodedProof MptProof
 	err = json.Unmarshal(proof, &decodedProof)
 	if err != nil {
-		return fmt.Errorf("failed to deserialize proof: %w", err)
+		return fmt.Errorf("failed to deserialize mpt proof: %w", err)
 	}
 
 	// Inclusion verification only supports MPT tries currently

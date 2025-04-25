@@ -7,10 +7,6 @@ import (
 )
 
 var (
-	// initialBalanceOnSimapp is the initial balance of the sender on SimApp before the transfer.
-	initialBalanceOnSimapp math.Int
-	// initialBalanceOnEvm is the initial balance of the sender on EVM before the transfer.
-	initialBalanceOnEvm math.Int
 	// transferAmount is the amount of tokens to transfer.
 	transferAmount = math.NewInt(100)
 	// transferBackAmount is the amount of tokens to transfer back.
