@@ -2,41 +2,34 @@
 
 The EVM Prover is a gRPC service that generates zero-knowledge proofs for EVM state transitions. It is designed to work with IBC (Inter-Blockchain Communication) and specifically implements proofs compatible with the ICS-07 Tendermint client specification.
 
-## Usage
-
-> [!WARNING]
-> This gRPC service is still under development and may not lack some features or not work as described.
+## Prerequisites
 
 Before running this program, please follow the steps outlined in this [README.md](https://github.com/celestiaorg/celestia-zkevm-ibc-demo/blob/main/README.md).
 
-To then run the server (on port `:50052`):
+## Usage
 
-    ```shell
-    cargo run
-    ```
+To run the evm-prover server on port `:50052` from the root directory:
 
-The `Info` endpoint returns the state transition and membership verification keys:
+```shell
+cargo run --package evm-prover
+```
 
-    ```shell
-    grpcurl -plaintext localhost:50052 celestia.prover.v1.Prover/Info
-    ```
+The `Info` endpoint returns the state transition verification key:
+
+```shell
+grpcurl -plaintext localhost:50052 celestia.prover.v1.Prover/Info
+```
 
 The `ProveStateTransition` endpoint generates a state transition proof for a range of EVM heights:
 
-    ```shell
-    grpcurl -plaintext -d '{"client_id":"08-groth16-0"}' localhost:50052 celestia.prover.v1.Prover/ProveStateTransition
+```shell
+grpcurl -plaintext -d '{"client_id":"08-groth16-0"}' localhost:50052 celestia.prover.v1.Prover/ProveStateTransition
 
-    {
-    "proof": "...",
-    "publicValues": "..."
-    }
-    ```
-
-Note that this requires the IBC light clients to be setup first:
-
-    ```shell
-    make setup
-    ```
+{
+"proof": "...",
+"publicValues": "..."
+}
+```
 
 The proving time for the ZK block range proof depends on the prover settings, i.e. prover network and mode.
 
