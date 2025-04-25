@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 )
 
-// relayByTx implements the logic of an IBC relayer for a MsgTransfer from EVM roll-up to SimApp.
+// relayFromEvmToSimapp implements the logic of an IBC relayer for a MsgTransfer from EVM roll-up to SimApp.
 func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof MptProof, groth16ClientHeight uint64) error {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
