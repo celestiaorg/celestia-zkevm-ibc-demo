@@ -35,7 +35,6 @@ func relayFromEvmToSimapp(sendPacketEvent *ics26router.ContractSendPacket, proof
 	return nil
 }
 
-// ethereum event type
 func createMsgRecvPacket(event *ics26router.ContractSendPacket, proof MptProof, groth16ClientHeight uint64) (*ibcchanneltypesv2.MsgRecvPacket, error) {
 	transferPayload := event.Packet.Payloads[0]
 	ibcPacket := ibcchanneltypesv2.Packet{
