@@ -9,11 +9,11 @@ The EVM Prover implements the Prover service for EVM rollups, creating zero-know
 The `blevm` SP1 program generates proofs of data inclusion and execution for single EVM blocks.
 
 #### Inputs:
-- `KeccakInclusionToDataRootProofInput`: Data for inclusion proof
-- `EthClientExecutorInput`: Data for EVM execution
-- `celestia_header_hash`: Celestia block header hash
-- `data_hash_bytes`: Hash of the block data
-- `proof_data_hash_to_celestia_hash`: Merkle proof connecting data hash to Celestia hash
+- `KeccakInclusionToDataRootProofInput`: Data for inclusion proof. This proof proves that the EVM raw block data was published as a blob and included in a Celestia block.
+- `EthClientExecutorInput`: Data for EVM execution, see [rsp.](https://github.com/succinctlabs/rsp/blob/5cd792c12c663d6c9feb54849c6df611029b5863/crates/executor/client/src/io.rs#L27-L56)
+- `celestia_header_hash`: Celestia block header hash.
+- `data_hash_bytes`: Data hash of the transactions in the Celestia header.
+- `proof_data_hash_to_celestia_hash`: Merkle proof connecting data hash to Celestia header hash.
 
 #### Output:
 ```rust
