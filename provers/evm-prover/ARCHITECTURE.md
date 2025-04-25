@@ -2,50 +2,107 @@
 
 The EVM Prover implements the Prover service for EVM rollups, creating zero-knowledge proofs for state membership and state transitions. It uses SP1 programs (`blevm` and `blevm-aggregator`) to generate ZK proofs of data inclusion in Celestia and EVM execution using the Rollup State Prover (RSP).
 
+## IBC Transfer Architecture
+
+The EVM Prover is a key component in the IBC transfer architecture, enabling secure asset transfers between Celestia and EVM rollups.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant SimApp
+    participant Relayer
+    participant CelestiaProver
+    participant EVMProver
+    participant EVM
+    
+    %% Initial Transfer: SimApp to EVM
+    User->>SimApp: Submit MsgTransfer (ICS20)
+    SimApp->>SimApp: Execute transaction
+    Note over SimApp: Check balance & lock funds
+    SimApp->>SimApp: Store commitment in state
+    
+    %% State Transition Proof for EVM
+    SimApp-->>Relayer: Emit SendPacket events
+    Relayer->>CelestiaProver: Query state transition proof
+    CelestiaProver-->>Relayer: Return SP1 state transition proof
+    Relayer->>EVM: Submit MsgUpdateClient with state transition proof
+    EVM->>EVM: Verify SP1 proof
+    EVM->>EVM: Update Tendermint light client
+    
+    %% State Membership Proof for EVM
+    Relayer->>CelestiaProver: Query membership proof
+    CelestiaProver-->>Relayer: Return SP1 membership proof
+    Relayer->>EVM: Submit MsgRecvPacket with membership proof
+    EVM->>EVM: Verify receipt in SimApp state
+    EVM->>EVM: Mint tokens to recipient
+    EVM->>EVM: Store receipt
+    
+    %% Acknowledgement: EVM to SimApp
+    EVM-->>Relayer: Emit WriteAcknowledgement events
+    Relayer->>EVMProver: Query state transition proof
+    EVMProver-->>Relayer: Return Groth16 state transition proof
+    Relayer->>SimApp: Submit MsgUpdateClient with state transition proof
+    SimApp->>SimApp: Verify Groth16 proof
+    SimApp->>SimApp: Update EVM light client
+    
+    %% State Membership Proof for SimApp
+    Relayer->>EVMProver: Query membership proof
+    EVMProver-->>Relayer: Return Groth16 membership proof
+    Relayer->>SimApp: Submit MsgAcknowledgement with membership proof
+    SimApp->>SimApp: Verify receipt in EVM state
+    SimApp->>SimApp: Unlock or burn tokens based on ack
+    SimApp->>SimApp: Store acknowledgement
+```
+
 ## Architecture
 
 ```mermaid
 graph TD
     subgraph "EVM Rollup"
         RollupNode["Rollup Node"]
-        RETH["RETH"]
         IBC["IBC Eureka Smart Contracts"]
         Sequencer["Centralized Sequencer"]
     end
     
-    subgraph "Prover Services"
+    subgraph "Prover System"
         EVMProver["EVM Prover Service"]
-        CelestiaProver["Celestia Prover Service"]
+        SP1Programs["SP1 Programs"]
+        SP1Programs --> BLEVM["blevm (Block Prover)"]
+        SP1Programs --> BLEVMAgg["blevm-aggregator"]
     end
     
-    subgraph "Indexer"
+    subgraph "Indexing"
         RollkitIndexer["Rollkit Indexer"]
+        BlockStorage["Block Data Storage"]
     end
     
-    subgraph "SP1 Programs"
-        BLEVM["blevm SP1 Program"]
-        BLEVMAgg["blevm-aggregator SP1 Program"]
-    end
-    
-    subgraph "Data Availability"
+    subgraph "Data Sources"
         CelestiaDA["Celestia DA"]
+        EVMState["EVM State"]
     end
     
-    subgraph "IBC"
-        Relayer["Relayer"]
+    subgraph "IBC Infrastructure"
+        Relayer["IBC Relayer"]
+        CelestiaProver["Celestia Prover"]
     end
     
-    RollupNode -- "EVM State" --> EVMProver
-    CelestiaDA -- "Block Data" --> RollkitIndexer
-    RollkitIndexer -- "Height to Inclusion Mapping" --> EVMProver
+    %% Data flow connections
+    CelestiaDA -->|"Raw blocks"| RollkitIndexer
+    RollupNode -->|"Block execution data"| EVMState
+    RollkitIndexer -->|"Height to inclusion mapping"| BlockStorage
     
-    EVMProver -- "Uses" --> BLEVM
-    EVMProver -- "Uses" --> BLEVMAgg
+    EVMState -->|"State data"| EVMProver
+    BlockStorage -->|"Raw block data"| EVMProver
     
-    Relayer -- "Requests Groth16 Proofs" --> EVMProver
-    EVMProver -- "Returns Proofs" --> Relayer
+    EVMProver -->|"Uses"| BLEVM
+    EVMProver -->|"Uses"| BLEVMAgg
     
-    Relayer -- "Submits Proofs + IBC Packets" --> IBC
+    Relayer -->|"ProveStateTransition request"| EVMProver
+    Relayer -->|"ProveStateMembership request"| EVMProver
+    EVMProver -->|"Groth16 proofs"| Relayer
+    
+    Relayer -->|"Submit proofs + packets"| IBC
+    Sequencer -->|"Transactions"| RollupNode
 ```
 
 ## Flow Overview
@@ -57,29 +114,37 @@ The EVM Prover implements the Prover service protocol to provide zero-knowledge 
 These proofs are used within the IBC (Inter-Blockchain Communication) protocol to securely transfer assets between the EVM rollup and other chains.
 
 ```mermaid
-sequenceDiagram
-    participant Relayer
-    participant EVMProver as EVM Prover
-    participant RollkitIndexer as Rollkit Indexer
-    participant BLEVM as blevm SP1 Program
-    participant BLEVMAgg as blevm-aggregator SP1 Program
-    participant CelestiaDA as Celestia DA
+graph TD
+    subgraph "State Transition Proof Flow"
+        RelayerST[Relayer]
+        EVMProverST[EVM Prover]
+        IndexerST[Rollkit Indexer]
+        BLEVMST[blevm SP1 Program]
+        BLEVMAggST[blevm-aggregator]
+        
+        RelayerST -->|"1. ProveStateTransition request"| EVMProverST
+        EVMProverST -->|"2. Query blocks in range"| IndexerST
+        IndexerST -->|"3. Return block data"| EVMProverST
+        EVMProverST -->|"4. Generate proofs for each block"| BLEVMST
+        BLEVMST -->|"5. Return BlevmOutputs"| EVMProverST
+        EVMProverST -->|"6. Aggregate proofs"| BLEVMAggST
+        BLEVMAggST -->|"7. Return BlevmAggOutput"| EVMProverST
+        EVMProverST -->|"8. Return proof response"| RelayerST
+    end
     
-    Relayer->>EVMProver: ProveStateTransition request
-    EVMProver->>RollkitIndexer: Query height to inclusion mapping
-    RollkitIndexer-->>EVMProver: Return mapping data
-    EVMProver->>BLEVM: Generate inclusion proofs
-    BLEVM-->>EVMProver: Return BlevmOutput
-    EVMProver->>BLEVMAgg: Aggregate proofs
-    BLEVMAgg-->>EVMProver: Return BlevmAggOutput
-    EVMProver-->>Relayer: ProveStateTransition response
-    
-    Relayer->>EVMProver: ProveStateMembership request
-    EVMProver->>RollkitIndexer: Query height to inclusion mapping
-    RollkitIndexer-->>EVMProver: Return mapping data
-    EVMProver->>BLEVM: Generate inclusion + membership proofs
-    BLEVM-->>EVMProver: Return BlevmOutput with membership proof
-    EVMProver-->>Relayer: ProveStateMembership response
+    subgraph "State Membership Proof Flow"
+        RelayerSM[Relayer]
+        EVMProverSM[EVM Prover]
+        IndexerSM[Rollkit Indexer]
+        BLEVMSM[blevm SP1 Program]
+        
+        RelayerSM -->|"1. ProveStateMembership request"| EVMProverSM
+        EVMProverSM -->|"2. Query block at height"| IndexerSM
+        IndexerSM -->|"3. Return block data"| EVMProverSM
+        EVMProverSM -->|"4. Generate proof with key path"| BLEVMSM
+        BLEVMSM -->|"5. Return BlevmOutput"| EVMProverSM
+        EVMProverSM -->|"6. Return proof response"| RelayerSM
+    end
 ```
 
 ## Prover Service
