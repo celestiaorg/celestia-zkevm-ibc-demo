@@ -174,7 +174,7 @@ func GetEvmEvent[T any](receipt *ethtypes.Receipt, parseFn func(log ethtypes.Log
 	}
 
 	if event == nil {
-		err = fmt.Errorf("event not found")
+		return nil, fmt.Errorf("event not found")
 	}
 
 	return event, nil
