@@ -79,7 +79,6 @@ impl ProverService {
         // Create the SP1 client once
         let sp1_client = ProverClient::from_env();
 
-        // Setup keys using the single client instance
         let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
 
         let prover = BlockProver::new(
