@@ -329,6 +329,7 @@ impl BlockProver {
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
+        dotenv::dotenv().ok();
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
         let stdin = self.get_stdin(input).await?;
         let (public_values, execution_report) = client
@@ -353,6 +354,7 @@ impl BlockProver {
         input: BlockProverInput,
     ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey), Box<dyn Error>> {
         // Generate and return the proof
+        dotenv::dotenv().ok();
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
         let (pk, vk) = client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
@@ -373,6 +375,7 @@ impl BlockProver {
         &self,
         inputs: Vec<AggregationInput>,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
+        dotenv::dotenv().ok();
         let client: sp1_sdk::EnvProver = ProverClient::from_env();
         let stdin = self.get_aggregate_stdin(inputs).await?;
         let (public_values, execution_report) = client
@@ -397,9 +400,11 @@ impl BlockProver {
         inputs: Vec<AggregationInput>,
     ) -> Result<AggregationOutput, Box<dyn Error>> {
         let stdin = self.get_aggregate_stdin(inputs).await?;
-        let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "cpu".to_string());
+        dotenv::dotenv().ok();
 
+        let mode = std::env::var("SP1_PROVER").unwrap_or_else(|_| "cpu".to_string());
         if mode == "mock" {
+            println!("aggregating proofs in mock mode");
             let mock_prover = sp1_sdk::CpuProver::mock();
             let (pk, _) = mock_prover.setup(self.aggregator_config.elf_bytes);
             let proof = mock_prover
@@ -409,6 +414,7 @@ impl BlockProver {
 
             Ok(AggregationOutput { proof })
         } else {
+            println!("aggregating proofs in non-mock mode");
             let client: sp1_sdk::EnvProver = ProverClient::from_env();
             let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
             let proof = client.prove(&pk, &stdin).groth16().run()?;
