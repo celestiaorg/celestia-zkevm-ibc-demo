@@ -115,8 +115,6 @@ func getProof() ([]byte, error) {
 		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
 	}
 	fmt.Printf("Received evm-prover state transition proof.\n")
-	fmt.Printf("Proof: %v\n", resp.Proof)
-	fmt.Printf("Public values: %v\n", resp.PublicValues)
 	return resp.Proof, nil
 }
 
