@@ -52,7 +52,6 @@ func assertBalanceOnSimApp() error {
 		}
 		fmt.Printf("Initial balance on SimApp: %v\n", initialBalanceOnSimapp)
 		fmt.Printf("Current balance on SimApp: %v\n", currentBalance.Int64())
-		fmt.Printf("Received %v tokens after the gas fees from EVM\n", difference)
 
 	case difference.IsNegative():
 		// Sent tokens to EVM
@@ -62,7 +61,6 @@ func assertBalanceOnSimApp() error {
 		}
 		fmt.Printf("Initial balance on SimApp: %v\n", initialBalanceOnSimapp)
 		fmt.Printf("Current balance on SimApp: %v\n", currentBalance)
-		fmt.Printf("Sent %v tokens including gas fees to EVM chain\n", difference.Neg())
 
 	default:
 		fmt.Printf("Balance unchanged: %v\n", currentBalance)
@@ -88,7 +86,6 @@ func assertBalanceOnEthereum() error {
 		}
 		fmt.Printf("Initial balance on EVM chain: %v\n", initialBalanceOnEvm)
 		fmt.Printf("Current balance on EVM chain: %v\n", userBalance)
-		fmt.Printf("Received %v tokens from SimApp\n", difference)
 	case difference.IsNegative():
 		// Sent tokens to SimApp
 		expectecBalance := initialBalanceOnEvm.Sub(math.NewInt(transferBackAmount.Int64()))
@@ -98,7 +95,6 @@ func assertBalanceOnEthereum() error {
 
 		fmt.Printf("Initial balance on EVM chain: %v\n", initialBalanceOnEvm)
 		fmt.Printf("Current balance on EVM chain: %v\n", userBalance)
-		fmt.Printf("Sent %v tokens to SimApp chain\n", difference.Neg())
 
 	default:
 		fmt.Printf("Balance unchanged: %v\n", userBalance)
