@@ -38,3 +38,7 @@ For reference in mock mode, the proof generation takes ~15 minutes for aggregati
 ## Protobuf
 
 gRPC depends on proto defined types. These are stored in `proto/prover/v1` from the root directory.
+
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for more information.
