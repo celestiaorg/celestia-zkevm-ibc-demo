@@ -376,9 +376,9 @@ impl BlockProver {
         &self,
         inputs: Vec<AggregationInput>,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
-        let client = &self.sp1_client;
         let stdin = self.get_aggregate_stdin(inputs).await?;
-        let (public_values, execution_report) = client
+        let (public_values, execution_report) = self
+            .sp1_client
             .execute(self.aggregator_config.elf_bytes, &stdin)
             .run()
             .unwrap();
@@ -412,9 +412,8 @@ impl BlockProver {
 
             Ok(AggregationOutput { proof })
         } else {
-            let client = &self.sp1_client;
-            let (pk, _) = client.setup(self.aggregator_config.elf_bytes);
-            let proof = client.prove(&pk, &stdin).groth16().run()?;
+            let (pk, _) = self.sp1_client.setup(self.aggregator_config.elf_bytes);
+            let proof = self.sp1_client.prove(&pk, &stdin).groth16().run()?;
 
             Ok(AggregationOutput { proof })
         }
