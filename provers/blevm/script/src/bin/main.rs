@@ -77,10 +77,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let aggregator_config = AggregatorConfig {
         elf_bytes: BLEVM_AGGREGATOR_ELF,
     };
-    let sp1_client = ProverClient::from_env();
-    let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
 
-    let prover = BlockProver::new(celestia_client, prover_config, aggregator_config, sp1_client);
+    let prover = BlockProver::new(
+        celestia_client,
+        prover_config,
+        aggregator_config,
+        ProverClient::from_env(),
+    );
 
     let input = BlockProverInput {
         inclusion_height: args.inclusion_block,
