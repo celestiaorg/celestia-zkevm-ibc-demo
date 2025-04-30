@@ -333,9 +333,9 @@ impl BlockProver {
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1PublicValues, ExecutionReport), Box<dyn Error>> {
-        let client = &self.sp1_client;
         let stdin = self.get_stdin(input).await?;
-        let (public_values, execution_report) = client
+        let (public_values, execution_report) = self
+            .sp1_client
             .execute(self.prover_config.elf_bytes, &stdin)
             .run()
             .unwrap();
@@ -356,10 +356,9 @@ impl BlockProver {
         &self,
         input: BlockProverInput,
     ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey), Box<dyn Error>> {
-        let client = &self.sp1_client;
-        let (pk, vk) = client.setup(self.prover_config.elf_bytes);
+        let (pk, vk) = self.sp1_client.setup(self.prover_config.elf_bytes);
         let stdin = self.get_stdin(input).await?;
-        let proof = client.prove(&pk, &stdin).compressed().run()?;
+        let proof = self.sp1_client.prove(&pk, &stdin).compressed().run()?;
         Ok((proof, vk))
     }
 
