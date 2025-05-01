@@ -76,7 +76,7 @@ NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Cel
     cargo run --package celestia-prover
     ```
 
-1. Run the demo
+1. Run the demo in a different terminal window
 
     ```shell
     # This runs make start, setup, and transfer
