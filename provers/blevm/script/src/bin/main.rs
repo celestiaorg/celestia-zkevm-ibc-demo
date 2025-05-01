@@ -15,7 +15,7 @@ use blevm_prover::prover::{
 };
 use celestia_types::nmt::Namespace;
 use clap::Parser;
-use sp1_sdk::{include_elf, utils};
+use sp1_sdk::{include_elf, ProverClient, utils};
 use std::time::Instant;
 use std::{error::Error, fs};
 
@@ -77,7 +77,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let aggregator_config = AggregatorConfig {
         elf_bytes: BLEVM_AGGREGATOR_ELF,
     };
-    let prover = BlockProver::new(celestia_client, prover_config, aggregator_config);
+
+    let prover = BlockProver::new(
+        celestia_client,
+        prover_config,
+        aggregator_config,
+        ProverClient::from_env(),
+    );
 
     let input = BlockProverInput {
         inclusion_height: args.inclusion_block,
