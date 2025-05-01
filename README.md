@@ -45,6 +45,12 @@ NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Cel
     cp .env.example .env
     ```
 
+1. Run sp1up
+
+    ```shell
+    sp1up
+    ```
+
 1. Install contract dependencies and the SP1 Tendermint light client operator binary from solidity-ibc-eureka.
 
     ```shell
@@ -60,7 +66,17 @@ NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Cel
     make build-simapp-docker
     ```
 
-1. Run the demo
+1. Copy the proto_description.bin file one directory up in celestia prover
+    ```shell
+    cp ./provers/celestia-prover/prover/proto_descriptor.bin ./provers/celestia-prover/
+    ```
+
+1. Run the Celestia prover
+    ```shell
+    cargo run --package celestia-prover
+    ```
+
+1. Run the demo in a different terminal window
 
     ```shell
     # This runs make start, setup, and transfer
