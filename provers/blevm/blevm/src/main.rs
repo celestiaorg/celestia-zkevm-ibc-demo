@@ -8,7 +8,6 @@
 sp1_zkvm::entrypoint!(main);
 use celestia_types::{blob::Blob, hash::Hash, AppVersion, ShareProof};
 use eq_common::KeccakInclusionToDataRootProofInput;
-use sha3::{Digest, Keccak256};
 
 use blevm_common::BlevmOutput;
 use nmt_rs::simple_merkle::tree::MerkleHash;
@@ -24,7 +23,6 @@ pub fn main() {
     let client_executor_input =
         bincode::deserialize::<EthClientExecutorInput>(&sp1_zkvm::io::read_vec()).unwrap();
     let celestia_header_hash: TmHash = sp1_zkvm::io::read();
-    let data_hash_bytes: Vec<u8> = sp1_zkvm::io::read_vec();
     let proof_data_hash_to_celestia_hash: Proof<TmSha2Hasher> = sp1_zkvm::io::read();
     println!("cycle-tracker-end: deserialize input");
 
@@ -32,11 +30,6 @@ pub fn main() {
     let blob =
         Blob::new(input.namespace_id, input.data, AppVersion::V3).expect("Failed creating blob");
     println!("cycle-tracker-end: create blob");
-
-    println!("cycle-tracker-start: compute keccak hash");
-    let computed_keccak_hash: [u8; 32] =
-        Keccak256::new().chain_update(&blob.data).finalize().into();
-    println!("cycle-tracker-end: compute keccak hash");
 
     println!("cycle-tracker-start: convert blob to shares");
     let rp = ShareProof {
@@ -58,7 +51,7 @@ pub fn main() {
     proof_data_hash_to_celestia_hash
         .verify_range(
             celestia_header_hash.as_bytes().try_into().unwrap(),
-            &[hasher.hash_leaf(&data_hash_bytes)],
+            &[hasher.hash_leaf(data_root_as_hash.as_bytes())],
         )
         .unwrap();
     println!("cycle-tracker-end: verify data root");
@@ -67,12 +60,6 @@ pub fn main() {
     rp.verify(data_root_as_hash)
         .expect("Failed verifying proof");
     println!("cycle-tracker-end: verify proof");
-
-    println!("cycle-tracker-start: check keccak hash");
-    if computed_keccak_hash != input.keccak_hash {
-        panic!("Computed keccak hash does not match input keccak hash");
-    }
-    println!("cycle-tracker-end: check keccak hash");
 
     // Execute the EVM block
     println!("cycle-tracker-start: executing EVM block");
