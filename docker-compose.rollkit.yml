@@ -18,7 +18,7 @@ services:
       - rollkit-network
 
   reth:
-    image: ghcr.io/paradigmxyz/reth # Use the official Reth image
+    image: ghcr.io/paradigmxyz/reth:v1.3.11 # Use the official Reth image
     container_name: reth
     ports:
       - "30303:30303" # P2P port
