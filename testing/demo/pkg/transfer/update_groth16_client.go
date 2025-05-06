@@ -100,7 +100,7 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	return header, nil
 }
 
-// getProof queries EVM prover for a state transition proof.
+// getProof queries EVM prover for a state transition proof from the last trusted height to the latest reth height.
 func getProof() ([]byte, error) {
 	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

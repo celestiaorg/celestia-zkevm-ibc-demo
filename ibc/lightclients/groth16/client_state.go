@@ -319,14 +319,11 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		}
 
 		publicWitness := PublicWitness{
-			TrustedHeight:             header.TrustedHeight,
-			TrustedCelestiaHeaderHash: header.TrustedCelestiaHeaderHash,
-			TrustedRollupStateRoot:    trustedConsensusState.StateRoot,
-			NewHeight:                 header.NewHeight,
-			NewRollupStateRoot:        header.NewStateRoot,
-			NewCelestiaHeaderHash:     header.NewCelestiaHeaderHash,
-			CodeCommitment:            cs.CodeCommitment,
-			GenesisStateRoot:          cs.GenesisStateRoot,
+			NewestHeaderHash:          header.NewestHeaderHash,
+			OldestHeaderHash:          header.OldestHeaderHash,
+			CelestiaHeaderHashes:      header.CelestiaHeaderHashes,
+			NewestStateRoot:           header.NewStateRoot,
+			NewestHeight:              header.NewHeight,
 		}
 
 		witness, err := publicWitness.Generate()

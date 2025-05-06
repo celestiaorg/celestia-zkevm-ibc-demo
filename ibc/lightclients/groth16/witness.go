@@ -9,14 +9,19 @@ import (
 
 // PublicWitness should match the public outputs of the SP1 program.
 type PublicWitness struct {
-	TrustedHeight             int64  // Provided by the relayer/user
-	TrustedCelestiaHeaderHash []byte // Provided by the ZK IBC Client
-	TrustedRollupStateRoot    []byte // Provided by the ZK IBC Client
-	NewHeight                 int64  // Provided by the relayer/user
-	NewRollupStateRoot        []byte // Provided by the relayer/user
-	NewCelestiaHeaderHash     []byte // Provided by Celestia State Machine
-	CodeCommitment            []byte // Provided during initialization of the IBC Client
-	GenesisStateRoot          []byte // Provided during initialization of the IBC Client
+	// NewestHeaderHash is the last block's hash on the EVM roll-up
+	NewestHeaderHash [32]byte
+	// OldestHeaderHash is the earliest block's hash on the EVM roll-up
+	OldestHeaderHash [32]byte
+	// CelestiaHeaderHashes is the range of Celestia blocks that include all
+	// of the blob data the EVM roll-up has posted from oldest_header_hash to
+	// newest_header_hash
+	CelestiaHeaderHashes [][32]byte
+	// NewestStateRoot is the computed state root of the EVM roll-up after
+	// processing blocks from oldest_header_hash to newest_header_hash
+	NewestStateRoot [32]byte
+	// NewestHeight is the most recent block number of the EVM roll-up
+	NewestHeight uint64
 }
 
 func (p PublicWitness) Generate() (witness.Witness, error) {
