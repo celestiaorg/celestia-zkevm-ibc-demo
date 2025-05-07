@@ -87,20 +87,19 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	}
 
 	header := &groth16.Header{
-		StateTransitionProof:      stateTransitionProof,
-		TrustedHeight:             trustedHeight,
-		TrustedCelestiaHeaderHash: []byte{},
-		NewStateRoot:              newStateRoot,
-		NewHeight:                 newHeight,
-		NewCelestiaHeaderHash:     []byte{},
-		DataRoots:                 [][]byte{},
-		Timestamp:                 timestamppb.New(timestamp),
+		StateTransitionProof: stateTransitionProof,
+		TrustedHeight:        trustedHeight,
+		NewestHeaderHash:     []byte{},
+		OldestHeaderHash:     []byte{},
+		NewestStateRoot:      newStateRoot,
+		NewestHeight:         uint64(newHeight),
+		Timestamp:            timestamppb.New(timestamp),
 	}
 
 	return header, nil
 }
 
-// getProof queries EVM prover for a state transition proof.
+// getProof queries EVM prover for a state transition proof from the last trusted height to the latest reth height.
 func getProof() ([]byte, error) {
 	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
