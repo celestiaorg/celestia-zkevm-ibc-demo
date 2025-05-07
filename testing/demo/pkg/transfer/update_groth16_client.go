@@ -87,14 +87,13 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	}
 
 	header := &groth16.Header{
-		StateTransitionProof:      stateTransitionProof,
-		TrustedHeight:             trustedHeight,
-		TrustedCelestiaHeaderHash: []byte{},
-		NewStateRoot:              newStateRoot,
-		NewHeight:                 newHeight,
-		NewCelestiaHeaderHash:     []byte{},
-		DataRoots:                 [][]byte{},
-		Timestamp:                 timestamppb.New(timestamp),
+		StateTransitionProof: stateTransitionProof,
+		TrustedHeight:        trustedHeight,
+		NewestHeaderHash:     []byte{},
+		OldestHeaderHash:     []byte{},
+		NewestStateRoot:      newStateRoot,
+		NewestHeight:         uint64(newHeight),
+		Timestamp:            timestamppb.New(timestamp),
 	}
 
 	return header, nil

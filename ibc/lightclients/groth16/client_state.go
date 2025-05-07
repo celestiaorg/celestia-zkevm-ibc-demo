@@ -309,10 +309,10 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 	if !isMockProof {
 
 		// This is a real proof, so we need to verify it.
-		trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
-		if err != nil {
-			return []exported.Height{}, fmt.Errorf("failed to get trusted consensus state: %w", err)
-		}
+		// trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
+		// if err != nil {
+		// 	return []exported.Height{}, fmt.Errorf("failed to get trusted consensus state: %w", err)
+		// }
 		vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
 		if err != nil {
 			return []exported.Height{}, fmt.Errorf("failed to deserialize verifying key: %w", err)
@@ -321,9 +321,9 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		publicWitness := PublicWitness{
 			NewestHeaderHash:          header.NewestHeaderHash,
 			OldestHeaderHash:          header.OldestHeaderHash,
-			CelestiaHeaderHashes:      header.CelestiaHeaderHashes,
-			NewestStateRoot:           header.NewStateRoot,
-			NewestHeight:              header.NewHeight,
+			// CelestiaHeaderHashes:      header.CelestiaHeaderHashes,
+			NewestStateRoot:           header.NewestStateRoot,
+			NewestHeight:              header.NewestHeight,
 		}
 
 		witness, err := publicWitness.Generate()
@@ -345,8 +345,8 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 	}
 
 	newConsensusState := &ConsensusState{
-		HeaderTimestamp: header.Timestamp,
-		StateRoot:       header.NewStateRoot,
+		// HeaderTimestamp: header.HeaderTimestamp,
+		StateRoot:       header.NewestStateRoot,
 	}
 
 	fmt.Printf("Setting new consensus state with state root: %X and height: %v and timestamp: %v\n", newConsensusState.StateRoot, header.GetHeight(), newConsensusState.HeaderTimestamp)
