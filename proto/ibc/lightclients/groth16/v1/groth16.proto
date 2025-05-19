@@ -59,7 +59,7 @@ message Header {
   bytes oldest_header_hash = 4;
 	// CelestiaHeaderHashes is the range of Celestia blocks that include all
 	// of the blob data the EVM roll-up has posted from oldest_header_hash to
-	// repeated bytes celestia_header_hashes = 5;
+	repeated bytes celestia_header_hashes = 5;
   // NewestStateRoot is the computed state root of the EVM roll-up after
 	// processing blocks from oldest_header_hash to newest_header_hash
   bytes newest_state_root = 6;

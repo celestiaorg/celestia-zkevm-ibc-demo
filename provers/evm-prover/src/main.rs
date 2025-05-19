@@ -53,9 +53,13 @@ pub struct ProverService {
 impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let evm_rpc_url = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
+
         let evm_client = Provider::try_from(evm_rpc_url.clone())?;
+
         let simapp_rpc = env::var("SIMAPP_RPC_URL").expect("SIMAPP_RPC_URL not provided");
+
         let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
+
         let indexer_url = env::var("INDEXER_URL").expect("INDEXER_URL not provided");
 
         let prover_config = ProverConfig {
@@ -77,7 +81,6 @@ impl ProverService {
         let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
 
         let sp1_client = ProverClient::from_env();
-
         let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
 
         let prover = BlockProver::new(
@@ -108,6 +111,7 @@ impl ProverService {
         })
     }
 
+    /// Get the latest height from EVM rollup.
     async fn get_latest_height(&self) -> Result<ethers::types::U64, Status> {
         self.evm_client
             .get_block(BlockNumber::Latest)
@@ -118,6 +122,7 @@ impl ProverService {
             .ok_or_else(|| Status::internal("Block has no number"))
     }
 
+    /// Get the trusted height from groth16 client.
     async fn get_trusted_height(&self, client_id: &str) -> Result<u64, Status> {
         let request = tonic::Request::new(QueryClientStateRequest {
             client_id: client_id.to_string(),
@@ -142,6 +147,7 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
+        println!("aggregator_vkey: {:?}", self.aggregator_vkey.vk);
         let response = InfoResponse {
             state_membership_verifier_key: "".to_string(),
             state_transition_verifier_key: self.aggregator_vkey.bytes32(),
@@ -150,6 +156,10 @@ impl Prover for ProverService {
         Ok(Response::new(response))
     }
 
+    /// Proves a state transition for a given height.
+    /// It gets the latest height from EVM rollup and the trusted height from groth16 client.
+    /// If the latest height is greater than the trusted height, it generates a proof for the state transition.
+    /// Otherwise, it returns an error.
     async fn prove_state_transition(
         &self,
         request: Request<ProveStateTransitionRequest>,
@@ -239,6 +249,15 @@ impl Prover for ProverService {
 
         let aggregation_output: blevm_prover::prover::AggregationOutput =
             self.prover.prove_block_range(inputs).await.unwrap();
+
+        println!(
+            "public values: {:?}",
+            aggregation_output.proof.public_values
+        );
+        println!(
+            "Public values to vec: {:?}",
+            aggregation_output.proof.public_values.as_slice()
+        );
 
         let response = ProveStateTransitionResponse {
             proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),

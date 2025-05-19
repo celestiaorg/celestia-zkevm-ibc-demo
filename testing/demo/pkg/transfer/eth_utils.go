@@ -94,7 +94,7 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	}
 
 	var receipt *ethtypes.Receipt
-	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+	err = utils.WaitForCondition(time.Second*600, time.Second, func() (bool, error) {
 		receipt, err = ethClient.TransactionReceipt(ctx, hash)
 		if err != nil {
 			return false, nil

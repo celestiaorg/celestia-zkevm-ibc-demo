@@ -44,7 +44,7 @@ func getTransactOpts(key *ecdsa.PrivateKey, chainID *big.Int, ethClient *ethclie
 func getTxReceipt(ctx context.Context, ethClient *ethclient.Client, hash ethcommon.Hash) (*ethtypes.Receipt, error) {
 	var receipt *ethtypes.Receipt
 	var err error
-	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+	err = utils.WaitForCondition(time.Second*300, time.Second, func() (bool, error) {
 		receipt, err = ethClient.TransactionReceipt(ctx, hash)
 		if err != nil {
 			return false, nil

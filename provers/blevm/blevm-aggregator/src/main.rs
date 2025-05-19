@@ -54,6 +54,14 @@ pub fn main() {
         newest_state_root: outputs[vkeys.len() - 1].state_root,
         newest_height: outputs[vkeys.len() - 1].height,
     };
+    // Print all the agg output values
+    println!("agg_output: {:?}", agg_output);
+    // print them separately
+    println!("newest_header_hash: {:?}", agg_output.newest_header_hash);
+    println!("oldest_header_hash: {:?}", agg_output.oldest_header_hash);
+    println!("celestia_header_hashes: {:?}", agg_output.celestia_header_hashes);
+    println!("newest_state_root: {:?}", agg_output.newest_state_root);
+    println!("newest_height: {:?}", agg_output.newest_height);
 
     sp1_zkvm::io::commit(&agg_output);
 }

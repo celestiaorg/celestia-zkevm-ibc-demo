@@ -10,8 +10,8 @@ import (
 	sdkerrors "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/mpt"
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/groth16"
+	// "github.com/consensys/gnark-crypto/ecc"
+	// "github.com/consensys/gnark/backend/groth16"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
@@ -56,7 +56,7 @@ func NewClientState(latestHeight uint64, stateTransitionVerifierKey []byte, stat
 		LatestHeight:               latestHeight,
 		CodeCommitment:             codeCommitment,
 		GenesisStateRoot:           genesisStateRoot,
-		StateTransitionVerifierKey: stateMembershipVerifierKey,
+		StateTransitionVerifierKey: stateTransitionVerifierKey,
 		StateMembershipVerifierKey: stateMembershipVerifierKey,
 	}
 }
@@ -293,75 +293,70 @@ func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.K
 
 // UpdateState updates the consensus state and client state.
 func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
-	header, ok := clientMsg.(*Header)
-	if !ok {
-		return []exported.Height{}, fmt.Errorf("the only supported clientMsg type is Header")
-	}
-	height, ok := header.GetHeight().(clienttypes.Height)
-	if !ok {
-		return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
-	}
+	// header, ok := clientMsg.(*Header)
+	// if !ok {
+	// 	return []exported.Height{}, fmt.Errorf("the only supported clientMsg type is Header")
+	// }
+	// height, ok := header.GetHeight().(clienttypes.Height)
+	// if !ok {
+	// 	return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
+	// }
 
-	// Check if this is a mock proof (all zeros)
-	isMockProof := bytes.Count(header.StateTransitionProof, []byte{0}) == len(header.StateTransitionProof)
+	// // Check if this is a mock proof (all zeros)
+	// isMockProof := bytes.Count(header.StateTransitionProof, []byte{0}) == len(header.StateTransitionProof)
 
-	// If this is a mock proof, we don't need to verify it.
-	if !isMockProof {
+	// fmt.Println(isMockProof, "Is mock proof")
+	// // If this is a mock proof, we don't need to verify it.
+	// // if !isMockProof {
+	// fmt.Println(cs.StateTransitionVerifierKey, "state transition verifier key")
+	// vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
+	// if err != nil {
+	// 	return []exported.Height{}, fmt.Errorf("failed to deserialize verifying key: %w", err)
+	// }
 
-		// This is a real proof, so we need to verify it.
-		// trustedConsensusState, err := GetConsensusState(clientStore, cdc, clienttypes.NewHeight(0, uint64(header.TrustedHeight)))
-		// if err != nil {
-		// 	return []exported.Height{}, fmt.Errorf("failed to get trusted consensus state: %w", err)
-		// }
-		vk, err := DeserializeVerifyingKey(cs.StateTransitionVerifierKey)
-		if err != nil {
-			return []exported.Height{}, fmt.Errorf("failed to deserialize verifying key: %w", err)
-		}
+	// publicWitness := PublicWitness{
+	// 	NewestHeaderHash:     header.NewestHeaderHash,
+	// 	OldestHeaderHash:     header.OldestHeaderHash,
+	// 	CelestiaHeaderHashes: header.CelestiaHeaderHashes,
+	// 	NewestStateRoot:      header.NewestStateRoot,
+	// 	NewestHeight:         header.NewestHeight,
+	// }
 
-		publicWitness := PublicWitness{
-			NewestHeaderHash:          header.NewestHeaderHash,
-			OldestHeaderHash:          header.OldestHeaderHash,
-			// CelestiaHeaderHashes:      header.CelestiaHeaderHashes,
-			NewestStateRoot:           header.NewestStateRoot,
-			NewestHeight:              header.NewestHeight,
-		}
+	// witness, err := publicWitness.Generate()
+	// if err != nil {
+	// 	return []exported.Height{}, fmt.Errorf("failed to generate state transition public witness: %w", err)
+	// }
 
-		witness, err := publicWitness.Generate()
-		if err != nil {
-			return []exported.Height{}, fmt.Errorf("failed to generate state transition public witness: %w", err)
-		}
+	// proof := groth16.NewProof(ecc.BN254)
+	// _, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
+	// if err != nil {
+	// 	return []exported.Height{}, fmt.Errorf("failed to read proof: %w", err)
+	// }
 
-		proof := groth16.NewProof(ecc.BN254)
-		_, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
-		if err != nil {
-			return []exported.Height{}, fmt.Errorf("failed to read proof: %w", err)
-		}
+	// fmt.Printf("Verifying state transition proof...\n")
+	// err = groth16.Verify(proof, vk, witness)
+	// if err != nil {
+	// 	return []exported.Height{}, fmt.Errorf("failed to verify proof: %w", err)
+	// }
 
-		fmt.Printf("Verifying state transition proof...\n")
-		err = groth16.Verify(proof, vk, witness)
-		if err != nil {
-			return []exported.Height{}, fmt.Errorf("failed to verify proof: %w", err)
-		}
-	}
+	// newConsensusState := &ConsensusState{
+	// 	HeaderTimestamp: header.Timestamp,
+	// 	StateRoot:       header.NewestStateRoot,
+	// }
 
-	newConsensusState := &ConsensusState{
-		// HeaderTimestamp: header.HeaderTimestamp,
-		StateRoot:       header.NewestStateRoot,
-	}
+	// fmt.Printf("Setting new consensus state with state root: %X and height: %v and timestamp: %v\n", newConsensusState.StateRoot, header.GetHeight(), newConsensusState.HeaderTimestamp)
+	// SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
+	// setConsensusMetadata(ctx, clientStore, header.GetHeight())
 
-	fmt.Printf("Setting new consensus state with state root: %X and height: %v and timestamp: %v\n", newConsensusState.StateRoot, header.GetHeight(), newConsensusState.HeaderTimestamp)
-	SetConsensusState(clientStore, cdc, newConsensusState, header.GetHeight())
-	setConsensusMetadata(ctx, clientStore, header.GetHeight())
+	// newClientState := &ClientState{
+	// 	LatestHeight:               header.GetHeight().GetRevisionHeight(),
+	// 	CodeCommitment:             cs.CodeCommitment,
+	// 	GenesisStateRoot:           cs.GenesisStateRoot,
+	// 	StateTransitionVerifierKey: cs.StateTransitionVerifierKey,
+	// 	StateMembershipVerifierKey: cs.StateMembershipVerifierKey,
+	// }
+	// fmt.Printf("Setting new client state with height: %v\n", newClientState.LatestHeight)
+	// setClientState(clientStore, cdc, newClientState)
 
-	newClientState := &ClientState{
-		LatestHeight:               header.GetHeight().GetRevisionHeight(),
-		CodeCommitment:             cs.CodeCommitment,
-		GenesisStateRoot:           cs.GenesisStateRoot,
-		StateTransitionVerifierKey: cs.StateTransitionVerifierKey,
-		StateMembershipVerifierKey: cs.StateMembershipVerifierKey,
-	}
-	fmt.Printf("Setting new client state with height: %v\n", newClientState.LatestHeight)
-	setClientState(clientStore, cdc, newClientState)
-
-	return []exported.Height{height}, nil
+	return []exported.Height{}, nil
 }

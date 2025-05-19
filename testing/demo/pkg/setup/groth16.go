@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strings"
+	"os"
 	"time"
 
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
@@ -143,16 +143,16 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 }
 
 func getStateTransitionVerifierKey() ([]byte, error) {
-	info, err := getEvmProverInfo()
+	// check current directory
+	dir, err := os.Getwd()
+	buf := bytes.NewBuffer(nil)
+	vkFile, err := os.Open(dir + "/ibc/lightclients/groth16/groth16_vk.bin")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get evm prover info %w", err)
+		return nil, fmt.Errorf("failed to open vk file %w", err)
 	}
+	buf.ReadFrom(vkFile)
 
-	decoded, err := hex.DecodeString(strings.TrimPrefix(info.StateTransitionVerifierKey, "0x"))
-	if err != nil {
-		return []byte{}, fmt.Errorf("failed to decode state transition verifier key %w", err)
-	}
-	return decoded, nil
+	return buf.Bytes(), nil
 }
 
 // TODO: Uncomment this function once the EVM prover info endpoint includes a state membership verifier key.
