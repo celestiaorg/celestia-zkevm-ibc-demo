@@ -192,15 +192,15 @@ type Header struct {
 	// state root with which the proof is verified against.
 	TrustedHeight int64 `protobuf:"varint,2,opt,name=trusted_height,json=trustedHeight,proto3" json:"trusted_height,omitempty"`
 	// NewestHeaderHash is the last block's hash on the EVM roll-upup.
-	NewestHeaderHash [32]byte `protobuf:"bytes,3,opt,name=newest_header_hash,json=newestHeaderHash,proto3" json:"newest_header_hash,omitempty"`
+	NewestHeaderHash []byte `protobuf:"bytes,3,opt,name=newest_header_hash,json=newestHeaderHash,proto3" json:"newest_header_hash,omitempty"`
 	// OldestHeaderHash is the earliest block's hash on the EVM roll-up
-	OldestHeaderHash [32]byte `protobuf:"bytes,4,opt,name=oldest_header_hash,json=oldestHeaderHash,proto3" json:"oldest_header_hash,omitempty"`
+	OldestHeaderHash []byte `protobuf:"bytes,4,opt,name=oldest_header_hash,json=oldestHeaderHash,proto3" json:"oldest_header_hash,omitempty"`
 	// CelestiaHeaderHashes is the range of Celestia blocks that include all
 	// of the blob data the EVM roll-up has posted from oldest_header_hash to
-	CelestiaHeaderHashes [][32]byte `protobuf:"bytes,5,rep,name=celestia_header_hashes,json=celestiaHeaderHashes,proto3" json:"celestia_header_hashes,omitempty"`
+	CelestiaHeaderHashes [][]byte `protobuf:"bytes,5,rep,name=celestia_header_hashes,json=celestiaHeaderHashes,proto3" json:"celestia_header_hashes,omitempty"`
 	// NewestStateRoot is the computed state root of the EVM roll-up after
 	// processing blocks from oldest_header_hash to newest_header_hash
-	NewestStateRoot [32]byte `protobuf:"bytes,6,opt,name=newest_state_root,json=newestStateRoot,proto3" json:"newest_state_root,omitempty"`
+	NewestStateRoot []byte `protobuf:"bytes,6,opt,name=newest_state_root,json=newestStateRoot,proto3" json:"newest_state_root,omitempty"`
 	// NewestHeight is the most recent block number of the EVM roll-up
 	NewestHeight uint64 `protobuf:"varint,7,opt,name=newest_height,json=newestHeight,proto3" json:"newest_height,omitempty"`
 	// Timestamp is the timestamp of an EVM header at the new height.
@@ -253,32 +253,32 @@ func (x *Header) GetTrustedHeight() int64 {
 	return 0
 }
 
-func (x *Header) GetNewestHeaderHash() [32]byte {
+func (x *Header) GetNewestHeaderHash() []byte {
 	if x != nil {
 		return x.NewestHeaderHash
 	}
-	return [32]byte{}
+	return nil
 }
 
-func (x *Header) GetOldestHeaderHash() [32]byte {
+func (x *Header) GetOldestHeaderHash() []byte {
 	if x != nil {
 		return x.OldestHeaderHash
 	}
-	return [32]byte{}
+	return nil
 }
 
-func (x *Header) GetCelestiaHeaderHashes() [][32]byte {
+func (x *Header) GetCelestiaHeaderHashes() [][]byte {
 	if x != nil {
 		return x.CelestiaHeaderHashes
 	}
 	return nil
 }
 
-func (x *Header) GetNewestStateRoot() [32]byte {
+func (x *Header) GetNewestStateRoot() []byte {
 	if x != nil {
 		return x.NewestStateRoot
 	}
-	return [32]byte{}
+	return nil
 }
 
 func (x *Header) GetNewestHeight() uint64 {
