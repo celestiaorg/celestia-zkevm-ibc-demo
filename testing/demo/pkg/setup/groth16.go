@@ -63,10 +63,12 @@ func createClientAndConsensusState() (*cdctypes.Any, *cdctypes.Any, error) {
 		return nil, nil, err
 	}
 
-	stateTransitionVerifierKey, err := getStateTransitionVerifierKey()
+	info, err := getEvmProverInfo()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get state transition verifier key: %w", err)
+		return nil, nil, fmt.Errorf("failed to get evm prover info %w", err)
 	}
+
+	stateTransitionVerifierKey := info.StateTransitionVerifierKey
 	fmt.Printf("Got state transition verifier key: %x\n", stateTransitionVerifierKey)
 
 	// TODO: Uncomment this code once the EVM prover info endpoint includes a state memberhsip verifier key.
@@ -80,10 +82,16 @@ func createClientAndConsensusState() (*cdctypes.Any, *cdctypes.Any, error) {
 	// TODO: Query the codeCommitment from the EVM rollup.
 	codeCommitment := []byte{}
 
+	groth16Vk, err := getGroth16Vk()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get groth16 vk: %w", err)
+	}
+
 	clientState := groth16.NewClientState(
 		latestBlock.Number().Uint64(),
-		stateTransitionVerifierKey,
+		info.StateTransitionVerifierKey,
 		stateMembershipVerifierKey,
+		groth16Vk,
 		codeCommitment,
 		genesisBlock.Root().Bytes(),
 	)
@@ -142,19 +150,6 @@ func getGenesisAndLatestBlock(ethClient *ethclient.Client) (*ethtypes.Block, *et
 	return genesisBlock, latestBlock, nil
 }
 
-func getStateTransitionVerifierKey() ([]byte, error) {
-	// check current directory
-	dir, err := os.Getwd()
-	buf := bytes.NewBuffer(nil)
-	vkFile, err := os.Open(dir + "/ibc/lightclients/groth16/groth16_vk.bin")
-	if err != nil {
-		return nil, fmt.Errorf("failed to open vk file %w", err)
-	}
-	buf.ReadFrom(vkFile)
-
-	return buf.Bytes(), nil
-}
-
 // TODO: Uncomment this function once the EVM prover info endpoint includes a state membership verifier key.
 // func getStateMembershipVerifierKey() ([]byte, error) {
 // 	info, err := getEvmProverInfo()
@@ -181,4 +176,15 @@ func getEvmProverInfo() (*proverclient.InfoResponse, error) {
 		return nil, fmt.Errorf("failed to get evm prover info %w", err)
 	}
 	return info, nil
+}
+
+func getGroth16Vk() ([]byte, error) {
+	dir, err := os.Getwd()
+	buf := bytes.NewBuffer(nil)
+	vkFile, err := os.Open(dir + "/ibc/lightclients/groth16/groth16_vk.bin")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open vk file %w", err)
+	}
+	buf.ReadFrom(vkFile)
+	return buf.Bytes(), nil
 }

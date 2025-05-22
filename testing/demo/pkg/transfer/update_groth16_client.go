@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
-	"os"
 	"time"
 
 	// gnark "github.com/consensys/gnark/backend/groth16"
@@ -19,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
@@ -134,155 +134,113 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16Client.Header, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get proof: %w", err)
 	}
-	fmt.Println(resp, "PROOF RESPONSE")
+	// var resp *proverclient.ProveStateTransitionResponse
+	// fmt.Printf("PROOF: %v", resp.Proof)
+	// fmt.Println("Public values: ", resp.GetPublicValues())
+	// resp.Proof = []byte{
+	// 	17, 182, 160, 157, 36, 63, 246, 147, 153, 41, 58, 13, 104, 199, 185, 205, 77, 193, 130, 20,
+	// 	111, 137, 165, 234, 229, 100, 86, 211, 137, 139, 222, 224, 183, 7, 203, 131, 21, 31, 12, 239,
+	// 	63, 110, 36, 69, 84, 223, 9, 90, 23, 172, 245, 90, 130, 25, 241, 104, 252, 94, 91, 98, 115,
+	// 	195, 143, 57, 156, 166, 11, 97, 24, 198, 244, 118, 22, 208, 81, 127, 227, 224, 81, 182, 55,
+	// 	186, 124, 78, 191, 83, 47, 211, 243, 137, 77, 180, 251, 42, 86, 222, 118, 201, 193, 137, 46,
+	// 	76, 1, 195, 148, 62, 197, 56, 53, 124, 239, 75, 25, 198, 32, 27, 31, 35, 102, 196, 117, 222,
+	// 	220, 170, 255, 181, 40, 30, 190, 106, 22, 12, 31, 211, 180, 154, 58, 127, 0, 129, 168, 205,
+	// 	0, 157, 57, 21, 46, 164, 212, 213, 246, 52, 213, 74, 249, 85, 87, 118, 18, 243, 238, 110, 135,
+	// 	176, 23, 70, 109, 4, 195, 106, 174, 63, 43, 33, 102, 62, 171, 191, 173, 19, 204, 230, 173, 182,
+	// 	248, 32, 66, 12, 218, 166, 42, 251, 50, 81, 245, 90, 15, 43, 89, 187, 198, 148, 182, 56, 88,
+	// 	21, 193, 192, 230, 162, 71, 38, 244, 134, 194, 94, 120, 169, 14, 238, 48, 54, 140, 166, 212,
+	// 	193, 187, 209, 11, 174, 50, 182, 84, 229, 78, 150, 125, 125, 192, 14, 74, 234, 110, 18, 44,
+	// 	165, 137, 195, 195, 149, 26, 137, 39, 49, 239, 146, 178, 46, 87, 137,
+	// }
 
-	dir, err := os.Getwd()
-	buf := bytes.NewBuffer(nil)
-	vkFile, err := os.Open(dir + "/ibc/lightclients/groth16/groth16_vk.bin")
+	// resp.PublicValues = []byte{
+	// 	210, 11, 36, 149, 29, 7, 102, 236, 175, 139, 159, 217, 228, 211, 101, 12, 202, 192, 180, 162,
+	// 	154, 67, 81, 4, 41, 185, 31, 106, 223, 99, 201, 174, 114, 48, 200, 21, 144, 28, 73, 93,
+	// 	103, 151, 25, 104, 226, 226, 12, 106, 52, 215, 108, 90, 0, 83, 108, 225, 176, 162, 39, 123,
+	// 	198, 121, 31, 234, 9, 0, 0, 0, 0, 0, 0, 0, 53, 215, 138, 14, 84, 18, 108, 31,
+	// 	148, 13, 118, 102, 92, 77, 225, 177, 3, 92, 32, 140, 5, 147, 53, 94, 25, 137, 195, 26,
+	// 	51, 41, 237, 51, 169, 177, 127, 164, 158, 104, 92, 122, 206, 39, 105, 88, 137, 105, 142, 84,
+	// 	230, 223, 220, 169, 253, 194, 44, 12, 105, 1, 253, 236, 132, 158, 69, 15, 145, 240, 53, 150,
+	// 	233, 236, 177, 184, 223, 65, 124, 53, 132, 173, 12, 165, 117, 90, 48, 207, 172, 193, 107, 214,
+	// 	192, 57, 230, 175, 249, 164, 73, 40, 202, 29, 171, 86, 67, 249, 129, 152, 61, 84, 177, 26,
+	// 	63, 42, 194, 14, 196, 118, 176, 4, 68, 29, 44, 61, 65, 180, 28, 238, 17, 172, 79, 208,
+	// 	229, 179, 44, 242, 179, 113, 160, 171, 20, 136, 103, 210, 221, 190, 63, 22, 62, 11, 164, 145,
+	// 	52, 85, 108, 227, 128, 27, 170, 89, 79, 138, 109, 203, 214, 51, 210, 59, 160, 201, 161, 134,
+	// 	14, 174, 135, 129, 186, 219, 17, 67, 76, 77, 11, 251, 141, 164, 34, 191, 64, 249, 86, 12,
+	// 	122, 160, 69, 161, 18, 240, 32, 55, 33, 255, 30, 28, 168, 237, 127, 131, 67, 30, 203, 162,
+	// 	246, 102, 185, 206, 7, 81, 216, 172, 210, 45, 241, 28, 209, 167, 67, 216, 128, 13, 96, 174,
+	// 	167, 90, 76, 80, 142, 64, 75, 233, 100, 111, 54, 44, 48, 208, 87, 79, 216, 50, 159, 184,
+	// 	90, 216, 196, 139, 137, 202, 187, 150, 152, 59, 160, 195, 1, 56, 179, 11, 81, 120, 151, 12,
+	// 	130, 163, 115, 250, 41, 57, 103, 168, 183, 120, 207, 151, 169, 231, 20, 170, 143, 158, 152, 103,
+	// 	125, 149, 17, 94, 119, 228, 242, 64, 151, 43, 122, 204, 251, 21, 87, 47, 78, 143, 71, 220,
+	// 	47, 193, 132, 27, 4, 150, 118, 185, 125, 96, 152, 97, 10, 0, 0, 0, 0, 0, 0, 0,
+	// }
+
+	// dir, err := os.Getwd()
+	// buf := bytes.NewBuffer(nil)
+	// vkFile, err := os.Open(dir + "/ibc/lightclients/groth16/groth16_vk.bin")
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to open vk file %w", err)
+	// }
+	// buf.ReadFrom(vkFile)
+	// vkeyBytes := buf.Bytes()
+
+	// conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to connect to prover: %w", err)
+	// }
+	// defer conn.Close()
+	// client := proverclient.NewProverClient(conn)
+
+	// evmProverInfo, err := getEvmProverInfo()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to get evm prover info: %w", err)
+	// }
+
+	// verifyProofRequest := &proverclient.VerifyProofRequest{
+	// 	Proof:           resp.Proof,
+	// 	Sp1PublicInputs: resp.GetPublicValues(),
+	// 	Sp1VkeyHash:     evmProverInfo.StateTransitionVerifierKey,
+	// 	Groth16Vk:       vkeyBytes,
+	// }
+
+	// fmt.Println("VERIFYING STATE TRANSITION PROOF....")
+	// evmproofresp, err := client.VerifyProof(context.Background(), verifyProofRequest)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to verify state transition proof: %w", err)
+	// }
+	// if !evmproofresp.Success {
+	// 	return nil, fmt.Errorf("failed to verify state transition proof: %w", err)
+	// }
+	// fmt.Println(evmproofresp)
+	// fmt.Println("STATE TRANSITION PROOF VERIFIED")
+
+	trustedHeight, err := getTrustedHeight()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open vk file %w", err)
+		return nil, fmt.Errorf("failed to get trusted height: %w", err)
 	}
-	buf.ReadFrom(vkFile)
-	vkeyBytes := buf.Bytes()
 
-	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	blevmPublicOutput, err := DecodePublicValues(resp.GetPublicValues())
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to prover: %w", err)
+		return nil, fmt.Errorf("failed to decode public values: %w", err)
 	}
-	defer conn.Close()
-	client := proverclient.NewProverClient(conn)
 
-
-	evmProverInfo, err := getEvmProverInfo()
+	timestamp, err := getEVMTimestampAtHeight(evmTransferBlockNumber)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get evm prover info: %w", err)
+		return nil, fmt.Errorf("failed to get evm timestamp at height: %w", err)
 	}
 
-	verifyProofRequest := &proverclient.VerifyProofRequest{
-		Proof:           resp.GetProof(),
-		Sp1PublicInputs: resp.GetPublicValues(),
-		Sp1VkeyHash:     evmProverInfo.StateTransitionVerifierKey,
-		Groth16Vk:       vkeyBytes,
+	header := &groth16Client.Header{
+		StateTransitionProof: resp.Proof,
+		TrustedHeight:        trustedHeight,
+		NewestHeaderHash:     blevmPublicOutput.NewestStateRoot[:],
+		OldestHeaderHash:     blevmPublicOutput.OldestHeaderHash[:],
+		NewestStateRoot:      blevmPublicOutput.NewestStateRoot[:],
+		NewestHeight:         blevmPublicOutput.NewestHeight,
+		Timestamp:            timestamppb.New(timestamp),
 	}
 
-	fmt.Println("VERIFYING STATE TRANSITION PROOF....")
-	evmproofresp, err := client.VerifyProof(context.Background(), verifyProofRequest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
-	}
-	fmt.Println(evmproofresp)
-	fmt.Println("STATE TRANSITION PROOF VERIFIED")
-
-	// publicValuesPassed := []byte{
-	// 	// Number of celestia header hashes (11)
-	// 	11, 0, 0, 0, 0, 0, 0, 0,
-
-	// 	// Newest header hash
-	// 	130, 145, 146, 189, 207, 51, 223, 212, 130, 247, 223, 62, 65, 247, 138, 53, 31, 95, 170, 173, 170, 236, 62, 159, 130, 119, 143, 80, 106, 167, 179, 22,
-
-	// 	// Oldest header hash
-	// 	192, 160, 132, 95, 74, 173, 130, 202, 126, 212, 70, 86, 85, 143, 210, 219, 89, 49, 82, 157, 181, 31, 251, 70, 16, 142, 6, 45, 220, 33, 10, 160,
-
-	// 	// Celestia header hashes (11 hashes)
-	// 	95, 138, 224, 134, 39, 215, 175, 19, 32, 250, 40, 109, 36, 247, 105, 227, 161, 116, 139, 86, 93, 16, 150, 118, 125, 134, 74, 189, 151, 160, 245, 225,
-	// 	198, 93, 32, 141, 113, 80, 76, 21, 135, 241, 141, 169, 228, 162, 152, 254, 108, 50, 154, 206, 142, 171, 26, 20, 246, 72, 206, 18, 231, 241, 210, 7,
-	// 	160, 249, 255, 241, 214, 124, 123, 20, 64, 160, 98, 226, 38, 85, 182, 33, 72, 223, 192, 179, 235, 220, 174, 3, 82, 241, 225, 149, 171, 239, 198, 123,
-	// 	203, 191, 95, 211, 74, 111, 114, 241, 238, 86, 41, 110, 6, 65, 89, 19, 0, 61, 113, 161, 156, 146, 161, 255, 241, 93, 24, 53, 61, 132, 219, 252,
-	// 	51, 187, 189, 127, 91, 94, 209, 149, 218, 80, 11, 137, 171, 128, 52, 55, 18, 182, 95, 184, 254, 61, 50, 170, 65, 107, 231, 72, 176, 133, 230, 102,
-	// 	127, 146, 195, 230, 17, 220, 173, 252, 239, 118, 2, 127, 3, 73, 125, 68, 22, 93, 41, 19, 21, 156, 178, 23, 132, 42, 54, 97, 204, 90, 124, 42,
-	// 	64, 239, 203, 114, 217, 229, 27, 20, 155, 197, 96, 10, 40, 179, 109, 58, 252, 176, 7, 68, 54, 42, 19, 168, 174, 57, 167, 202, 149, 188, 202, 53,
-	// 	191, 203, 115, 196, 186, 43, 127, 51, 72, 228, 93, 213, 198, 150, 234, 233, 45, 55, 1, 216, 72, 83, 251, 8, 66, 5, 8, 65, 169, 178, 52, 26,
-	// 	120, 138, 228, 142, 116, 74, 7, 247, 116, 52, 82, 189, 193, 78, 4, 49, 107, 62, 211, 62, 27, 103, 102, 2, 204, 163, 111, 242, 107, 241, 72, 75,
-	// 	2, 239, 63, 95, 199, 91, 121, 42, 80, 6, 140, 92, 133, 174, 244, 235, 17, 107, 82, 66, 136, 220, 208, 161, 78, 191, 162, 239, 250, 127, 41, 68,
-	// 	8, 71, 227, 148, 169, 10, 110, 208, 158, 243, 139, 158, 122, 80, 240, 44, 87, 7, 227, 251, 121, 148, 123, 94, 206, 229, 239, 72, 209, 51, 33, 39,
-
-	// 	// Newest state root
-	// 	70, 228, 88, 200, 88, 88, 169, 112, 127, 189, 121, 209, 101, 253, 163, 171, 148, 78, 60, 154, 46, 62, 208, 88, 95, 66, 108, 21, 181, 82, 58, 207,
-
-	// 	// Newest height (15)
-	// 	15, 0, 0, 0, 0, 0, 0, 0,
-	// }
-	// trustedHeight, err := getTrustedHeight()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get trusted height: %w", err)
-	// }
-
-	// newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp(evmTransferBlockNumber)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get EVM state root, height, and timestamp: %w", err)
-	// }
-	// publicValues, err := DecodePublicValues(publicValuesPassed)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to decode public values: %w", err)
-	// }
-	// fmt.Printf("Public values: %v\n", publicValues)
-
-	// oldestHeaderHash, newestHeaderHash, err := getFirstAndLastHeaderHashes(evmTransferBlockNumber)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get first and last header hashes: %w", err)
-	// }
-
-	// stateTransitionProof = []byte{}
-	// trustedHeight = 0
-	// newHeight = 0
-	// newStateRoot = []byte{}
-	// oldestHeaderHash := []byte{}
-	// timestamp = time.Now()
-	// // oldestHeaderHash := []byte{}
-	// // newestHeaderHash := []byte{}
-	// // HARD CODE ALL VALUES
-	// header := &groth16Client.Header{
-	// 	StateTransitionProof: stateTransitionProof,
-	// 	TrustedHeight:        trustedHeight,
-	// 	NewestHeaderHash:     newStateRoot,
-	// 	OldestHeaderHash:     oldestHeaderHash,
-	// 	NewestStateRoot:      newStateRoot,
-	// }
-
-	// TEST PROOF VERIFICATION
-	// vk, err := groth16Client.DeserializeVerifyingKey(stateTransitionProof)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to deserialize verifying key: %w", err)
-	// }
-
-	// publicWitness := groth16Client.PublicWitness{
-	// 	NewestHeaderHash:     header.NewestHeaderHash,
-	// 	OldestHeaderHash:     header.OldestHeaderHash,
-	// 	CelestiaHeaderHashes: header.CelestiaHeaderHashes,
-	// 	NewestStateRoot:      header.NewestStateRoot,
-	// 	NewestHeight:         header.NewestHeight,
-	// }
-
-	// witness, err := publicWitness.Generate()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to generate state transition public witness: %w", err)
-	// }
-
-	// proof := gnark.NewProof(ecc.BN254)
-	// _, err = proof.ReadFrom(bytes.NewReader(header.StateTransitionProof))
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to read proof: %w", err)
-	// }
-
-	// fmt.Printf("Verifying state transition proof...\n")
-	// err = gnark.Verify(proof, vk, witness)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to verify proof: %w", err)
-	// }
-
-	// get oldest header hash
-
-	// header := &groth16Client.Header{
-	// 	StateTransitionProof: stateTransitionProof,
-	// 	TrustedHeight:        trustedHeight,
-	// 	NewestHeaderHash:     newStateRoot,
-	// 	OldestHeaderHash:     oldestHeaderHash,
-	// 	NewestStateRoot:      newStateRoot,
-	// 	NewestHeight:         uint64(newHeight),
-	// 	Timestamp:            timestamppb.New(timestamp),
-	// }
-
-	return &groth16Client.Header{}, nil
+	return header, nil
 }
 
 // getProof queries EVM prover for a state transition proof from the last trusted height to the latest reth height.
@@ -346,18 +304,18 @@ func getClientState() (*groth16Client.ClientState, error) {
 	return groth16ClientState, nil
 }
 
-func getEVMStateRootHeightTimestamp(evmTransferBlockNumber uint64) ([]byte, int64, time.Time, error) {
+func getEVMTimestampAtHeight(evmTransferBlockNumber uint64) (time.Time, error) {
 	client, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return nil, 0, time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
+		return time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
 	}
 
 	header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(evmTransferBlockNumber)))
 	if err != nil {
-		return nil, 0, time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
+		return time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
 	}
 
-	return header.Root.Bytes(), header.Number.Int64(), time.Unix(int64(header.Time), 0), nil
+	return time.Unix(int64(header.Time), 0), nil
 }
 
 func getFirstAndLastHeaderHashes(evmTransferBlockNumber uint64) ([]byte, []byte, error) {

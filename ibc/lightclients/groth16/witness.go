@@ -10,16 +10,16 @@ import (
 // PublicWitness should match the public outputs of the SP1 program.
 type PublicWitness struct {
 	// NewestHeaderHash is the last block's hash on the EVM roll-up
-	NewestHeaderHash [32]byte
+	NewestHeaderHash []byte
 	// OldestHeaderHash is the earliest block's hash on the EVM roll-up
-	OldestHeaderHash [32]byte
+	OldestHeaderHash []byte
 	// CelestiaHeaderHashes is the range of Celestia blocks that include all
 	// of the blob data the EVM roll-up has posted from oldest_header_hash to
 	// newest_header_hash
-	CelestiaHeaderHashes [][32]byte
+	CelestiaHeaderHashes [][]byte
 	// NewestStateRoot is the computed state root of the EVM roll-up after
 	// processing blocks from oldest_header_hash to newest_header_hash
-	NewestStateRoot [32]byte
+	NewestStateRoot []byte
 	// NewestHeight is the most recent block number of the EVM roll-up
 	NewestHeight uint64
 }

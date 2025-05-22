@@ -6,6 +6,7 @@ use blevm_prover::rsp::generate_client_input;
 use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
 use prost::Message;
 use rsp_primitives::genesis::Genesis;
+use sp1_sdk::SP1_CIRCUIT_VERSION;
 use sp1_sdk::{include_elf, HashableKey, ProverClient, SP1VerifyingKey};
 use sp1_verifier::Groth16Verifier;
 use std::env;
@@ -54,6 +55,8 @@ pub struct ProverService {
 
 impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        println!("SP1 Circuit Version: {}", SP1_CIRCUIT_VERSION);
+
         let evm_rpc_url = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
 
         let evm_client = Provider::try_from(evm_rpc_url.clone())?;
@@ -267,7 +270,7 @@ impl Prover for ProverService {
         );
 
         let response = ProveStateTransitionResponse {
-            proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),
+            proof: aggregation_output.proof.bytes(),
             public_values: aggregation_output.proof.public_values.to_vec(),
         };
 
@@ -339,12 +342,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_descriptor_path: String = match env::var("EVM_PROTO_DESCRIPTOR_PATH") {
         Ok(path) => path,
         Err(e) => {
-            eprintln!("EVM_PROTO_DESCRIPTOR_PATH environment variable not set: {}", e);
+            eprintln!(
+                "EVM_PROTO_DESCRIPTOR_PATH environment variable not set: {}",
+                e
+            );
             return Err(e.into());
         }
     };
 
-    println!("Loading proto descriptor set from {}", proto_descriptor_path);
+    println!(
+        "Loading proto descriptor set from {}",
+        proto_descriptor_path
+    );
     let file_path = PathBuf::from(proto_descriptor_path);
 
     // Read the file with error handling

@@ -15,7 +15,7 @@ message ClientState {
   // verifying Groth16 state transition proofs. These proofs verify a rollup's
   // state root after the state transition has been applied. Only the BN254
   // curve is supported.
-  bytes state_transition_verifier_key = 2;
+  string state_transition_verifier_key = 2;
 
   // CodeCommitment is a commitment over the roll-up's source code.
   bytes code_commitment = 3;
@@ -26,6 +26,8 @@ message ClientState {
   // StateMembershipVerifierKey is the key used to verify state membership
   // (a.k.a inclusion) proofs.
   bytes state_membership_verifier_key = 5;
+
+  bytes groth16_vk = 6;
 }
 
 // ConsensusState is the trusted view of the state of a state machine at a
@@ -49,22 +51,24 @@ message Header {
   // StateTransitionProof is a serialized groth16 proof that the given state transition is valid.
   // If a proof with 0 bytes is provided, it is assumed to be a mock proof.
   bytes state_transition_proof = 1;
+  bytes public_values = 2;
   // TrustedHeight is the last verified height of the rollup. This is used to retrieve the previous
   // state root with which the proof is verified against.
-  int64 trusted_height = 2;
+  int64 trusted_height = 3;
+
 
   // NewestHeaderHash is the last block's hash on the EVM roll-upup.
-  bytes newest_header_hash = 3;
+  bytes newest_header_hash = 4;
 	// OldestHeaderHash is the earliest block's hash on the EVM roll-up
-  bytes oldest_header_hash = 4;
+  bytes oldest_header_hash = 5;
 	// CelestiaHeaderHashes is the range of Celestia blocks that include all
 	// of the blob data the EVM roll-up has posted from oldest_header_hash to
-	repeated bytes celestia_header_hashes = 5;
+	repeated bytes celestia_header_hashes = 6;
   // NewestStateRoot is the computed state root of the EVM roll-up after
 	// processing blocks from oldest_header_hash to newest_header_hash
-  bytes newest_state_root = 6;
+  bytes newest_state_root = 7;
 	// NewestHeight is the most recent block number of the EVM roll-up
-  uint64 newest_height = 7;
+  uint64 newest_height = 8;
   // Timestamp is the timestamp of an EVM header at the new height.
-  google.protobuf.Timestamp timestamp = 8;
+  google.protobuf.Timestamp timestamp = 9;
 }
