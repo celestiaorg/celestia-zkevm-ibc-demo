@@ -39,7 +39,8 @@ curl http://localhost:8080/health
 ```
 
 Expected response:
-```
+
+```bash
 OK
 ```
 
@@ -50,6 +51,7 @@ curl http://localhost:8080/status
 ```
 
 Expected response:
+
 ```json
 {"last_processed_celestia_height": 864}
 ```
@@ -61,6 +63,7 @@ curl http://localhost:8080/inclusion_height/32
 ```
 
 Expected response if found:
+
 ```json
 {"eth_block_number":32,"celestia_height":16,"blob_commitment":"am1pW8KzYUBR2B5KNymVeHxPzw+XfaqkLRSK+Avhq0I="}
 ```
@@ -78,15 +81,16 @@ The service can be configured using the following environment variables:
 
 ## Running the Indexer
 
-### Directly on host:
+### Directly on host
 
 ```bash
-export CELESTIA_NODE_URL="ws://your-celestia-node:26658"
-export CELESTIA_NODE_AUTH_TOKEN="your-auth-token"
+export CELESTIA_NODE_URL="http://localhost:26658"
+export CELESTIA_NODE_AUTH_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 ./indexer
+go run .
 ```
 
-### Using Docker:
+### Using Docker
 
 ```bash
 docker run -p 8080:8080 \

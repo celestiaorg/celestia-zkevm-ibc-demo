@@ -2023,6 +2023,20 @@ name = "bytemuck"
 version = "1.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6b1fc10dbac614ebc03540c9dbd60e83887fda27794998c6528f1782047d540"
+dependencies = [
+ "bytemuck_derive",
+]
+
+[[package]]
+name = "bytemuck_derive"
+version = "1.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ecc273b49b3205b83d648f0690daa588925572cc5063745bfe547fe7ec8e1a1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
 
 [[package]]
 name = "byteorder"
@@ -3104,6 +3118,7 @@ dependencies = [
  "ff 0.13.1",
  "generic-array 0.14.7",
  "group 0.13.0",
+ "hkdf",
  "pem-rfc7468",
  "pkcs8",
  "rand_core 0.6.4",
@@ -3597,6 +3612,7 @@ dependencies = [
  "sp1-ics07-tendermint-prover",
  "sp1-ics07-tendermint-utils",
  "sp1-sdk",
+ "sp1-verifier",
  "tendermint",
  "tendermint-rpc",
  "tokio",
@@ -9107,9 +9123,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-build"
-version = "4.1.6"
+version = "4.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44021cb464833bc15882933d79da1ea45013b12d97f1c0d874ee46cc00de5aaf"
+checksum = "05372b4e3eecca255ba8e385f8dc294861a3b4ea0b0a9946873e39941011db4c"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -9317,6 +9333,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39daf1e0f52792dfc4d65fb904a3ece0125895e6e43ebb4284ffa5a08087bde6"
 dependencies = [
  "bincode",
+ "elliptic-curve",
  "serde",
  "sp1-primitives",
 ]
@@ -9602,6 +9619,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp1-verifier"
+version = "4.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d94a7db4a54984acf4d64c6ba55c4698104f02ef213cc21882e233b4409e7155"
+dependencies = [
+ "blake3",
+ "cfg-if",
+ "hex",
+ "lazy_static",
+ "sha2 0.10.8",
+ "sp1-build",
+ "substrate-bn-succinct",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "sp1_bls12_381"
 version = "0.8.0-sp1-4.0.0-v2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9738,6 +9771,23 @@ dependencies = [
  "lazy_static",
  "rand 0.8.5",
  "rustc-hex",
+]
+
+[[package]]
+name = "substrate-bn-succinct"
+version = "0.6.0-v4.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8ac8ce0a40e721f790e2ef99beab32b99b3121c58edaaa140ffd8f1795a6af7"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "cfg-if",
+ "crunchy",
+ "lazy_static",
+ "num-bigint 0.4.6",
+ "rand 0.8.5",
+ "rustc-hex",
+ "sp1-lib",
 ]
 
 [[package]]

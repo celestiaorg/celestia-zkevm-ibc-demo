@@ -93,7 +93,7 @@ BEACON_START_CMD="./build/bin/beacond start --pruning=nothing "$TRACE" \
 --log_level $LOGLEVEL --api.enabled-unsafe-cors \
 --rollkit.aggregator --rollkit.da_address http://celestia-network-bridge:26658 --rpc.laddr tcp://127.0.0.1:36657 --grpc.address 127.0.0.1:9290 --p2p.laddr "0.0.0.0:36656" \
 --api.enable --api.swagger --minimum-gas-prices=0.0001abgt --rollkit.da_auth_token ${DA_AUTH_TOKEN} --rollkit.da_namespace 00000000000000000000000000000000000000b7b24d9321578eb83626 \
---home $HOMEDIR --beacon-kit.engine.jwt-secret-path ${JWT_SECRET_PATH} --rollkit.block_time 6s"
+--home $HOMEDIR --beacon-kit.engine.jwt-secret-path ${JWT_SECRET_PATH} --rollkit.block_time 30s"
 
 # Conditionally add the rpc-dial-url flag if RPC_DIAL_URL is not empty
 if [ -n "$RPC_DIAL_URL" ]; then

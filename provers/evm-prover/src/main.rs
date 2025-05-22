@@ -6,7 +6,9 @@ use blevm_prover::rsp::generate_client_input;
 use ibc_proto::ibc::core::client::v1::QueryClientStateRequest;
 use prost::Message;
 use rsp_primitives::genesis::Genesis;
+use sp1_sdk::SP1_CIRCUIT_VERSION;
 use sp1_sdk::{include_elf, HashableKey, ProverClient, SP1VerifyingKey};
+use sp1_verifier::Groth16Verifier;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -23,6 +25,7 @@ use prover::prover_server::{Prover, ProverServer};
 use prover::{
     ClientState, InfoRequest, InfoResponse, ProveStateMembershipRequest,
     ProveStateMembershipResponse, ProveStateTransitionRequest, ProveStateTransitionResponse,
+    VerifyProofRequest, VerifyProofResponse,
 };
 
 use celestia_types::nmt::Namespace;
@@ -52,10 +55,21 @@ pub struct ProverService {
 
 impl ProverService {
     async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        println!("SP1 Circuit Version: {}", SP1_CIRCUIT_VERSION);
+
         let evm_rpc_url = env::var("EVM_RPC_URL").expect("EVM_RPC_URL not provided");
+
         let evm_client = Provider::try_from(evm_rpc_url.clone())?;
+
         let simapp_rpc = env::var("SIMAPP_RPC_URL").expect("SIMAPP_RPC_URL not provided");
-        let simapp_client = ClientQueryClient::connect(simapp_rpc).await?;
+
+        let simapp_client = match ClientQueryClient::connect(simapp_rpc.clone()).await {
+            Ok(client) => client,
+            Err(e) => {
+                return Err(format!("Failed to connect to simapp RPC: {}", e).into());
+            }
+        };
+
         let indexer_url = env::var("INDEXER_URL").expect("INDEXER_URL not provided");
 
         let prover_config = ProverConfig {
@@ -77,7 +91,6 @@ impl ProverService {
         let celestia_client = CelestiaClient::new(celestia_config, namespace).await?;
 
         let sp1_client = ProverClient::from_env();
-
         let (_, aggregator_vkey) = sp1_client.setup(BLEVM_AGGREGATOR_ELF);
 
         let prover = BlockProver::new(
@@ -108,6 +121,7 @@ impl ProverService {
         })
     }
 
+    /// Get the latest height from EVM rollup.
     async fn get_latest_height(&self) -> Result<ethers::types::U64, Status> {
         self.evm_client
             .get_block(BlockNumber::Latest)
@@ -118,6 +132,7 @@ impl ProverService {
             .ok_or_else(|| Status::internal("Block has no number"))
     }
 
+    /// Get the trusted height from groth16 client.
     async fn get_trusted_height(&self, client_id: &str) -> Result<u64, Status> {
         let request = tonic::Request::new(QueryClientStateRequest {
             client_id: client_id.to_string(),
@@ -142,6 +157,7 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
+        println!("aggregator_vkey: {:?}", self.aggregator_vkey.vk);
         let response = InfoResponse {
             state_membership_verifier_key: "".to_string(),
             state_transition_verifier_key: self.aggregator_vkey.bytes32(),
@@ -150,6 +166,10 @@ impl Prover for ProverService {
         Ok(Response::new(response))
     }
 
+    /// Proves a state transition for a given height.
+    /// It gets the latest height from EVM rollup and the trusted height from groth16 client.
+    /// If the latest height is greater than the trusted height, it generates a proof for the state transition.
+    /// Otherwise, it returns an error.
     async fn prove_state_transition(
         &self,
         request: Request<ProveStateTransitionRequest>,
@@ -240,12 +260,48 @@ impl Prover for ProverService {
         let aggregation_output: blevm_prover::prover::AggregationOutput =
             self.prover.prove_block_range(inputs).await.unwrap();
 
+        println!(
+            "public values: {:?}",
+            aggregation_output.proof.public_values
+        );
+        println!(
+            "Public values to vec: {:?}",
+            aggregation_output.proof.public_values.as_slice()
+        );
+
         let response = ProveStateTransitionResponse {
-            proof: bincode::serialize(&aggregation_output.proof.proof).unwrap(),
+            proof: aggregation_output.proof.bytes(),
             public_values: aggregation_output.proof.public_values.to_vec(),
         };
 
         Ok(Response::new(response))
+    }
+
+    async fn verify_proof(
+        &self,
+        request: Request<VerifyProofRequest>,
+    ) -> Result<Response<VerifyProofResponse>, Status> {
+        let inner_request = request.into_inner();
+
+        // Convert Vec<u8> to &[u8] using as_slice()
+        let success = Groth16Verifier::verify(
+            &inner_request.proof,
+            &inner_request.sp1_public_inputs,
+            inner_request.sp1_vkey_hash.as_str(),
+            &inner_request.groth16_vk,
+        );
+        let mut response = VerifyProofResponse {
+            success: success.is_ok(),
+            error_message: "".to_string(),
+        };
+        if !success.is_ok() {
+            response.error_message =
+                format!("Proof verification failed: {}", success.err().unwrap());
+            return Ok(Response::new(response));
+        } else {
+            response.error_message = "".to_string();
+            Ok(Response::new(response))
+        }
     }
 
     async fn prove_state_membership(
@@ -267,14 +323,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         println!("SP1_Prover mode: undefined");
     };
+
+    // Add error handling for address parsing
     let addr = "[::]:50052".parse()?;
-    let prover = ProverService::new().await?;
+
+    // Add error handling for ProverService initialization
+    let prover = match ProverService::new().await {
+        Ok(prover) => prover,
+        Err(e) => {
+            eprintln!("Failed to initialize ProverService: {}", e);
+            return Err(e);
+        }
+    };
 
     println!("Prover Server listening on {}", addr);
 
     // Get the path to the proto descriptor file from the environment variable
-    let proto_descriptor_path: String = env::var("EVM_PROTO_DESCRIPTOR_PATH")
-        .expect("EVM_PROTO_DESCRIPTOR_PATH environment variable not set");
+    let proto_descriptor_path: String = match env::var("EVM_PROTO_DESCRIPTOR_PATH") {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!(
+                "EVM_PROTO_DESCRIPTOR_PATH environment variable not set: {}",
+                e
+            );
+            return Err(e.into());
+        }
+    };
 
     println!(
         "Loading proto descriptor set from {}",
@@ -282,11 +356,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let file_path = PathBuf::from(proto_descriptor_path);
 
-    // Read the file
-    let file_descriptor_set = fs::read(&file_path)?;
+    // Read the file with error handling
+    let file_descriptor_set = match fs::read(&file_path) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Failed to read proto descriptor file: {}", e);
+            return Err(e.into());
+        }
+    };
     println!("Loaded proto descriptor set");
 
-    Server::builder()
+    // Add error handling for server startup
+    match Server::builder()
         .add_service(ProverServer::new(prover))
         .add_service(
             tonic_reflection::server::Builder::configure()
@@ -295,7 +376,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap(),
         )
         .serve(addr)
-        .await?;
-
-    Ok(())
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            eprintln!("Server failed to start: {}", e);
+            Err(e.into())
+        }
+    }
 }

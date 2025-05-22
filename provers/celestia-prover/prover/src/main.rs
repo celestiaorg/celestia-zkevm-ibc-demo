@@ -24,7 +24,8 @@ use ibc_eureka_solidity_types::sp1_ics07::IICS07TendermintMsgs::ConsensusState a
 use prover::prover_server::{Prover, ProverServer};
 use prover::{
     InfoRequest, InfoResponse, ProveStateMembershipRequest, ProveStateMembershipResponse,
-    ProveStateTransitionRequest, ProveStateTransitionResponse,
+    ProveStateTransitionRequest, ProveStateTransitionResponse, VerifyProofRequest,
+    VerifyProofResponse,
 };
 use reqwest::Url;
 use sp1_ics07_tendermint_utils::{light_block::LightBlockExt, rpc::TendermintRpcExt};
@@ -280,6 +281,15 @@ impl Prover for ProverService {
         };
 
         Ok(Response::new(response))
+    }
+
+    async fn verify_proof(
+        &self,
+        _request: Request<VerifyProofRequest>,
+    ) -> Result<Response<VerifyProofResponse>, Status> {
+        Err(Status::unimplemented(
+            "Membership proofs not yet implemented",
+        ))
     }
 }
 
