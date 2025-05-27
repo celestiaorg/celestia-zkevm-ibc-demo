@@ -98,6 +98,8 @@ services:
   simapp-validator:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp:latest
     container_name: simapp-validator
+    environment:
+      - EVM_PROVER_URL=evm-prover:50052
     volumes:
       - ./.tmp/simapp-validator:/home/celestia
       - ./testing/files/simapp-validator:/testapp_files
@@ -145,7 +147,7 @@ services:
       - CELESTIA_NODE_AUTH_TOKEN=${CELESTIA_NODE_AUTH_TOKEN:-}
       - CELESTIA_NAMESPACE=${CELESTIA_NAMESPACE:-0f0f0f0f0f0f0f0f0f0f}
       - GENESIS_PATH=/testapp_files/eth-genesis.json
-      - SP1_PROVER=mock
+      - SP1_PROVER=network
     ports:
       - "50052:50052"
     depends_on:

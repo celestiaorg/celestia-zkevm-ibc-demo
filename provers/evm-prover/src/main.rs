@@ -157,7 +157,6 @@ impl ProverService {
 #[tonic::async_trait]
 impl Prover for ProverService {
     async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
-        println!("aggregator_vkey: {:?}", self.aggregator_vkey.vk);
         let response = InfoResponse {
             state_membership_verifier_key: "".to_string(),
             state_transition_verifier_key: self.aggregator_vkey.bytes32(),
@@ -299,6 +298,7 @@ impl Prover for ProverService {
                 format!("Proof verification failed: {}", success.err().unwrap());
             return Ok(Response::new(response));
         } else {
+            println!("Proof verification successful");
             response.error_message = "".to_string();
             Ok(Response::new(response))
         }
@@ -328,27 +328,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::]:50052".parse()?;
 
     // Add error handling for ProverService initialization
-    let prover = match ProverService::new().await {
-        Ok(prover) => prover,
-        Err(e) => {
-            eprintln!("Failed to initialize ProverService: {}", e);
-            return Err(e);
-        }
-    };
+    let prover = ProverService::new().await?;
 
     println!("Prover Server listening on {}", addr);
 
     // Get the path to the proto descriptor file from the environment variable
-    let proto_descriptor_path: String = match env::var("EVM_PROTO_DESCRIPTOR_PATH") {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!(
-                "EVM_PROTO_DESCRIPTOR_PATH environment variable not set: {}",
-                e
-            );
-            return Err(e.into());
-        }
-    };
+    let proto_descriptor_path: String = env::var("EVM_PROTO_DESCRIPTOR_PATH")
+        .expect("EVM_PROTO_DESCRIPTOR_PATH environment variable not set");
 
     println!(
         "Loading proto descriptor set from {}",
@@ -356,18 +342,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let file_path = PathBuf::from(proto_descriptor_path);
 
-    // Read the file with error handling
-    let file_descriptor_set = match fs::read(&file_path) {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Failed to read proto descriptor file: {}", e);
-            return Err(e.into());
-        }
-    };
+    // Read the file
+    let file_descriptor_set = fs::read(&file_path)?;
     println!("Loaded proto descriptor set");
 
-    // Add error handling for server startup
-    match Server::builder()
+    Server::builder()
         .add_service(ProverServer::new(prover))
         .add_service(
             tonic_reflection::server::Builder::configure()
@@ -376,12 +355,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap(),
         )
         .serve(addr)
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            eprintln!("Server failed to start: {}", e);
-            Err(e.into())
-        }
-    }
+        .await?;
+    Ok(())
 }

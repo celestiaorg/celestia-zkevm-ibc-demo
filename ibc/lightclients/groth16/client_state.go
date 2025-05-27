@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 
 	sdkerrors "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
@@ -32,7 +33,6 @@ import (
 const (
 	Groth16ClientType = ModuleName
 	// evmProverRPC is the RPC endpoint for the EVM prover.
-	evmProverRPC = "evm-prover:50052"
 )
 
 // MptProof contains the Merkle Patricia Trie proofs for packet commitment verification.
@@ -58,6 +58,32 @@ var _ exported.ClientState = (*ClientState)(nil)
 
 // NewClientState creates a new ClientState instance.
 func NewClientState(latestHeight uint64, stateTransitionVerifierKey string, stateMembershipVerifierKey []byte, groth16Vk []byte, codeCommitment []byte, genesisStateRoot []byte) *ClientState {
+
+	evmProverRPC := os.Getenv("EVM_PROVER_URL")
+    if evmProverRPC == "" {
+		evmProverRPC = "evm-prover:50052"
+        fmt.Println("EVM_PROVER_URL not set!")
+    } else {
+        fmt.Println("EVM_PROVER_URL:", evmProverRPC)
+    }
+
+	for _, env := range os.Environ() {
+        fmt.Println(env, "PRINTING ENV")
+    }
+
+	fmt.Println(evmProverRPC, "evm prover rpc")
+	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		fmt.Println(err, "error connecting to evm prover")
+	}
+	defer conn.Close()
+	proverClient := proverclient.NewProverClient(conn)
+	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
+	if err != nil {
+		fmt.Println(err, "error getting evm prover info")
+	}
+	fmt.Println(info, "evm prover info")
+
 	return &ClientState{
 		LatestHeight:               latestHeight,
 		CodeCommitment:             codeCommitment,
@@ -300,12 +326,21 @@ func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.K
 
 // UpdateState updates the consensus state and client state.
 func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
+	fmt.Println(clientMsg, "updating client msg")
 	header, ok := clientMsg.(*Header)
 	if !ok {
 		return []exported.Height{}, fmt.Errorf("the only supported clientMsg type is Header")
 	}
 
+	// try to get from the environment variable
+	evmProverRPC := os.Getenv("EVM_PROVER_URL")
+	if evmProverRPC == "" {
+		evmProverRPC = "evm-prover:50052"
+	}
+
 	fmt.Println(cs.StateTransitionVerifierKey, "state transition verifier key")
+	fmt.Println(evmProverRPC, "evm prover rpc")
+
 	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to prover: %w", err)
