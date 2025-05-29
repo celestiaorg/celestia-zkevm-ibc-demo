@@ -63,12 +63,12 @@ func createClientAndConsensusState() (*cdctypes.Any, *cdctypes.Any, error) {
 		return nil, nil, err
 	}
 
-	info, err := getEvmProverInfo()
+	evmProverInfo, err := getEvmProverInfo()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get evm prover info %w", err)
 	}
 
-	stateTransitionVerifierKey := info.StateTransitionVerifierKey
+	stateTransitionVerifierKey := evmProverInfo.StateTransitionVerifierKey
 	fmt.Printf("Got state transition verifier key: %x\n", stateTransitionVerifierKey)
 
 	// TODO: Uncomment this code once the EVM prover info endpoint includes a state memberhsip verifier key.
@@ -89,7 +89,7 @@ func createClientAndConsensusState() (*cdctypes.Any, *cdctypes.Any, error) {
 
 	clientState := groth16.NewClientState(
 		latestBlock.Number().Uint64(),
-		info.StateTransitionVerifierKey,
+		evmProverInfo.StateTransitionVerifierKey,
 		stateMembershipVerifierKey,
 		groth16Vk,
 		codeCommitment,

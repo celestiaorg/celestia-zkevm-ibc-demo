@@ -44,7 +44,8 @@ type ClientState struct {
 	// StateMembershipVerifierKey is the key used to verify state membership
 	// (a.k.a inclusion) proofs.
 	StateMembershipVerifierKey []byte `protobuf:"bytes,5,opt,name=state_membership_verifier_key,json=stateMembershipVerifierKey,proto3" json:"state_membership_verifier_key,omitempty"`
-	Groth16Vk                  []byte `protobuf:"bytes,6,opt,name=groth16_vk,json=groth16Vk,proto3" json:"groth16_vk,omitempty"`
+	// Groth16Vk is the SP1 Groth16 circuit vkey.
+	Groth16Vk []byte `protobuf:"bytes,6,opt,name=groth16_vk,json=groth16Vk,proto3" json:"groth16_vk,omitempty"`
 }
 
 func (x *ClientState) Reset() {
@@ -196,7 +197,8 @@ type Header struct {
 	// StateTransitionProof is a serialized groth16 proof that the given state transition is valid.
 	// If a proof with 0 bytes is provided, it is assumed to be a mock proof.
 	StateTransitionProof []byte `protobuf:"bytes,1,opt,name=state_transition_proof,json=stateTransitionProof,proto3" json:"state_transition_proof,omitempty"`
-	PublicValues         []byte `protobuf:"bytes,2,opt,name=public_values,json=publicValues,proto3" json:"public_values,omitempty"`
+	// PublicValues are bincode serialized public output from the SP1 program that get used as public witness for the verifier.
+	PublicValues []byte `protobuf:"bytes,2,opt,name=public_values,json=publicValues,proto3" json:"public_values,omitempty"`
 	// TrustedHeight is the last verified height of the rollup. This is used to retrieve the previous
 	// state root with which the proof is verified against.
 	TrustedHeight int64 `protobuf:"varint,3,opt,name=trusted_height,json=trustedHeight,proto3" json:"trusted_height,omitempty"`

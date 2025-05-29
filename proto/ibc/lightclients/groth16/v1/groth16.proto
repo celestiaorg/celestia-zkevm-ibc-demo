@@ -26,7 +26,7 @@ message ClientState {
   // StateMembershipVerifierKey is the key used to verify state membership
   // (a.k.a inclusion) proofs.
   bytes state_membership_verifier_key = 5;
-
+  // Groth16Vk is the SP1 Groth16 circuit vkey.
   bytes groth16_vk = 6;
 }
 
@@ -51,6 +51,7 @@ message Header {
   // StateTransitionProof is a serialized groth16 proof that the given state transition is valid.
   // If a proof with 0 bytes is provided, it is assumed to be a mock proof.
   bytes state_transition_proof = 1;
+  // PublicValues are bincode serialized public output from the SP1 program that get used as public witness for the verifier.
   bytes public_values = 2;
   // TrustedHeight is the last verified height of the rollup. This is used to retrieve the previous
   // state root with which the proof is verified against.

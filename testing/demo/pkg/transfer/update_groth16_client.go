@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"time"
 
-	groth16Client "github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
+	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -73,13 +73,16 @@ func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
 	return nil
 }
 
-func DecodePublicValues(data []byte) (*BlevmAggOutput, error) {
-
-	// Create a new buffer with the data
+// DecodePublicValues decodes the public values from the Blevm proof aggregator.
+// The public values are encoded using bincode serialization. They're encoded in fixed order.
+// All of the fields are fixed size bytes32 and are encoded in little endian format.
+// Celestia header hashes is not a fixed size array therefore it is encoded
+// as a u64 length prefix(bytes8) followed by the hashes.
+func DecodePublicValues(data []byte) (*groth16.BlevmAggOutput, error) {
 	buf := bytes.NewBuffer(data)
-	output := &BlevmAggOutput{}
+	output := &groth16.BlevmAggOutput{}
 
-	// Read fixed-size fields
+	// Read fixed-size fields they should be 32 bytes each
 	if err := binary.Read(buf, binary.LittleEndian, &output.NewestHeaderHash); err != nil {
 		return nil, fmt.Errorf("read newest header hash: %w", err)
 	}
@@ -88,47 +91,25 @@ func DecodePublicValues(data []byte) (*BlevmAggOutput, error) {
 		return nil, fmt.Errorf("read oldest header hash: %w", err)
 	}
 
+	// Celestia header hashes are of variable length but bincode serialization
+	// pefixes them with a u64(8 bytes) length. We slice the 32 bytes times the length.
 	celestiaHeaderHashesLength := binary.LittleEndian.Uint64(data[64 : 64+8])
 
-	var reconstructedHeaderHashes = make([][]byte, celestiaHeaderHashesLength)
-	var currentIndex int
-	currentIndex = 64 + 8 // first two fixed length hashes and length bytes
+	var currentIndex = 64 + 8 // first two fixed length hashes and length bytes
 	for i := 0; uint64(i) < celestiaHeaderHashesLength; i++ {
-		reconstructedHeaderHashes[i] = []byte(data[currentIndex : currentIndex+32])
-		if len(reconstructedHeaderHashes[i]) != 32 {
-			fmt.Errorf("something wrong with celestia header hashes reconstruction")
-		}
-		currentIndex = currentIndex + 32
+		output.CelestiaHeaderHashes[i] = []byte(data[currentIndex : currentIndex+32])
+		currentIndex += 32
 	}
-	output.CelestiaHeaderHashes = reconstructedHeaderHashes
 
-	// Read remaining fields
+	// Read remaining fixed size fields
 	output.NewestStateRoot = [32]byte(data[currentIndex : currentIndex+32])
 	output.NewestHeight = binary.LittleEndian.Uint64(data[len(data)-8:])
-
-	fmt.Println("OUTPUT", output)
 
 	fmt.Printf("Successfully decoded public values with %d celestia header hashes\n", len(output.CelestiaHeaderHashes))
 	return output, nil
 }
 
-type BlevmAggOutput struct {
-	// newest_header_hash is the last block's hash on the EVM roll-up
-	NewestHeaderHash [32]byte
-	// oldest_header_hash is the earliest block's hash on the EVM roll-up
-	OldestHeaderHash [32]byte
-	// celestia_header_hashes is the range of Celestia blocks that include all
-	// of the blob data the EVM roll-up has posted from oldest_header_hash to
-	// newest_header_hash
-	CelestiaHeaderHashes [][]byte
-	// newest_state_root is the computed state root of the EVM roll-up after
-	// processing blocks from oldest_header_hash to newest_header_hash
-	NewestStateRoot [32]byte
-	// newest_height is the most recent block number of the EVM roll-up
-	NewestHeight uint64
-}
-
-func getHeader(evmTransferBlockNumber uint64) (*groth16Client.Header, error) {
+func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
 	resp, err := getProof()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get proof: %w", err)
@@ -149,7 +130,7 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16Client.Header, error) {
 		return nil, fmt.Errorf("failed to get evm timestamp at height: %w", err)
 	}
 
-	header := &groth16Client.Header{
+	header := &groth16.Header{
 		StateTransitionProof: resp.Proof,
 		PublicValues:         resp.GetPublicValues(),
 		TrustedHeight:        trustedHeight,
@@ -191,7 +172,7 @@ func getTrustedHeight() (int64, error) {
 	return int64(height), nil
 }
 
-func getClientState() (*groth16Client.ClientState, error) {
+func getClientState() (*groth16.ClientState, error) {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client context: %w", err)
@@ -213,7 +194,7 @@ func getClientState() (*groth16Client.ClientState, error) {
 	}
 
 	// Type assert to the Groth16 client state
-	groth16ClientState, ok := clientState.(*groth16Client.ClientState)
+	groth16ClientState, ok := clientState.(*groth16.ClientState)
 	if !ok {
 		return nil, fmt.Errorf("failed to type assert to Groth16 client state, got type %T", clientState)
 	}
@@ -235,26 +216,7 @@ func getEVMTimestampAtHeight(evmTransferBlockNumber uint64) (time.Time, error) {
 	return time.Unix(int64(header.Time), 0), nil
 }
 
-func getFirstAndLastHeaderHashes(evmTransferBlockNumber uint64) ([]byte, []byte, error) {
-	client, err := ethclient.Dial(ethereumRPC)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to Reth: %w", err)
-	}
-
-	firstBlock, err := client.BlockByNumber(context.Background(), big.NewInt(0))
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get first block: %w", err)
-	}
-
-	lastBlock, err := client.BlockByNumber(context.Background(), big.NewInt(int64(evmTransferBlockNumber)))
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get last block: %w", err)
-	}
-
-	return firstBlock.Hash().Bytes(), lastBlock.Hash().Bytes(), nil
-}
-
-func getConsensusState() (*groth16Client.ConsensusState, error) {
+func getConsensusState() (*groth16.ConsensusState, error) {
 	clientCtx, err := utils.SetupClientContext()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client context: %w", err)
@@ -274,27 +236,10 @@ func getConsensusState() (*groth16Client.ConsensusState, error) {
 		return nil, fmt.Errorf("failed to unpack consensus state: %w", err)
 	}
 
-	groth16ConsensusState, ok := consensusState.(*groth16Client.ConsensusState)
+	groth16ConsensusState, ok := consensusState.(*groth16.ConsensusState)
 	if !ok {
 		return nil, fmt.Errorf("failed to type assert to Groth16 consensus state, got type %T", consensusState)
 	}
 
 	return groth16ConsensusState, nil
-}
-
-func getEvmProverInfo() (*proverclient.InfoResponse, error) {
-	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to prover: %w", err)
-	}
-	defer conn.Close()
-	client := proverclient.NewProverClient(conn)
-
-	fmt.Printf("Requesting evm-prover info...\n")
-	resp, err := client.Info(context.Background(), &proverclient.InfoRequest{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get prover info: %w", err)
-	}
-
-	return resp, nil
 }
