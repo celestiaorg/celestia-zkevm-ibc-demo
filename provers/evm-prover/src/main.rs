@@ -259,15 +259,6 @@ impl Prover for ProverService {
         let aggregation_output: blevm_prover::prover::AggregationOutput =
             self.prover.prove_block_range(inputs).await.unwrap();
 
-        println!(
-            "public values: {:?}",
-            aggregation_output.proof.public_values
-        );
-        println!(
-            "Public values to vec: {:?}",
-            aggregation_output.proof.public_values.as_slice()
-        );
-
         let response = ProveStateTransitionResponse {
             proof: aggregation_output.proof.bytes(),
             public_values: aggregation_output.proof.public_values.to_vec(),
@@ -276,32 +267,36 @@ impl Prover for ProverService {
         Ok(Response::new(response))
     }
 
+    /// Verifies an SP1 Groth16 proof.
     async fn verify_proof(
         &self,
         request: Request<VerifyProofRequest>,
     ) -> Result<Response<VerifyProofResponse>, Status> {
         let inner_request = request.into_inner();
 
-        // Convert Vec<u8> to &[u8] using as_slice()
         let success = Groth16Verifier::verify(
             &inner_request.proof,
             &inner_request.sp1_public_inputs,
             inner_request.sp1_vkey_hash.as_str(),
             &inner_request.groth16_vk,
         );
-        let mut response = VerifyProofResponse {
+
+        let response = VerifyProofResponse {
             success: success.is_ok(),
-            error_message: "".to_string(),
+            error_message: success.err().map_or("".to_string(), |e| {
+                format!("Proof verification failed: {}", e)
+            }),
         };
-        if !success.is_ok() {
-            response.error_message =
-                format!("Proof verification failed: {}", success.err().unwrap());
-            return Ok(Response::new(response));
-        } else {
-            println!("Proof verification successful");
-            response.error_message = "".to_string();
-            Ok(Response::new(response))
-        }
+
+        println!(
+            "Proof verification {}",
+            if response.success {
+                "successful"
+            } else {
+                "failed"
+            }
+        );
+        Ok(Response::new(response))
     }
 
     async fn prove_state_membership(
@@ -324,10 +319,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("SP1_Prover mode: undefined");
     };
 
-    // Add error handling for address parsing
     let addr = "[::]:50052".parse()?;
 
-    // Add error handling for ProverService initialization
     let prover = ProverService::new().await?;
 
     println!("Prover Server listening on {}", addr);

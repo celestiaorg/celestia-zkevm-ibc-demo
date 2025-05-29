@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"time"
 
-	// gnark "github.com/consensys/gnark/backend/groth16"
 	groth16Client "github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/lightclients/groth16"
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/testing/demo/pkg/utils"
@@ -135,9 +134,6 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16Client.Header, error) {
 		return nil, fmt.Errorf("failed to get proof: %w", err)
 	}
 
-	fmt.Println(resp.Proof, "PROOF")
-	fmt.Println(resp.PublicValues, "Public values")
-
 	trustedHeight, err := getTrustedHeight()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get trusted height: %w", err)
@@ -157,9 +153,6 @@ func getHeader(evmTransferBlockNumber uint64) (*groth16Client.Header, error) {
 		StateTransitionProof: resp.Proof,
 		PublicValues:         resp.GetPublicValues(),
 		TrustedHeight:        trustedHeight,
-		NewestHeaderHash:     blevmPublicOutput.NewestStateRoot[:],
-		CelestiaHeaderHashes: blevmPublicOutput.CelestiaHeaderHashes,
-		OldestHeaderHash:     blevmPublicOutput.OldestHeaderHash[:],
 		NewestStateRoot:      blevmPublicOutput.NewestStateRoot[:],
 		NewestHeight:         blevmPublicOutput.NewestHeight,
 		Timestamp:            timestamppb.New(timestamp),

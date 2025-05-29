@@ -11,11 +11,6 @@ import (
 	sdkerrors "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/celestiaorg/celestia-zkevm-ibc-demo/ibc/mpt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-
-	// "github.com/consensys/gnark-crypto/ecc"
-	// "github.com/consensys/gnark/backend/groth16"
 	proverclient "github.com/celestiaorg/celestia-zkevm-ibc-demo/provers/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -28,11 +23,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
 	Groth16ClientType = ModuleName
-	// evmProverRPC is the RPC endpoint for the EVM prover.
 )
 
 // MptProof contains the Merkle Patricia Trie proofs for packet commitment verification.
@@ -58,32 +54,6 @@ var _ exported.ClientState = (*ClientState)(nil)
 
 // NewClientState creates a new ClientState instance.
 func NewClientState(latestHeight uint64, stateTransitionVerifierKey string, stateMembershipVerifierKey []byte, groth16Vk []byte, codeCommitment []byte, genesisStateRoot []byte) *ClientState {
-
-	evmProverRPC := os.Getenv("EVM_PROVER_URL")
-    if evmProverRPC == "" {
-		evmProverRPC = "evm-prover:50052"
-        fmt.Println("EVM_PROVER_URL not set!")
-    } else {
-        fmt.Println("EVM_PROVER_URL:", evmProverRPC)
-    }
-
-	for _, env := range os.Environ() {
-        fmt.Println(env, "PRINTING ENV")
-    }
-
-	fmt.Println(evmProverRPC, "evm prover rpc")
-	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		fmt.Println(err, "error connecting to evm prover")
-	}
-	defer conn.Close()
-	proverClient := proverclient.NewProverClient(conn)
-	info, err := proverClient.Info(context.Background(), &proverclient.InfoRequest{})
-	if err != nil {
-		fmt.Println(err, "error getting evm prover info")
-	}
-	fmt.Println(info, "evm prover info")
-
 	return &ClientState{
 		LatestHeight:               latestHeight,
 		CodeCommitment:             codeCommitment,
@@ -326,21 +296,17 @@ func (cs *ClientState) verifyHeader(_ sdktypes.Context, clientStore storetypes.K
 
 // UpdateState updates the consensus state and client state.
 func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, clientStore storetypes.KVStore, clientMsg exported.ClientMessage) ([]exported.Height, error) {
-	fmt.Println(clientMsg, "updating client msg")
 	header, ok := clientMsg.(*Header)
 	if !ok {
 		return []exported.Height{}, fmt.Errorf("the only supported clientMsg type is Header")
 	}
 
-	// try to get from the environment variable
-	evmProverRPC := os.Getenv("EVM_PROVER_URL")
-	if evmProverRPC == "" {
-		evmProverRPC = "evm-prover:50052"
+	height, ok := header.GetHeight().(clienttypes.Height)
+	if !ok {
+		return []exported.Height{}, fmt.Errorf("invalid height type %T", header.GetHeight())
 	}
 
-	fmt.Println(cs.StateTransitionVerifierKey, "state transition verifier key")
-	fmt.Println(evmProverRPC, "evm prover rpc")
-
+	evmProverRPC := os.Getenv("EVM_PROVER_URL")
 	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to prover: %w", err)
@@ -354,6 +320,8 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 		Sp1VkeyHash:     cs.StateTransitionVerifierKey,
 		Groth16Vk:       cs.Groth16Vk,
 	}
+
+	fmt.Printf("Verifying groth16 state transition proof from height: %d to height: %d\n", header.GetHeight(), header.NewestHeight)
 	verifyProofResponse, err := client.VerifyProof(ctx, verifyProofRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify proof: %w", err)
@@ -384,5 +352,5 @@ func (cs *ClientState) UpdateState(ctx sdktypes.Context, cdc codec.BinaryCodec, 
 	fmt.Printf("Setting new client state with height: %v\n", newClientState.LatestHeight)
 	setClientState(clientStore, cdc, newClientState)
 
-	return []exported.Height{}, nil
+	return []exported.Height{height}, nil
 }

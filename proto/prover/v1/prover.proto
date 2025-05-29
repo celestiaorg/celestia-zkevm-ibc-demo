@@ -36,7 +36,7 @@ message ProveStateTransitionResponse {
 message ProveStateMembershipRequest {
   // For EVM chains this is the Tendermint light client contract address.
   // For Tendermint chains this is the client ID.
-  string client_id = 1;
+  string   client_id = 1;
   repeated string key_paths = 2;
 }
 
@@ -46,10 +46,10 @@ message ProveStateMembershipResponse {
 }
 
 message VerifyProofRequest {
-  bytes proof = 1;
-  bytes sp1_public_inputs = 2;
-  string   sp1_vkey_hash = 3;
-  bytes    groth16_vk = 4;
+  bytes  proof = 1;
+  bytes  sp1_public_inputs = 2;
+  string sp1_vkey_hash = 3;
+  bytes  groth16_vk = 4;
 }
 
 message VerifyProofResponse {

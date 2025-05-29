@@ -57,18 +57,11 @@ message Header {
   int64 trusted_height = 3;
 
 
-  // NewestHeaderHash is the last block's hash on the EVM roll-upup.
-  bytes newest_header_hash = 4;
-	// OldestHeaderHash is the earliest block's hash on the EVM roll-up
-  bytes oldest_header_hash = 5;
-	// CelestiaHeaderHashes is the range of Celestia blocks that include all
-	// of the blob data the EVM roll-up has posted from oldest_header_hash to
-	repeated bytes celestia_header_hashes = 6;
   // NewestStateRoot is the computed state root of the EVM roll-up after
-	// processing blocks from oldest_header_hash to newest_header_hash
-  bytes newest_state_root = 7;
+	// processing blocks from oldest header hash to newest_header_hash
+  bytes newest_state_root = 4;
 	// NewestHeight is the most recent block number of the EVM roll-up
-  uint64 newest_height = 8;
+  uint64 newest_height = 5;
   // Timestamp is the timestamp of an EVM header at the new height.
-  google.protobuf.Timestamp timestamp = 9;
+  google.protobuf.Timestamp timestamp = 6;
 }
