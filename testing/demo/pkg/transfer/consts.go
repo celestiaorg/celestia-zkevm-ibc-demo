@@ -8,9 +8,9 @@ import (
 
 var (
 	// transferAmount is the amount of tokens to transfer.
-	transferAmount = math.NewInt(100)
+	transferAmount = math.NewInt(1e5)
 	// transferBackAmount is the amount of tokens to transfer back.
-	transferBackAmount = big.NewInt(1)
+	transferBackAmount = big.NewInt(1e5)
 )
 
 // Tokens

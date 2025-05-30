@@ -94,6 +94,7 @@ func DecodePublicValues(data []byte) (*groth16.BlevmAggOutput, error) {
 	// Celestia header hashes are of variable length but bincode serialization
 	// pefixes them with a u64(8 bytes) length. We slice the 32 bytes times the length.
 	celestiaHeaderHashesLength := binary.LittleEndian.Uint64(data[64 : 64+8])
+	output.CelestiaHeaderHashes = make([][]byte, celestiaHeaderHashesLength)
 
 	var currentIndex = 64 + 8 // first two fixed length hashes and length bytes
 	for i := 0; uint64(i) < celestiaHeaderHashesLength; i++ {
