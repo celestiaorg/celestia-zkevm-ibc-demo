@@ -107,6 +107,7 @@ services:
     ports:
       - "9190:9090"
       - "5123:26657"
+      - "1318:1317"
     networks:
       - rollkit-network
 
