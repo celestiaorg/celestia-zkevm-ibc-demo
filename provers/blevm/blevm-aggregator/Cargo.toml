@@ -4,18 +4,21 @@ name = "blevm-aggregator"
 edition = { workspace = true }
 
 [dependencies]
-blevm-common = { path = "../common" }
+blevm-common = { workspace = true }
 hex-literal = "0.4.1"
 alloy-sol-types = { workspace = true }
 sp1-zkvm = { workspace = true, features = ["verify"] }
-rsp-client-executor = {workspace=true}
-celestia-types = {workspace=true}
+rsp-client-executor = { workspace = true }
+celestia-types = { workspace = true }
 nmt-rs = "*"
-reth-primitives = {workspace=true}
-tendermint = {workspace=true}
-tendermint-proto = {workspace=true}
-bincode = {workspace=true}
+reth-primitives = { workspace = true }
+tendermint = { workspace = true }
+tendermint-proto = { workspace = true }
+bincode = { workspace = true }
 hex = "0.4.3"
 sha2 = "0.10.8"
-serde = { version = "1.0", default-features = false, features = ["derive", "std"] }
+serde = { version = "1.0", default-features = false, features = [
+  "derive",
+  "std",
+] }
 serde_cbor = "0.11.2"

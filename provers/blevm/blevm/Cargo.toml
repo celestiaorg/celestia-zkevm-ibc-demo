@@ -4,17 +4,17 @@ name = "blevm"
 edition = { workspace = true }
 
 [dependencies]
-blevm-common = {path = "../common"}
+blevm-common = { workspace = true }
 
 alloy-sol-types = { workspace = true }
 sp1-zkvm = { workspace = true }
-rsp-client-executor = {workspace=true}
-celestia-types = {workspace=true}
+rsp-client-executor = { workspace = true }
+celestia-types = { workspace = true }
 nmt-rs = "*"
-reth-primitives = {workspace=true}
-tendermint = {workspace=true}
-tendermint-proto = {workspace=true}
-bincode = {workspace=true}
-eq-common = {workspace=true}
-sha3 = {workspace=true}
+reth-primitives = { workspace = true }
+tendermint = { workspace = true }
+tendermint-proto = { workspace = true }
+bincode = { workspace = true }
+eq-common = { workspace = true }
+sha3 = { workspace = true }
 hex = "0.4.3"

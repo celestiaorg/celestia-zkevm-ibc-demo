@@ -27,7 +27,7 @@ hex = "0.4.3"
 
 sp1-ics07-tendermint-prover.workspace = true
 sp1-ics07-tendermint-utils.workspace = true
-sp1-prover = "4.1.2"
+sp1-prover.workspace = true
 sp1-sdk = { workspace = true, features = ["network"] }
 
 [build-dependencies]
