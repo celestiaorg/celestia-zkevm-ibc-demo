@@ -59,7 +59,7 @@ message Header {
 
 
   // NewestStateRoot is the computed state root of the EVM roll-up after
-	// processing blocks from oldest header hash to newest_header_hash
+  // processing blocks from oldest header hash to newest_header_hash
   bytes newest_state_root = 4;
 	// NewestHeight is the most recent block number of the EVM roll-up
   uint64 newest_height = 5;
