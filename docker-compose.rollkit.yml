@@ -138,7 +138,7 @@ services:
     environment:
       # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
       # for Celestia (with IBC Eurekea enabled).
-      - NETWORK_PRIVATE_KEY=
+      - NETWORK_PRIVATE_KEY=${NETWORK_PRIVATE_KEY:-}
       - SIMAPP_RPC_URL=grpc://simapp-validator:9090
       - INDEXER_URL=http://indexer:8080
       - RPC_URL=http://reth:8545
