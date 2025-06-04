@@ -15,7 +15,7 @@ message ClientState {
   // verifying Groth16 state transition proofs. These proofs verify a rollup's
   // state root after the state transition has been applied. Only the BN254
   // curve is supported.
-  bytes state_transition_verifier_key = 2;
+  string state_transition_verifier_key = 2;
 
   // CodeCommitment is a commitment over the roll-up's source code.
   bytes code_commitment = 3;
@@ -26,6 +26,8 @@ message ClientState {
   // StateMembershipVerifierKey is the key used to verify state membership
   // (a.k.a inclusion) proofs.
   bytes state_membership_verifier_key = 5;
+  // Groth16Vk is the SP1 Groth16 circuit vkey.
+  bytes groth16_vk = 6;
 }
 
 // ConsensusState is the trusted view of the state of a state machine at a
@@ -49,26 +51,18 @@ message Header {
   // StateTransitionProof is a serialized groth16 proof that the given state transition is valid.
   // If a proof with 0 bytes is provided, it is assumed to be a mock proof.
   bytes state_transition_proof = 1;
-
+  // PublicValues are bincode serialized public output from the SP1 program that get used as public witness for the verifier.
+  bytes public_values = 2;
   // TrustedHeight is the last verified height of the rollup. This is used to retrieve the previous
   // state root with which the proof is verified against.
-  int64 trusted_height = 2;
+  int64 trusted_height = 3;
 
-  // TrustedCelestiaHeaderHash is the last verified Celestia header hash.
-  bytes trusted_celestia_header_hash = 3;
 
-  // NewStateRoot is the new state root of the rollup after the state transition has been applied.
-  bytes new_state_root = 4;
-  // NewHeight is the new height of the rollup after the state transition has been applied.
-  int64 new_height = 5;
-  // NewCelestiaHeaderHash is the new Celestia header hash after the state transition has been applied.
-  bytes new_celestia_header_hash = 6;
-
-  // TODO: This is provided by the user at the moment but we can't trust them
-  // with this data. We need to get all the data roots from the
-  // the store.
-  repeated bytes data_roots = 7;
-
+  // NewestStateRoot is the computed state root of the EVM roll-up after
+  // processing blocks from oldest header hash to newest_header_hash
+  bytes newest_state_root = 4;
+  // NewestHeight is the most recent block number of the EVM roll-up
+  uint64 newest_height = 5;
   // Timestamp is the timestamp of an EVM header at the new height.
-  google.protobuf.Timestamp timestamp = 8;
+  google.protobuf.Timestamp timestamp = 6;
 }

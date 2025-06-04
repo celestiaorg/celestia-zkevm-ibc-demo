@@ -98,6 +98,8 @@ services:
   simapp-validator:
     image: ghcr.io/celestiaorg/celestia-zkevm-ibc-demo/simapp:latest
     container_name: simapp-validator
+    environment:
+      - EVM_PROVER_URL=evm-prover:50052
     volumes:
       - ./.tmp/simapp-validator:/home/celestia
       - ./testing/files/simapp-validator:/testapp_files
@@ -105,6 +107,7 @@ services:
     ports:
       - "9190:9090"
       - "5123:26657"
+      - "1318:1317"
     networks:
       - rollkit-network
 
@@ -133,8 +136,7 @@ services:
       - ./testing/files:/testapp_files
       - ./.tmp:/.tmp
     environment:
-      # TENDERMINT_RPC_URL should be the SimApp which is acting as a substitute
-      # for Celestia (with IBC Eurekea enabled).
+      - NETWORK_PRIVATE_KEY=${NETWORK_PRIVATE_KEY:-}
       - SIMAPP_RPC_URL=grpc://simapp-validator:9090
       - INDEXER_URL=http://indexer:8080
       - RPC_URL=http://reth:8545
@@ -144,7 +146,7 @@ services:
       - CELESTIA_NODE_AUTH_TOKEN=${CELESTIA_NODE_AUTH_TOKEN:-}
       - CELESTIA_NAMESPACE=${CELESTIA_NAMESPACE:-0f0f0f0f0f0f0f0f0f0f}
       - GENESIS_PATH=/testapp_files/eth-genesis.json
-      - SP1_PROVER=mock
+      - SP1_PROVER=${SP1_PROVER:-}
     ports:
       - "50052:50052"
     depends_on:

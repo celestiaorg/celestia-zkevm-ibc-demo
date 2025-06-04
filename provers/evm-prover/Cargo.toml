@@ -16,6 +16,7 @@ alloy = { workspace = true, features = ["providers"] }
 alloy-provider = { workspace = true }
 ibc-eureka-solidity-types.workspace = true
 sp1-sdk = { workspace = true, features = ["network"] }
+sp1-verifier = { version = "4.2.1"}
 sp1-ics07-tendermint-prover.workspace = true
 sp1-ics07-tendermint-utils.workspace = true
 ibc-core-commitment-types = { workspace = true }

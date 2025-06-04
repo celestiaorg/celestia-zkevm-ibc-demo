@@ -412,8 +412,8 @@ impl BlockProver {
             Ok(AggregationOutput { proof })
         } else {
             let (pk, _) = self.sp1_client.setup(self.aggregator_config.elf_bytes);
-            let proof = self.sp1_client.prove(&pk, &stdin).groth16().run()?;
-
+            let proof: SP1ProofWithPublicValues =
+                self.sp1_client.prove(&pk, &stdin).groth16().run()?;
             Ok(AggregationOutput { proof })
         }
     }

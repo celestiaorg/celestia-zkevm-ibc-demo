@@ -67,11 +67,19 @@ NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Cel
     ```
 
 1. Copy the proto_description.bin file one directory up in celestia prover
+
     ```shell
     cp ./provers/celestia-prover/prover/proto_descriptor.bin ./provers/celestia-prover/
     ```
 
+1. Copy the groth16_vk.bin file to the ibc/lightclients/groth16 directory
+
+    ```shell
+    cp ~/.sp1/circuits/groth16/v4.0.0-rc.3/groth16_vk.bin ./ibc/lightclients/groth16
+    ```
+
 1. Run the Celestia prover
+
     ```shell
     cargo run --package celestia-prover
     ```

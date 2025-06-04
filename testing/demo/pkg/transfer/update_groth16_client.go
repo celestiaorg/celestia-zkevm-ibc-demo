@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"time"
@@ -52,7 +54,7 @@ func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
 		Signer:        sender,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to broadcast create client msg: %w", err)
+		return fmt.Errorf("failed to broadcast update client msg: %w", err)
 	}
 	if resp.Code != 0 {
 		return fmt.Errorf("failed to update Groth16 light client on simapp: %w", err)
@@ -71,37 +73,78 @@ func updateGroth16LightClient(evmTransferBlockNumber uint64) error {
 	return nil
 }
 
+// DecodePublicValues decodes the public values from the Blevm proof aggregator.
+// The public values are encoded using bincode serialization. They're encoded in fixed order.
+// All of the fields are fixed size bytes32 and are encoded in little endian format.
+// Celestia header hashes is not a fixed size array therefore it is encoded
+// as a u64 length prefix(bytes8) followed by the hashes.
+func DecodePublicValues(data []byte) (*groth16.BlevmAggOutput, error) {
+	buf := bytes.NewBuffer(data)
+	output := &groth16.BlevmAggOutput{}
+
+	// Read fixed-size fields they should be 32 bytes each
+	if err := binary.Read(buf, binary.LittleEndian, &output.NewestHeaderHash); err != nil {
+		return nil, fmt.Errorf("read newest header hash: %w", err)
+	}
+
+	if err := binary.Read(buf, binary.LittleEndian, &output.OldestHeaderHash); err != nil {
+		return nil, fmt.Errorf("read oldest header hash: %w", err)
+	}
+
+	// Celestia header hashes are of variable length but bincode serialization
+	// pefixes them with a u64(8 bytes) length. We slice the 32 bytes times the length.
+	celestiaHeaderHashesLength := binary.LittleEndian.Uint64(data[64 : 64+8])
+	output.CelestiaHeaderHashes = make([][]byte, celestiaHeaderHashesLength)
+
+	var currentIndex = 64 + 8 // first two fixed length hashes and length bytes
+	for i := 0; uint64(i) < celestiaHeaderHashesLength; i++ {
+		output.CelestiaHeaderHashes[i] = []byte(data[currentIndex : currentIndex+32])
+		currentIndex += 32
+	}
+
+	// Read remaining fixed size fields
+	output.NewestStateRoot = [32]byte(data[currentIndex : currentIndex+32])
+	output.NewestHeight = binary.LittleEndian.Uint64(data[len(data)-8:])
+
+	fmt.Printf("Successfully decoded public values with %d celestia header hashes\n", len(output.CelestiaHeaderHashes))
+	return output, nil
+}
+
 func getHeader(evmTransferBlockNumber uint64) (*groth16.Header, error) {
-	stateTransitionProof, err := getProof()
+	resp, err := getProof()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get proof: %w", err)
 	}
+
 	trustedHeight, err := getTrustedHeight()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get trusted height: %w", err)
 	}
 
-	newStateRoot, newHeight, timestamp, err := getEVMStateRootHeightTimestamp(evmTransferBlockNumber)
+	blevmPublicOutput, err := DecodePublicValues(resp.GetPublicValues())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get EVM state root, height, and timestamp: %w", err)
+		return nil, fmt.Errorf("failed to decode public values: %w", err)
+	}
+
+	timestamp, err := getEVMTimestampAtHeight(evmTransferBlockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get evm timestamp at height: %w", err)
 	}
 
 	header := &groth16.Header{
-		StateTransitionProof:      stateTransitionProof,
-		TrustedHeight:             trustedHeight,
-		TrustedCelestiaHeaderHash: []byte{},
-		NewStateRoot:              newStateRoot,
-		NewHeight:                 newHeight,
-		NewCelestiaHeaderHash:     []byte{},
-		DataRoots:                 [][]byte{},
-		Timestamp:                 timestamppb.New(timestamp),
+		StateTransitionProof: resp.Proof,
+		PublicValues:         resp.GetPublicValues(),
+		TrustedHeight:        trustedHeight,
+		NewestStateRoot:      blevmPublicOutput.NewestStateRoot[:],
+		NewestHeight:         blevmPublicOutput.NewestHeight,
+		Timestamp:            timestamppb.New(timestamp),
 	}
 
 	return header, nil
 }
 
-// getProof queries EVM prover for a state transition proof.
-func getProof() ([]byte, error) {
+// getProof queries EVM prover for a state transition proof from the last trusted height to the latest reth height.
+func getProof() (*proverclient.ProveStateTransitionResponse, error) {
 	conn, err := grpc.NewClient(evmProverRPC, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to prover: %w", err)
@@ -115,7 +158,7 @@ func getProof() ([]byte, error) {
 		return nil, fmt.Errorf("failed to get state transition proof: %w", err)
 	}
 	fmt.Printf("Received evm-prover state transition proof.\n")
-	return resp.Proof, nil
+	return resp, nil
 }
 
 // getTrustedHeight returns the last trusted height that the Groth16 light client is aware of.
@@ -160,18 +203,18 @@ func getClientState() (*groth16.ClientState, error) {
 	return groth16ClientState, nil
 }
 
-func getEVMStateRootHeightTimestamp(evmTransferBlockNumber uint64) ([]byte, int64, time.Time, error) {
+func getEVMTimestampAtHeight(evmTransferBlockNumber uint64) (time.Time, error) {
 	client, err := ethclient.Dial(ethereumRPC)
 	if err != nil {
-		return nil, 0, time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
+		return time.Time{}, fmt.Errorf("failed to connect to Reth: %w", err)
 	}
 
 	header, err := client.HeaderByNumber(context.Background(), big.NewInt(int64(evmTransferBlockNumber)))
 	if err != nil {
-		return nil, 0, time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
+		return time.Time{}, fmt.Errorf("failed to get latest header: %w", err)
 	}
 
-	return header.Root.Bytes(), header.Number.Int64(), time.Unix(int64(header.Time), 0), nil
+	return time.Unix(int64(header.Time), 0), nil
 }
 
 func getConsensusState() (*groth16.ConsensusState, error) {

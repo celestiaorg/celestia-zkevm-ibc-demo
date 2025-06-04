@@ -22,6 +22,7 @@ const (
 	Prover_Info_FullMethodName                 = "/celestia.prover.v1.Prover/Info"
 	Prover_ProveStateTransition_FullMethodName = "/celestia.prover.v1.Prover/ProveStateTransition"
 	Prover_ProveStateMembership_FullMethodName = "/celestia.prover.v1.Prover/ProveStateMembership"
+	Prover_VerifyProof_FullMethodName          = "/celestia.prover.v1.Prover/VerifyProof"
 )
 
 // ProverClient is the client API for Prover service.
@@ -31,6 +32,7 @@ type ProverClient interface {
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	ProveStateTransition(ctx context.Context, in *ProveStateTransitionRequest, opts ...grpc.CallOption) (*ProveStateTransitionResponse, error)
 	ProveStateMembership(ctx context.Context, in *ProveStateMembershipRequest, opts ...grpc.CallOption) (*ProveStateMembershipResponse, error)
+	VerifyProof(ctx context.Context, in *VerifyProofRequest, opts ...grpc.CallOption) (*VerifyProofResponse, error)
 }
 
 type proverClient struct {
@@ -71,6 +73,16 @@ func (c *proverClient) ProveStateMembership(ctx context.Context, in *ProveStateM
 	return out, nil
 }
 
+func (c *proverClient) VerifyProof(ctx context.Context, in *VerifyProofRequest, opts ...grpc.CallOption) (*VerifyProofResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyProofResponse)
+	err := c.cc.Invoke(ctx, Prover_VerifyProof_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProverServer is the server API for Prover service.
 // All implementations must embed UnimplementedProverServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type ProverServer interface {
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	ProveStateTransition(context.Context, *ProveStateTransitionRequest) (*ProveStateTransitionResponse, error)
 	ProveStateMembership(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error)
+	VerifyProof(context.Context, *VerifyProofRequest) (*VerifyProofResponse, error)
 	mustEmbedUnimplementedProverServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedProverServer) ProveStateTransition(context.Context, *ProveSta
 }
 func (UnimplementedProverServer) ProveStateMembership(context.Context, *ProveStateMembershipRequest) (*ProveStateMembershipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProveStateMembership not implemented")
+}
+func (UnimplementedProverServer) VerifyProof(context.Context, *VerifyProofRequest) (*VerifyProofResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyProof not implemented")
 }
 func (UnimplementedProverServer) mustEmbedUnimplementedProverServer() {}
 func (UnimplementedProverServer) testEmbeddedByValue()                {}
@@ -172,6 +188,24 @@ func _Prover_ProveStateMembership_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Prover_VerifyProof_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyProofRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProverServer).VerifyProof(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Prover_VerifyProof_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProverServer).VerifyProof(ctx, req.(*VerifyProofRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Prover_ServiceDesc is the grpc.ServiceDesc for Prover service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var Prover_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProveStateMembership",
 			Handler:    _Prover_ProveStateMembership_Handler,
+		},
+		{
+			MethodName: "VerifyProof",
+			Handler:    _Prover_VerifyProof_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

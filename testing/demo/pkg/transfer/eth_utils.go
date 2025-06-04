@@ -15,7 +15,6 @@ import (
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics20transfer"
 	"github.com/cosmos/solidity-ibc-eureka/abigen/ics26router"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -27,7 +26,7 @@ import (
 // It verifies the existence and value of a storage key in the EVM state.
 type StorageProof struct {
 	// The key of the storage
-	Key common.Hash `json:"key"`
+	Key ethcommon.Hash `json:"key"`
 	// The value of the storage
 	Value hexutil.Big `json:"value"`
 	// The proof of the storage
@@ -37,25 +36,25 @@ type StorageProof struct {
 // EthGetProofResponse is the response from the eth_getProof RPC call.
 type EthGetProofResponse struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
-	Address      common.Address  `json:"address"`
+	Address      ethcommon.Address  `json:"address"`
 	Balance      *hexutil.Big    `json:"balance"`
-	CodeHash     common.Hash     `json:"codeHash"`
+	CodeHash     ethcommon.Hash     `json:"codeHash"`
 	Nonce        hexutil.Uint64  `json:"nonce"`
 
-	StorageHash  common.Hash    `json:"storageHash"`
+	StorageHash  ethcommon.Hash    `json:"storageHash"`
 	StorageProof []StorageProof `json:"storageProof"`
 }
 
 // MptProof is the proof of the commitment of the packet on the EVM chain.
 type MptProof struct {
 	AccountProof []hexutil.Bytes `json:"accountProof"`
-	Address      common.Address  `json:"address"`
+	Address      ethcommon.Address  `json:"address"`
 	Balance      *hexutil.Big    `json:"balance"`
-	CodeHash     common.Hash     `json:"codeHash"`
+	CodeHash     ethcommon.Hash     `json:"codeHash"`
 	Nonce        hexutil.Uint64  `json:"nonce"`
-	StorageHash  common.Hash     `json:"storageHash"`
+	StorageHash  ethcommon.Hash     `json:"storageHash"`
 	StorageProof []hexutil.Bytes `json:"storageProof"`
-	StorageKey   common.Hash     `json:"storageKey"`
+	StorageKey   ethcommon.Hash     `json:"storageKey"`
 	StorageValue hexutil.Big     `json:"storageValue"`
 }
 
@@ -94,7 +93,7 @@ func getTxReciept(ctx context.Context, chain ethereum.Ethereum, hash ethcommon.H
 	}
 
 	var receipt *ethtypes.Receipt
-	err = utils.WaitForCondition(time.Second*30, time.Second, func() (bool, error) {
+	err = utils.WaitForCondition(time.Second*600, time.Second, func() (bool, error) {
 		receipt, err = ethClient.TransactionReceipt(ctx, hash)
 		if err != nil {
 			return false, nil

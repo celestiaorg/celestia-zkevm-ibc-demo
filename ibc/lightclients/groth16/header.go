@@ -14,7 +14,7 @@ func (h *Header) ClientType() string {
 
 // GetHeight returns the EVM height of this header.
 func (h *Header) GetHeight() exported.Height {
-	return clienttypes.NewHeight(0, uint64(h.NewHeight))
+	return clienttypes.NewHeight(0, uint64(h.NewestHeight))
 }
 
 // ValidateBasic is a no-op.
