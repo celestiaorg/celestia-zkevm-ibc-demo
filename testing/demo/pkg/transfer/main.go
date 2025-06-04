@@ -31,7 +31,7 @@ func main() {
 			log.Fatal("Failed to transfer from EVM roll-up to SimApp: ", err)
 		}
 	} else if os.Args[1] == "query-balance" {
-		err := assertBalances()
+		err := queryBalances()
 		if err != nil {
 			log.Fatal("Failed to query balance: ", err)
 		}
@@ -42,11 +42,6 @@ func transferSimAppToEVM() error {
 	err := assertVerifierKeys()
 	if err != nil {
 		return fmt.Errorf("failed to assert verifier keys: %w", err)
-	}
-
-	err = updateBalances()
-	if err != nil {
-		return fmt.Errorf("failed to update balances: %w", err)
 	}
 
 	msg, err := createMsgSendPacket()
@@ -69,7 +64,7 @@ func transferSimAppToEVM() error {
 		return fmt.Errorf("failed to relay IBC transaction: %w", err)
 	}
 
-	err = assertBalances()
+	err = queryBalances()
 	if err != nil {
 		return fmt.Errorf("failed to query balance: %w", err)
 	}
@@ -81,11 +76,6 @@ func transferBack() error {
 	err := approveSpend()
 	if err != nil {
 		return fmt.Errorf("failed to approve spend: %w", err)
-	}
-
-	err = updateBalances()
-	if err != nil {
-		return fmt.Errorf("failed to update balances: %w", err)
 	}
 
 	addresses, err := utils.ExtractDeployedContractAddresses()
@@ -122,7 +112,7 @@ func transferBack() error {
 		return fmt.Errorf("failed to relay from EVM to SimApp: %w", err)
 	}
 
-	err = assertBalances()
+	err = queryBalances()
 	if err != nil {
 		return fmt.Errorf("failed to query balance: %w", err)
 	}
