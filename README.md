@@ -66,6 +66,12 @@ NETWORK_PRIVATE_KEY="PRIVATE_KEY" to the SP1 prover network private key from Cel
     make build-simapp-docker
     ```
 
+    **Note:** For ARM-based systems (like Apple Silicon), you may need to set the build platform:
+
+    ```shell
+    BUILDPLATFORM=linux/arm64 make build-simapp-docker
+    ```
+
 1. Copy the proto_description.bin file one directory up in celestia prover
 
     ```shell

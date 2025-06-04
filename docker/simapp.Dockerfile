@@ -1,4 +1,5 @@
 # Stage 1: Generate the simapp binary (simd)
+ARG BUILDPLATFORM=linux/amd64
 FROM --platform=$BUILDPLATFORM docker.io/golang:1.23.6-alpine3.20 AS builder
 
 ARG TARGETOS

@@ -191,7 +191,7 @@ docker: build-simapp-docker build-indexer-docker build-celestia-prover-docker bu
 ## build-simapp-docker: Build the simapp docker image from the current branch. Requires docker.
 build-simapp-docker: build-simapp
 	@echo "--> Building simapp Docker image"
-	$(DOCKER) build -t $(SIMAPP_GHCR_REPO) --file docker/simapp.Dockerfile .
+	$(DOCKER) build -t $(SIMAPP_GHCR_REPO) --file docker/simapp.Dockerfile $(if $(BUILDPLATFORM),--build-arg BUILDPLATFORM=$(BUILDPLATFORM),) .
 .PHONY: build-simapp-docker
 
 ## build-indexer-docker: Build the indexer docker image. Requires docker.
