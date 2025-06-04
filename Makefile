@@ -106,9 +106,9 @@ transfer-back:
 	@go run ./testing/demo/pkg/transfer/ transfer-back
 .PHONY: transfer-back
 
-## query-balance: Query the balance of the receiver in the EVM roll-up.
+## query-balance: Query the balances on SimApp and EVM roll-up.
 query-balance:
-	@echo "--> Querying the balance of the receivier on the EVM roll-up"
+	@echo "--> Querying the balances..."
 	@go run ./testing/demo/pkg/transfer/ query-balance
 .PHONY: query-balance
 
