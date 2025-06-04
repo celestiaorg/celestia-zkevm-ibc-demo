@@ -1,6 +1,7 @@
 use crate::proofs::generate_header_proofs;
 use celestia_rpc::{BlobClient, Client, HeaderClient, ShareClient};
 use celestia_types::{
+    hash::Hash,
     nmt::{Namespace, NamespaceProof},
     ExtendedHeader,
 };
@@ -245,12 +246,16 @@ impl BlockProver {
         // Generate all required proofs
         let (data_hash_bytes, data_hash_proof) = generate_header_proofs(&header)?;
 
+        assert_eq!(
+            data_hash_bytes,
+            Hash::Sha256(proof_input.data_root).as_bytes()
+        );
+
         // Prepare stdin for the prover
         let mut stdin = SP1Stdin::new();
         stdin.write(&proof_input);
         stdin.write(&client_executor_input);
         stdin.write(&header.header.hash());
-        stdin.write_vec(data_hash_bytes);
         stdin.write(&data_hash_proof);
         Ok(stdin)
     }
