@@ -148,7 +148,7 @@ services:
       - CELESTIA_NODE_AUTH_TOKEN=${CELESTIA_NODE_AUTH_TOKEN:-}
       - CELESTIA_NAMESPACE=${CELESTIA_NAMESPACE:-0f0f0f0f0f0f0f0f0f0f}
       - GENESIS_PATH=/testapp_files/eth-genesis.json
-      - SP1_PROVER=network
+      - SP1_PROVER=${SP1_PROVER:-}
     ports:
       - "50052:50052"
     depends_on:
