@@ -133,7 +133,7 @@ enable = true
 swagger = false
 
 # Address defines the API server to listen on.
-address = "tcp://localhost:1317"
+address = "tcp://0.0.0.0:1317"
 
 # MaxOpenConnections defines the number of maximum open connections.
 max-open-connections = 1000
@@ -148,7 +148,7 @@ rpc-write-timeout = 0
 rpc-max-body-bytes = 1000000
 
 # EnableUnsafeCORS defines if CORS should be enabled (unsafe - use it at your own risk).
-enabled-unsafe-cors = false
+enabled-unsafe-cors = true
 
 ###############################################################################
 ###                           gRPC Configuration                            ###
