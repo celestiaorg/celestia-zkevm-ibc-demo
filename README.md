@@ -1,13 +1,10 @@
 # ZK EVM IBC demo
 
-> [!WARNING]
-> This repository is a work in progress and under active development.
-
 This repo exists to showcase transferring tokens between SimApp (a Cosmos SDK chain representing Celestia) and a ZK proveable EVM via [IBC V2](https://github.com/cosmos/ibc/blob/main/spec/IBC_V2/README.md) (formerly known as IBC Eureka) and the IBC V2 [solidity contracts](https://github.com/cosmos/solidity-ibc-eureka/blob/main/README.md). The diagram below is meant to detail the components involved and, at a high level, how they interact with one another.
 
 ![mvp-zk-accounts](./docs/images/mvp-zk-accounts.png)
 
-For more information refer to the [architecture](./docs/ARCHITECTURE.md). Note that the design is subject to change.
+For more information refer to the [architecture](./docs/ARCHITECTURE.md).
 
 ## Usage
 
