@@ -62,7 +62,7 @@ This mapping is used by the EVM Prover to locate the Celestia inclusion block wh
 ### Current Limitations
 
 1. **Matching Inclusion and Execution Data**: Matching inclusion data to execution data is not yet implemented.
-2. **Sequencer Signature Verification**: Verification of sequencer signatures is not yet implementated.
+2. **Sequencer Signature Verification**: Verification of sequencer signatures is not yet implemented.
 
 ### Future Improvements
 
