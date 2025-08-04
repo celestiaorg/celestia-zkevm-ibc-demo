@@ -1,5 +1,5 @@
 //! A SP1 program that accepts several inputs and commits to several outputs. At a high-level it
-//! accepts an EVM block and a few fields and proofs from a Celestia block. Then it verfifies that
+//! accepts an EVM block and a few fields and proofs from a Celestia block. Then it verifies that
 //! the EVM block was included in the Celestia block. Lastly, it executes the EVM block and commits
 //! the computed EVM header hash in the public outputs along with other metadata from the computed
 //! EVM block.
